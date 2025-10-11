@@ -1,0 +1,18 @@
+networks:
+  playground-network:
+    driver: bridge
+
+services:
+  alpine:
+    image: alpine:latest
+    container_name: playground-alpine
+    hostname: alpine
+    networks:
+      - playground-network
+    volumes:
+      - /home/manzolo/Scrivania/Temp/bash/docker-playground/shared-volumes:/shared
+    command: /bin/sh -c "tail -f /dev/null"
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+

@@ -1,0 +1,27 @@
+[2025-10-11 18:54:48] Environment initialized
+[2025-10-11 18:55:38] Environment initialized
+[2025-10-11 18:56:27] Full cleanup performed
+[2025-10-11 18:57:03] Environment initialized
+[2025-10-11 18:57:36] Environment initialized
+[2025-10-11 18:57:51] Environment initialized
+[2025-10-11 18:58:12] Playground manager exited
+[2025-10-11 19:01:04] Playground manager exited
+[2025-10-11 19:01:04] Environment initialized
+[2025-10-11 19:01:58] Environment initialized
+[2025-10-11 19:01:59] Generated docker-compose.yml with services: "ubuntu-24"
+[2025-10-11 19:02:00] Started containers: "ubuntu-24"
+[2025-10-11 19:09:00] Entered container: ubuntu-24
+[2025-10-11 20:34:50] Environment initialized
+[2025-10-11 20:35:04] Generated docker-compose.yml with services: "nginx"
+[2025-10-11 20:35:04] Started containers: "nginx"
+[2025-10-11 20:35:19] Entered container: nginx
+[2025-10-11 20:35:39] Environment initialized
+[2025-10-11 20:36:09] Environment initialized
+[2025-10-11 20:36:18] Generated docker-compose.yml with services: "arch"
+[2025-10-11 20:36:33] Started containers: "arch"
+[2025-10-11 20:36:54] Entered container: arch
+[2025-10-11 20:37:55] Full cleanup performed
+[2025-10-11 20:38:06] Generated docker-compose.yml with services: "alpine"
+[2025-10-11 20:38:06] Started containers: "alpine"
+[2025-10-11 20:38:15] Entered container: alpine
+[2025-10-11 20:38:22] Playground manager exited
