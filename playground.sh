@@ -1488,21 +1488,21 @@ main_menu() {
     # Esecuzione del menu whiptail
     choice=$(whiptail --title "Docker Playground Manager v2.4" \
       --menu "Choose an action:" 24 75 16 \
-      "1" "▶️  Start containers                [Container]" \
-      "2" "🎯 Start by category              [Container]" \
-      "3" "⏹️  Stop containers                 [Container]" \
-      "4" "💻 Enter a container              [Container]" \
-      "5" "📋 List active containers         [Monitor]" \
-      "6" "📊 View container logs            [Monitor]" \
-      "7" "🔄 Restart container              [Monitor]" \
-      "8" "📈 Container statistics           [Monitor]" \
-      "9" "📺 Dashboard                      [Monitor]" \
-      "10" "🔍 Search images                  [Tools]" \
-      "11" "📚 Browse catalog                 [Tools]" \
-      "12" "⚙  System information             [Tools]" \
-      "13" "❓ Help                           [Tools]" \
-      "14" "📤 Export logs                    [Maintenance]" \
-      "15" "🧹 Cleanup (remove all)           [Maintenance]" \
+      "1" "▶️  Start containers              [Container]" \
+      "2" "🎯 Start by category             [Container]" \
+      "3" "⏹️  Stop containers               [Container]" \
+      "4" "💻 Enter a container             [Container]" \
+      "5" "📋 List active containers        [Monitor]" \
+      "6" "📊 View container logs           [Monitor]" \
+      "7" "🔄 Restart container             [Monitor]" \
+      "8" "📈 Container statistics          [Monitor]" \
+      "9" "📺 Dashboard                     [Monitor]" \
+      "10" "🔍 Search images                 [Tools]" \
+      "11" "📚 Browse catalog                [Tools]" \
+      "12" "⚙  System information            [Tools]" \
+      "13" "❓ Help                          [Tools]" \
+      "14" "📤 Export logs                   [Maintenance]" \
+      "15" "🧹 Cleanup (remove all)          [Maintenance]" \
       "16" "❌ Exit                           " 3>&1 1>&2 2>&3)
     
     # Check the exit status of whiptail. Status 1 usually means ESC/CANCEL/Ctrl+C.
