@@ -120,7 +120,7 @@ When entering specific containers, you'll see helpful quick reference guides:
 Example: When you enter a MySQL container, you'll see:
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║                    MySQL Quick Reference                      ║
+║                    MySQL Quick Reference                     ║
 ╚══════════════════════════════════════════════════════════════╝
 
 🔐 Connection Info:
