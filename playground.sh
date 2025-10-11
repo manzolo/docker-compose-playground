@@ -1147,13 +1147,22 @@ container_logs() {
   echo -e "${YELLOW}Press Ctrl+C to return to menu${NC}"
   echo ""
   
+  # Create a subshell that handles the logs
   (
-    trap 'exit 0' INT TERM
+    # This subshell will be killed on Ctrl+C
     docker compose -f "$COMPOSE_FILE" logs -f "$service" 2>&1
   ) &
   
   local log_pid=$!
+  
+  # Wait for Ctrl+C in the parent shell
+  trap "kill $log_pid 2>/dev/null; trap - INT; echo -e '\n${GREEN}Returning to menu...${NC}'; sleep 1; return 0" INT
+  
+  # Wait for the background process
   wait $log_pid 2>/dev/null
+  
+  # Clean up trap
+  trap - INT
   
   echo -e "\n${GREEN}Returning to menu...${NC}"
   sleep 1
@@ -1281,15 +1290,15 @@ show_dashboard() {
 }
 
 quick_search() {
-  search_term=$(whiptail --inputbox "Search images by name or description:" 10 60 3>&1 1>&2 2>&3)
+  search_term=$(whiptail --inputbox "Search images by name or description:" 10 60 3>&1 1>&2 2>&3) || return 0
   
+  # Check if empty
   if [ -z "$search_term" ]; then
-    return
+    return 0
   fi
   
   # Search in both keys and descriptions
   results=""
-  desc_results=""
   
   # Search by key name
   while IFS= read -r img; do
@@ -1297,26 +1306,28 @@ quick_search() {
       desc=$(yq ".images.\"$img\".description" "$CONFIG_FILE" 2>/dev/null || echo "No description")
       results+="$img - $desc"$'\n'
     fi
-  done < <(yq '.images | keys | .[]' "$CONFIG_FILE" 2>/dev/null)
+  done < <(yq '.images | keys | .[]' "$CONFIG_FILE" 2>/dev/null || true)
   
   # Search by description
   while IFS= read -r img; do
     desc=$(yq ".images.\"$img\".description" "$CONFIG_FILE" 2>/dev/null || echo "")
-    if echo "$desc" | grep -qi "$search_term"; then
+    if [ -n "$desc" ] && echo "$desc" | grep -qi "$search_term"; then
       if ! echo "$results" | grep -q "^$img -"; then
         results+="$img - $desc"$'\n'
       fi
     fi
-  done < <(yq '.images | keys | .[]' "$CONFIG_FILE" 2>/dev/null)
+  done < <(yq '.images | keys | .[]' "$CONFIG_FILE" 2>/dev/null || true)
   
   # Remove empty lines and sort
-  all_results=$(echo "$results" | grep -v '^$' | sort -u)
+  all_results=$(echo "$results" | grep -v '^$' | sort -u || true)
   
   if [ -z "$all_results" ]; then
-    whiptail --msgbox "No images found matching: $search_term" 8 50
+    whiptail --msgbox "No images found matching: $search_term" 8 50 || true
   else
-    whiptail --title "Search Results for: $search_term" --msgbox "$all_results" 22 90 --scrolltext
+    whiptail --title "Search Results for: $search_term" --msgbox "$all_results" 22 90 --scrolltext || true
   fi
+  
+  return 0
 }
 
 #############################################
