@@ -1,0 +1,67 @@
+╔══════════════════════════════════════════════════════════════╗
+║                  Python Quick Reference                       ║
+╚══════════════════════════════════════════════════════════════╝
+
+🐍 Python Environment:
+   python --version                              # Check version
+   pip --version                                 # Check pip version
+   pip list                                      # List installed packages
+
+📦 Package Management:
+   pip install requests                          # Install package
+   pip install -r requirements.txt               # Install from file
+   pip freeze > /shared/requirements.txt         # Export packages
+   pip uninstall package_name                    # Uninstall package
+
+🧪 Quick Testing:
+   # Create test script
+   cat > /shared/test.py <<EOF2
+   import sys
+   print(f"Python {sys.version}")
+   print("Hello from Python!")
+   
+   # Test basic functionality
+   numbers = [1, 2, 3, 4, 5]
+   squared = [x**2 for x in numbers]
+   print(f"Squared: {squared}")
+   EOF2
+   
+   python /shared/test.py
+
+🌐 Web Server:
+   # Quick HTTP server
+   cd /shared && python -m http.server 8000
+   
+   # Create simple Flask app
+   pip install flask
+   cat > /shared/app.py <<EOF2
+   from flask import Flask
+   app = Flask(__name__)
+   
+   @app.route('/')
+   def hello():
+       return 'Hello from Python Flask!'
+   
+   if __name__ == '__main__':
+       app.run(host='0.0.0.0', port=5000)
+   EOF2
+   
+   python /shared/app.py
+
+📊 Data Science Quick Start:
+   pip install numpy pandas matplotlib
+   
+   python <<EOF2
+   import numpy as np
+   import pandas as pd
+   
+   # Create sample data
+   data = pd.DataFrame({
+       'name': ['Alice', 'Bob', 'Charlie'],
+       'age': [25, 30, 35]
+   })
+   print(data)
+   data.to_csv('/shared/data.csv', index=False)
+   EOF2
+
+Press Enter to continue...

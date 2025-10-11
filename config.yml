@@ -1,13 +1,16 @@
 # Docker Playground Configuration
-# Add or modify images as needed
+# Comprehensive catalog of development environments
 
 images:
-  # Linux Distributions
+  # ═══════════════════════════════════════
+  # LINUX DISTRIBUTIONS
+  # ═══════════════════════════════════════
+  
   ubuntu-24:
     image: ubuntu:24.04
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Ubuntu 24.04 LTS (Noble Numbat)"
+    description: "Ubuntu 24.04 LTS (Noble Numbat) - Latest LTS"
     category: linux
   
   ubuntu-22:
@@ -28,7 +31,7 @@ images:
     image: debian:12
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Debian 12 (Bookworm)"
+    description: "Debian 12 (Bookworm) - Stable"
     category: linux
   
   debian-11:
@@ -38,47 +41,124 @@ images:
     description: "Debian 11 (Bullseye)"
     category: linux
   
-  alpine:
-    image: alpine:latest
+  alpine-3.19:
+    image: alpine:3.19
     shell: /bin/sh
     keep_alive_cmd: tail -f /dev/null
-    description: "Alpine Linux (Lightweight)"
+    description: "Alpine Linux 3.19 (Lightweight - 5MB)"
     category: linux
   
-  fedora:
-    image: fedora:latest
+  alpine-edge:
+    image: alpine:edge
+    shell: /bin/sh
+    keep_alive_cmd: tail -f /dev/null
+    description: "Alpine Linux Edge (Development)"
+    category: linux
+  
+  fedora-39:
+    image: fedora:39
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Fedora Linux"
+    description: "Fedora 39 - Cutting edge packages"
+    category: linux
+  
+  rockylinux-9:
+    image: rockylinux:9
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Rocky Linux 9 (RHEL clone)"
+    category: linux
+  
+  almalinux-9:
+    image: almalinux:9
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "AlmaLinux 9 (CentOS replacement)"
     category: linux
   
   arch:
     image: archlinux:latest
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Arch Linux"
+    description: "Arch Linux - Rolling release"
+    category: linux
+  
+  opensuse-leap:
+    image: opensuse/leap:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "openSUSE Leap - Enterprise stable"
+    category: linux
+  
+  kali-rolling:
+    image: kalilinux/kali-rolling
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Kali Linux - Penetration testing"
     category: linux
 
-  # Programming Languages
+  # ═══════════════════════════════════════
+  # PROGRAMMING LANGUAGES - PYTHON
+  # ═══════════════════════════════════════
+  
+  python-3.13:
+    image: python:3.13
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Python 3.13 (Latest)"
+    category: programming
+  
   python-3.12:
     image: python:3.12
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Python 3.12 Runtime"
+    description: "Python 3.12"
     category: programming
   
   python-3.11:
     image: python:3.11
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Python 3.11 Runtime"
+    description: "Python 3.11"
     category: programming
+  
+  python-3.10:
+    image: python:3.10
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Python 3.10"
+    category: programming
+  
+  python-alpine:
+    image: python:3.12-alpine
+    shell: /bin/sh
+    keep_alive_cmd: sleep infinity
+    description: "Python 3.12 on Alpine (Minimal)"
+    category: programming
+  
+  anaconda:
+    image: continuumio/anaconda3
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Anaconda - Data Science stack"
+    category: programming
+  
+  miniconda:
+    image: continuumio/miniconda3
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Miniconda - Minimal conda"
+    category: programming
+
+  # ═══════════════════════════════════════
+  # PROGRAMMING LANGUAGES - JAVASCRIPT/NODE
+  # ═══════════════════════════════════════
   
   node-22:
     image: node:22
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Node.js 22 LTS"
+    description: "Node.js 22 LTS (Latest)"
     category: programming
   
   node-20:
@@ -88,107 +168,543 @@ images:
     description: "Node.js 20 LTS"
     category: programming
   
-  golang:
-    image: golang:latest
+  node-18:
+    image: node:18
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Go Programming Language"
+    description: "Node.js 18 LTS"
     category: programming
   
-  rust:
-    image: rust:latest
+  node-alpine:
+    image: node:22-alpine
+    shell: /bin/sh
+    keep_alive_cmd: sleep infinity
+    description: "Node.js 22 on Alpine (Minimal)"
+    category: programming
+  
+  deno:
+    image: denoland/deno:latest
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Rust Programming Language"
+    description: "Deno - Secure TypeScript runtime"
     category: programming
+  
+  bun:
+    image: oven/bun:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Bun - Fast all-in-one JavaScript runtime"
+    category: programming
+
+  # ═══════════════════════════════════════
+  # PROGRAMMING LANGUAGES - COMPILED
+  # ═══════════════════════════════════════
+  
+  golang-1.22:
+    image: golang:1.22
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Go 1.22 (Latest)"
+    category: programming
+  
+  golang-alpine:
+    image: golang:1.22-alpine
+    shell: /bin/sh
+    keep_alive_cmd: sleep infinity
+    description: "Go 1.22 on Alpine"
+    category: programming
+  
+  rust-1.75:
+    image: rust:1.75
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Rust 1.75 (Latest stable)"
+    category: programming
+  
+  rust-alpine:
+    image: rust:alpine
+    shell: /bin/sh
+    keep_alive_cmd: sleep infinity
+    description: "Rust on Alpine"
+    category: programming
+  
+  gcc:
+    image: gcc:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "GCC - GNU Compiler Collection (C/C++)"
+    category: programming
+  
+  clang:
+    image: silkeh/clang:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Clang - LLVM C/C++ compiler"
+    category: programming
+  
+  zig:
+    image: euantorano/zig:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Zig - Modern systems language"
+    category: programming
+
+  # ═══════════════════════════════════════
+  # PROGRAMMING LANGUAGES - JVM
+  # ═══════════════════════════════════════
   
   openjdk-21:
     image: openjdk:21
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "OpenJDK 21"
+    description: "OpenJDK 21 LTS (Latest)"
     category: programming
+  
+  openjdk-17:
+    image: openjdk:17
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "OpenJDK 17 LTS"
+    category: programming
+  
+  openjdk-11:
+    image: openjdk:11
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "OpenJDK 11 LTS"
+    category: programming
+  
+  gradle:
+    image: gradle:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Gradle - Build automation tool"
+    category: programming
+  
+  maven:
+    image: maven:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Maven - Project management tool"
+    category: programming
+  
+  kotlin:
+    image: zenika/kotlin:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Kotlin - Modern JVM language"
+    category: programming
+  
+  scala:
+    image: hseeberger/scala-sbt:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Scala with SBT"
+    category: programming
+
+  # ═══════════════════════════════════════
+  # PROGRAMMING LANGUAGES - OTHER
+  # ═══════════════════════════════════════
   
   php-8.3:
     image: php:8.3
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "PHP 8.3"
+    description: "PHP 8.3 (Latest)"
     category: programming
   
-  ruby:
-    image: ruby:latest
+  php-8.2:
+    image: php:8.2
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Ruby Language"
+    description: "PHP 8.2"
+    category: programming
+  
+  php-fpm:
+    image: php:8.3-fpm
+    shell: /bin/bash
+    keep_alive_cmd: php-fpm
+    description: "PHP 8.3 with FPM"
+    category: programming
+  
+  ruby-3.3:
+    image: ruby:3.3
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Ruby 3.3 (Latest)"
+    category: programming
+  
+  ruby-alpine:
+    image: ruby:3.3-alpine
+    shell: /bin/sh
+    keep_alive_cmd: sleep infinity
+    description: "Ruby 3.3 on Alpine"
+    category: programming
+  
+  elixir:
+    image: elixir:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Elixir - Functional language (Erlang VM)"
+    category: programming
+  
+  erlang:
+    image: erlang:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Erlang - Concurrent functional language"
+    category: programming
+  
+  haskell:
+    image: haskell:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Haskell - Pure functional language"
+    category: programming
+  
+  swift:
+    image: swift:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Swift - Apple's language (Linux)"
+    category: programming
+  
+  dotnet-8:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: ".NET 8 SDK (C#/F#)"
+    category: programming
+  
+  lua:
+    image: nickblah/lua:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Lua - Lightweight scripting language"
+    category: programming
+  
+  perl:
+    image: perl:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Perl - Text processing language"
     category: programming
 
-  # Databases
+  # ═══════════════════════════════════════
+  # DATABASES - SQL
+  # ═══════════════════════════════════════
+  
   postgres-16:
     image: postgres:16
     shell: /bin/bash
     keep_alive_cmd: postgres
-    description: "PostgreSQL 16"
+    description: "PostgreSQL 16 (Latest)"
     category: database
     environment:
       POSTGRES_PASSWORD: playground
       POSTGRES_USER: playground
       POSTGRES_DB: playground
+    ports:
+      - "5432:5432"
+  
+  postgres-15:
+    image: postgres:15
+    shell: /bin/bash
+    keep_alive_cmd: postgres
+    description: "PostgreSQL 15"
+    category: database
+    environment:
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+      POSTGRES_DB: playground
+    ports:
+      - "5433:5432"
+  
+  postgres-alpine:
+    image: postgres:16-alpine
+    shell: /bin/sh
+    keep_alive_cmd: postgres
+    description: "PostgreSQL 16 Alpine (Minimal)"
+    category: database
+    environment:
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+      POSTGRES_DB: playground
+    ports:
+      - "5434:5432"
   
   mysql-8:
     image: mysql:8
     shell: /bin/bash
     keep_alive_cmd: mysqld
-    description: "MySQL 8"
+    description: "MySQL 8.0 (Latest)"
     category: database
     environment:
       MYSQL_ROOT_PASSWORD: playground
       MYSQL_DATABASE: playground
+      MYSQL_USER: playground
+      MYSQL_PASSWORD: playground
+    ports:
+      - "3306:3306"
   
-  mariadb:
-    image: mariadb:latest
+  mysql-5.7:
+    image: mysql:5.7
+    shell: /bin/bash
+    keep_alive_cmd: mysqld
+    description: "MySQL 5.7 (Legacy)"
+    category: database
+    environment:
+      MYSQL_ROOT_PASSWORD: playground
+      MYSQL_DATABASE: playground
+    ports:
+      - "3307:3306"
+  
+  mariadb-11:
+    image: mariadb:11
     shell: /bin/bash
     keep_alive_cmd: mariadbd
-    description: "MariaDB"
+    description: "MariaDB 11 (Latest)"
     category: database
     environment:
       MYSQL_ROOT_PASSWORD: playground
       MYSQL_DATABASE: playground
+    ports:
+      - "3308:3306"
   
-  mongodb:
-    image: mongo:latest
+  mariadb-10:
+    image: mariadb:10
     shell: /bin/bash
-    keep_alive_cmd: mongod
-    description: "MongoDB"
+    keep_alive_cmd: mariadbd
+    description: "MariaDB 10"
     category: database
+    environment:
+      MYSQL_ROOT_PASSWORD: playground
+      MYSQL_DATABASE: playground
+    ports:
+      - "3309:3306"
   
-  redis:
-    image: redis:latest
-    shell: /bin/sh
-    keep_alive_cmd: redis-server
-    description: "Redis Cache"
+  cockroachdb:
+    image: cockroachdb/cockroach:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "CockroachDB - Distributed SQL"
     category: database
 
-  # Web Servers
-  nginx:
+  # ═══════════════════════════════════════
+  # DATABASES - NoSQL
+  # ═══════════════════════════════════════
+  
+  mongodb-7:
+    image: mongo:7
+    shell: /bin/bash
+    keep_alive_cmd: mongod
+    description: "MongoDB 7 (Latest)"
+    category: database
+    ports:
+      - "27017:27017"
+  
+  mongodb-6:
+    image: mongo:6
+    shell: /bin/bash
+    keep_alive_cmd: mongod
+    description: "MongoDB 6"
+    category: database
+    ports:
+      - "27018:27017"
+  
+  redis-7:
+    image: redis:7
+    shell: /bin/sh
+    keep_alive_cmd: redis-server
+    description: "Redis 7 (Latest) - In-memory cache"
+    category: database
+    ports:
+      - "6379:6379"
+  
+  redis-alpine:
+    image: redis:7-alpine
+    shell: /bin/sh
+    keep_alive_cmd: redis-server
+    description: "Redis 7 Alpine (Minimal)"
+    category: database
+    ports:
+      - "6380:6379"
+  
+  memcached:
+    image: memcached:latest
+    shell: /bin/sh
+    keep_alive_cmd: memcached -u memcache
+    description: "Memcached - Distributed memory cache"
+    category: database
+    ports:
+      - "11211:11211"
+  
+  cassandra:
+    image: cassandra:latest
+    shell: /bin/bash
+    keep_alive_cmd: cassandra -f
+    description: "Apache Cassandra - Wide-column store"
+    category: database
+    ports:
+      - "9042:9042"
+  
+  couchdb:
+    image: couchdb:latest
+    shell: /bin/bash
+    keep_alive_cmd: /docker-entrypoint.sh /opt/couchdb/bin/couchdb
+    description: "CouchDB - Document database"
+    category: database
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: playground
+    ports:
+      - "5984:5984"
+  
+  neo4j:
+    image: neo4j:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Neo4j - Graph database"
+    category: database
+    environment:
+      NEO4J_AUTH: neo4j/playground
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    shell: /bin/bash
+    keep_alive_cmd: /usr/local/bin/docker-entrypoint.sh
+    description: "Elasticsearch - Search & analytics"
+    category: database
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+    ports:
+      - "9200:9200"
+  
+  influxdb:
+    image: influxdb:latest
+    shell: /bin/bash
+    keep_alive_cmd: influxd
+    description: "InfluxDB - Time series database"
+    category: database
+    ports:
+      - "8086:8086"
+
+  # ═══════════════════════════════════════
+  # WEB SERVERS & REVERSE PROXIES
+  # ═══════════════════════════════════════
+  
+  nginx-latest:
     image: nginx:latest
     shell: /bin/bash
     keep_alive_cmd: nginx -g 'daemon off;'
-    description: "Nginx Web Server"
+    description: "Nginx (Latest) - Web server"
     category: webserver
     ports:
       - "8080:80"
   
-  apache:
-    image: httpd:latest
-    shell: /bin/bash
-    keep_alive_cmd: httpd-foreground
-    description: "Apache HTTP Server"
+  nginx-alpine:
+    image: nginx:alpine
+    shell: /bin/sh
+    keep_alive_cmd: nginx -g 'daemon off;'
+    description: "Nginx Alpine (Minimal)"
     category: webserver
     ports:
       - "8081:80"
+  
+  apache-latest:
+    image: httpd:latest
+    shell: /bin/bash
+    keep_alive_cmd: httpd-foreground
+    description: "Apache HTTP Server (Latest)"
+    category: webserver
+    ports:
+      - "8082:80"
+  
+  apache-alpine:
+    image: httpd:alpine
+    shell: /bin/sh
+    keep_alive_cmd: httpd-foreground
+    description: "Apache Alpine (Minimal)"
+    category: webserver
+    ports:
+      - "8083:80"
+  
+  caddy:
+    image: caddy:latest
+    shell: /bin/sh
+    keep_alive_cmd: caddy run --config /etc/caddy/Caddyfile
+    description: "Caddy - Modern web server with auto HTTPS"
+    category: webserver
+    ports:
+      - "8084:80"
+  
+  traefik:
+    image: traefik:latest
+    shell: /bin/sh
+    keep_alive_cmd: /entrypoint.sh traefik
+    description: "Traefik - Modern reverse proxy"
+    category: webserver
+    ports:
+      - "8085:80"
+      - "8086:8080"
+  
+  haproxy:
+    image: haproxy:latest
+    shell: /bin/bash
+    keep_alive_cmd: haproxy -f /usr/local/etc/haproxy/haproxy.cfg
+    description: "HAProxy - High performance load balancer"
+    category: webserver
 
-  # DevOps Tools
+  # ═══════════════════════════════════════
+  # MESSAGE QUEUES & STREAMING
+  # ═══════════════════════════════════════
+  
+  rabbitmq:
+    image: rabbitmq:management
+    shell: /bin/bash
+    keep_alive_cmd: rabbitmq-server
+    description: "RabbitMQ - Message broker with management UI"
+    category: messaging
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  
+  kafka:
+    image: apache/kafka:latest
+    shell: /bin/bash
+    keep_alive_cmd: /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+    description: "Apache Kafka - Event streaming platform"
+    category: messaging
+    ports:
+      - "9092:9092"
+  
+  nats:
+    image: nats:latest
+    shell: /bin/sh
+    keep_alive_cmd: /nats-server
+    description: "NATS - Cloud native messaging"
+    category: messaging
+    ports:
+      - "4222:4222"
+  
+  activemq:
+    image: apache/activemq-classic:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Apache ActiveMQ - Message broker"
+    category: messaging
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+
+  # ═══════════════════════════════════════
+  # DEVOPS & CI/CD
+  # ═══════════════════════════════════════
+  
   docker-dind:
     image: docker:dind
     shell: /bin/sh
@@ -197,34 +713,191 @@ images:
     category: devops
     privileged: true
   
+  jenkins:
+    image: jenkins/jenkins:lts
+    shell: /bin/bash
+    keep_alive_cmd: /usr/bin/tini -- /usr/local/bin/jenkins.sh
+    description: "Jenkins - CI/CD automation server"
+    category: devops
+    ports:
+      - "8087:8080"
+      - "50000:50000"
+  
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "GitLab Runner - CI/CD runner"
+    category: devops
+  
   ansible:
     image: ansible/ansible:latest
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Ansible Automation"
+    description: "Ansible - Configuration management"
     category: devops
   
   terraform:
     image: hashicorp/terraform:latest
     shell: /bin/sh
     keep_alive_cmd: tail -f /dev/null
-    description: "Terraform IaC"
+    description: "Terraform - Infrastructure as Code"
     category: devops
+  
+  packer:
+    image: hashicorp/packer:latest
+    shell: /bin/sh
+    keep_alive_cmd: tail -f /dev/null
+    description: "Packer - Image automation"
+    category: devops
+  
+  vault:
+    image: hashicorp/vault:latest
+    shell: /bin/sh
+    keep_alive_cmd: vault server -dev
+    description: "Vault - Secrets management"
+    category: devops
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: playground
+    ports:
+      - "8200:8200"
+  
+  consul:
+    image: hashicorp/consul:latest
+    shell: /bin/sh
+    keep_alive_cmd: consul agent -dev
+    description: "Consul - Service mesh & discovery"
+    category: devops
+    ports:
+      - "8500:8500"
 
-  # Testing & Development
+  # ═══════════════════════════════════════
+  # MONITORING & OBSERVABILITY
+  # ═══════════════════════════════════════
+  
+  prometheus:
+    image: prom/prometheus:latest
+    shell: /bin/sh
+    keep_alive_cmd: /bin/prometheus
+    description: "Prometheus - Monitoring system"
+    category: monitoring
+    ports:
+      - "9090:9090"
+  
+  grafana:
+    image: grafana/grafana:latest
+    shell: /bin/bash
+    keep_alive_cmd: /run.sh
+    description: "Grafana - Observability platform"
+    category: monitoring
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: playground
+    ports:
+      - "3000:3000"
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    shell: /bin/sh
+    keep_alive_cmd: /go/bin/all-in-one-linux
+    description: "Jaeger - Distributed tracing"
+    category: monitoring
+    ports:
+      - "16686:16686"
+  
+  zipkin:
+    image: openzipkin/zipkin:latest
+    shell: /bin/bash
+    keep_alive_cmd: start-zipkin
+    description: "Zipkin - Distributed tracing"
+    category: monitoring
+    ports:
+      - "9411:9411"
+
+  # ═══════════════════════════════════════
+  # UTILITIES & TOOLS
+  # ═══════════════════════════════════════
+  
   busybox:
     image: busybox:latest
     shell: /bin/sh
     keep_alive_cmd: sleep infinity
-    description: "BusyBox (Minimal Unix)"
+    description: "BusyBox - Minimal Unix utilities"
+    category: utility
+  
+  alpine-tools:
+    image: alpine:latest
+    shell: /bin/sh
+    keep_alive_cmd: tail -f /dev/null
+    description: "Alpine + common tools (curl, wget, etc)"
     category: utility
   
   curl:
     image: curlimages/curl:latest
     shell: /bin/sh
     keep_alive_cmd: sleep infinity
-    description: "curl HTTP client"
+    description: "curl - HTTP client"
     category: utility
+  
+  ubuntu-full:
+    image: ubuntu:24.04
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Ubuntu 24.04 + build-essential & tools"
+    category: utility
+  
+  netshoot:
+    image: nicolaka/netshoot:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Network troubleshooting tools"
+    category: utility
+  
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
+    shell: /bin/bash
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    description: "Selenium with Chrome - Browser automation"
+    category: utility
+    ports:
+      - "4444:4444"
+  
+  selenium-firefox:
+    image: selenium/standalone-firefox:latest
+    shell: /bin/bash
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    description: "Selenium with Firefox - Browser automation"
+    category: utility
+    ports:
+      - "4445:4444"
+
+  # ═══════════════════════════════════════
+  # MACHINE LEARNING & DATA SCIENCE
+  # ═══════════════════════════════════════
+  
+  jupyter:
+    image: jupyter/base-notebook:latest
+    shell: /bin/bash
+    keep_alive_cmd: start-notebook.sh
+    description: "Jupyter Notebook - Interactive computing"
+    category: ml
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+    ports:
+      - "8888:8888"
+  
+  tensorflow:
+    image: tensorflow/tensorflow:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "TensorFlow - ML framework"
+    category: ml
+  
+  pytorch:
+    image: pytorch/pytorch:latest
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "PyTorch - ML framework"
+    category: ml
 
 # Global settings
 settings:

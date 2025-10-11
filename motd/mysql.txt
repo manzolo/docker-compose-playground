@@ -1,0 +1,50 @@
+╔══════════════════════════════════════════════════════════════╗
+║                    MySQL Quick Reference                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+🔐 Connection Info:
+   Host: localhost / Container IP
+   Port: 3306
+   User: playground / root
+   Password: playground
+
+📊 Basic Commands:
+   mysql -u root -pplayground                    # Connect to MySQL
+   mysql -u playground -pplayground playground   # Connect to playground DB
+
+📁 Database Operations:
+   SHOW DATABASES;                               # List all databases
+   CREATE DATABASE mydb;                         # Create database
+   USE mydb;                                     # Switch to database
+   SHOW TABLES;                                  # List tables
+   DESCRIBE tablename;                           # Show table structure
+
+💾 Backup & Restore:
+   # Backup single database
+   mysqldump -u root -pplayground playground > /shared/backup.sql
+   
+   # Backup all databases
+   mysqldump -u root -pplayground --all-databases > /shared/full_backup.sql
+   
+   # Restore database
+   mysql -u root -pplayground playground < /shared/backup.sql
+   
+   # Restore with creation
+   mysql -u root -pplayground < /shared/backup.sql
+
+🔍 Useful Queries:
+   SELECT USER(), DATABASE();                    # Current user & DB
+   SHOW PROCESSLIST;                            # Active connections
+   SHOW VARIABLES LIKE '%version%';             # MySQL version info
+   SELECT * FROM information_schema.tables;     # All tables info
+
+📝 Quick Table Example:
+   CREATE TABLE users (
+     id INT AUTO_INCREMENT PRIMARY KEY,
+     name VARCHAR(100),
+     email VARCHAR(100)
+   );
+   INSERT INTO users (name, email) VALUES ('Test', 'test@example.com');
+   SELECT * FROM users;
+
+Press Enter to continue...

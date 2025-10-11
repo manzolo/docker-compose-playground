@@ -1,0 +1,69 @@
+╔══════════════════════════════════════════════════════════════╗
+║               Elasticsearch Quick Reference                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+🔍 Connection:
+   URL: http://localhost:9200
+   Health: curl localhost:9200/_cluster/health
+
+📊 Basic Operations:
+   # Check cluster info
+   curl localhost:9200
+   
+   # List indices
+   curl localhost:9200/_cat/indices?v
+   
+   # Create index
+   curl -X PUT localhost:9200/myindex
+   
+   # Delete index
+   curl -X DELETE localhost:9200/myindex
+
+📝 Document Operations:
+   # Index document
+   curl -X POST localhost:9200/myindex/_doc/1 -H 'Content-Type: application/json' -d '
+   {
+     "title": "First Document",
+     "content": "Hello Elasticsearch"
+   }'
+   
+   # Get document
+   curl localhost:9200/myindex/_doc/1
+   
+   # Update document
+   curl -X POST localhost:9200/myindex/_update/1 -H 'Content-Type: application/json' -d '
+   {
+     "doc": {"content": "Updated content"}
+   }'
+   
+   # Delete document
+   curl -X DELETE localhost:9200/myindex/_doc/1
+
+🔎 Search:
+   # Match all
+   curl localhost:9200/myindex/_search?q=*
+   
+   # Search with query
+   curl -X GET localhost:9200/myindex/_search -H 'Content-Type: application/json' -d '
+   {
+     "query": {
+       "match": {
+         "title": "First"
+       }
+     }
+   }'
+
+💾 Backup (Snapshot):
+   # Register repository
+   curl -X PUT localhost:9200/_snapshot/my_backup -H 'Content-Type: application/json' -d '
+   {
+     "type": "fs",
+     "settings": {
+       "location": "/shared/elasticsearch_backup"
+     }
+   }'
+   
+   # Create snapshot
+   curl -X PUT localhost:9200/_snapshot/my_backup/snapshot_1?wait_for_completion=true
+
+Press Enter to continue...

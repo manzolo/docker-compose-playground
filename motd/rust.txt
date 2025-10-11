@@ -1,0 +1,56 @@
+╔══════════════════════════════════════════════════════════════╗
+║                   Rust Quick Reference                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+🦀 Rust Environment:
+   rustc --version                               # Compiler version
+   cargo --version                               # Cargo version
+   rustup update                                 # Update Rust
+
+📦 Cargo Commands:
+   cargo new myapp                               # Create new project
+   cargo init                                    # Initialize in current dir
+   cargo build                                   # Build debug
+   cargo build --release                         # Build optimized
+   cargo run                                     # Build and run
+   cargo test                                    # Run tests
+   cargo check                                   # Check without building
+
+🚀 Quick Program:
+   cat > /shared/hello.rs <<'EOF2'
+   fn main() {
+       println!("Hello from Rust!");
+       
+       let numbers = vec![1, 2, 3, 4, 5];
+       let sum: i32 = numbers.iter().sum();
+       println!("Sum: {}", sum);
+   }
+   EOF2
+   
+   rustc /shared/hello.rs -o /shared/hello
+   /shared/hello
+
+📝 Simple Web Server (Actix):
+   cargo new webserver --bin
+   cd webserver
+   
+   # Add to Cargo.toml:
+   # [dependencies]
+   # actix-web = "4"
+   
+   # Then:
+   cargo build
+   cargo run
+
+🔧 Useful Commands:
+   cargo fmt                                     # Format code
+   cargo clippy                                  # Lint code
+   cargo doc --open                              # Generate docs
+   cargo clean                                   # Clean build
+
+📊 Dependencies:
+   cargo add serde                               # Add dependency
+   cargo update                                  # Update dependencies
+   cargo tree                                    # Show dependency tree
+
+Press Enter to continue...

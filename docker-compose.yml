@@ -3,16 +3,25 @@ networks:
     driver: bridge
 
 services:
-  alpine:
-    image: alpine:latest
-    container_name: playground-alpine
-    hostname: alpine
+  postgres-16:
+    image: postgres:16
+    container_name: playground-postgres-16
+    hostname: postgres-16
     networks:
       - playground-network
     volumes:
       - /home/manzolo/Scrivania/Temp/bash/docker-playground/shared-volumes:/shared
-    command: /bin/sh -c "tail -f /dev/null"
+    command: postgres
     stdin_open: true
     tty: true
     restart: unless-stopped
+    labels:
+      - "playground.managed=true"
+      - "playground.image=postgres-16"
+    environment:
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+      POSTGRES_DB: playground
+    ports:
+      - "5432:5432"
 

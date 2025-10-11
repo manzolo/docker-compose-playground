@@ -1,0 +1,55 @@
+╔══════════════════════════════════════════════════════════════╗
+║                   Redis Quick Reference                       ║
+╚══════════════════════════════════════════════════════════════╝
+
+🔐 Connection Info:
+   Host: localhost / Container IP
+   Port: 6379
+   No authentication required (default)
+
+📊 Basic Commands:
+   redis-cli                                     # Connect to Redis
+   PING                                          # Test connection
+   INFO                                          # Server information
+   DBSIZE                                        # Number of keys
+   FLUSHDB                                       # Clear current database
+   FLUSHALL                                      # Clear all databases
+
+💾 Backup & Restore:
+   # Trigger manual save
+   SAVE                                          # Synchronous save
+   BGSAVE                                        # Background save
+   
+   # Backup file location: /data/dump.rdb
+   # Copy backup
+   docker cp playground-redis:/data/dump.rdb /shared/redis_backup.rdb
+   
+   # Restore (stop Redis, replace dump.rdb, start Redis)
+   docker cp /shared/redis_backup.rdb playground-redis:/data/dump.rdb
+
+🔑 String Operations:
+   SET key "value"                               # Set string
+   GET key                                       # Get string
+   MSET key1 "val1" key2 "val2"                 # Set multiple
+   INCR counter                                  # Increment
+   EXPIRE key 3600                               # Set expiry (seconds)
+   TTL key                                       # Time to live
+
+📝 List Operations:
+   LPUSH mylist "item1"                          # Push to left
+   RPUSH mylist "item2"                          # Push to right
+   LRANGE mylist 0 -1                            # Get all items
+   LPOP mylist                                   # Pop from left
+
+🗂️ Hash Operations:
+   HSET user:1 name "John" age 30               # Set hash fields
+   HGET user:1 name                             # Get field
+   HGETALL user:1                               # Get all fields
+   HINCRBY user:1 age 1                         # Increment field
+
+📊 Set Operations:
+   SADD myset "item1" "item2"                   # Add to set
+   SMEMBERS myset                               # Get all members
+   SISMEMBER myset "item1"                      # Check membership
+
+Press Enter to continue...
