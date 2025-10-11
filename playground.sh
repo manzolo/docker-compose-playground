@@ -26,6 +26,20 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
+# ---------------------------------------------
+# GLOBAL TRAP FIX:
+# Ignore Ctrl+C globally to prevent exiting the script unless explicitly allowed.
+# We set a placeholder function that will be executed when INT is received.
+# 'break' will only work inside a while loop, so we use a dummy function
+# which we will manually override in functions that need to catch it.
+# We define the actual action in main_menu's while loop.
+# ---------------------------------------------
+dummy_trap_handler() {
+    # This prevents the script from exiting when Ctrl+C is pressed outside of a read/whiptail/sleep loop.
+    :
+}
+trap 'dummy_trap_handler' INT
+
 #############################################
 # Utility Functions
 #############################################
@@ -1185,65 +1199,65 @@ restart_container() {
   fi
 }
 
+#############################################
+# Container Statistics (Manuale Refresh)
+#############################################
 container_stats() {
-  clear
-  echo -e "${GREEN}Container Statistics${NC}"
-  echo -e "${YELLOW}Press Enter to refresh, Ctrl+C to return to menu${NC}"
-  echo ""
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+  local CYAN='\033[0;36m'
+
+  # 1. Salva la trap INT dello script principale
+  local old_trap
+  old_trap=$(trap -p INT | sed "s/trap -- '//; s/' INT//")
   
-  # Get ONLY running containers
-  containers=$(docker ps --filter "label=playground.managed=true" --filter "status=running" --format "{{.Names}}" | sort)
-  
-  if [ -z "$containers" ]; then
-    echo "No active containers found."
-    read -r -s -n 1
-    return
-  fi
-  
-  trap 'echo -e "\n${GREEN}Returning to menu...${NC}"; sleep 1; return' INT
+  # 2. Imposta la trap INT: esegue la pulizia e poi termina la funzione con 'return'.
+  # Il 'return' esce dalla funzione e riporta il controllo al main_menu.
+  trap 'echo -e "\n${GREEN}Ritorno al menu...${NC}"; sleep 1; return' INT
   
   while true; do
-    clear
+    clear 
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║              Container Statistics                          ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo -e "${YELLOW}Press Enter to refresh, Ctrl+C to return to menu${NC}"
+    echo -e "${YELLOW}Premi INVIO per aggiornare, Ctrl+C per tornare al menu.${NC}"
     echo ""
-    echo -e "${CYAN}NAME\t\t\tIMAGE\t\t\tSTATUS${NC}"
-    echo -e "────────────────────────────────────────────────────────────"
+
+    containers_ids=$(docker ps --filter "label=playground.managed=true" --filter "status=running" -q)
     
-    # Re-check running containers on each refresh
-    containers=$(docker ps --filter "label=playground.managed=true" --filter "status=running" --format "{{.Names}}" | sort)
-    
-    if [ -z "$containers" ]; then
-      echo -e "${RED}No running containers found.${NC}"
-      echo ""
-      read -r -s -n 1
+    if [ -z "$containers_ids" ]; then
+      echo -e "${RED}Attenzione: Nessun contenitore in esecuzione trovato.${NC}"
+      read -r -p "Premi Invio per continuare..." || true
+      # Rimuove il "return" qui, in modo che il controllo segua il flusso normale
       break
     fi
+
+    echo -e "${CYAN}NAME\t\t\tCPU %\tMEM USAGE / LIMIT\tMEM %\tNET I/O\t\tBLOCK I/O${NC}"
+    echo -e "──────────────────────────────────────────────────────────────────────────────────────"
     
-    while IFS= read -r container; do
-      image=$(docker inspect --format '{{.Config.Image}}' "$container" 2>/dev/null | cut -d':' -f1 || echo "N/A")
-      status=$(docker inspect --format '{{.State.Status}}' "$container" 2>/dev/null || echo "N/A")
-      
-      if [ "$status" = "running" ]; then
-        status_color="${GREEN}"
-      else
-        status_color="${RED}"
-      fi
-      
-      echo -e "${container}\t${image}\t${status_color}${status}${NC}"
-    done <<< "$containers"
+    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}" $containers_ids | tail -n +2
     
-    echo ""
-    read -r -s -n 1 input
-    if [ -z "$input" ]; then
-      continue
-    fi
-    break
+    # 3. Blocco di input (read)
+    # read -r -p "" input
+    # Usiamo 'read -r -s -n 1' senza un loop interno, in modo che la trap sia l'unico modo per uscire.
+    # Quando l'utente preme INVIO, la read termina.
+    # Quando l'utente preme Ctrl+C, la trap viene attivata e ritorna al menu.
+    
+    # Il problema era che Ctrl+C interrompeva la read, ma non forniva una nuova riga,
+    # lasciando il terminale confuso. Aggiungiamo un semplice sleep per resettare il segnale.
+    
+    echo -n "" # Assicura una riga pulita per la read successiva
+
+    # Usiamo read -r -s per un'esperienza migliore, se Invio è la tua unica opzione.
+    read -r -p "" input
+    
+    # Questo punto viene raggiunto solo se l'utente preme Invio.
   done
   
-  trap - INT
+  # 4. Ripristina la trap INT originale.
+  trap "$old_trap" INT 
 }
 
 #############################################
@@ -1453,15 +1467,25 @@ show_help() {
 #############################################
 # Main Menu
 #############################################
+#############################################
+# Main Menu
+#############################################
 main_menu() {
   while true; do
     print_header
     
+    # --- Gestione del segnale INT (Ctrl+C) per il menu ---
+    # Se Ctrl+C viene premuto mentre whiptail è attivo, vogliamo tornare
+    # al menu principale e ridisegnarlo.
+    trap 'clear; echo -e "\n${YELLOW}Action interrupted. Returning to menu...${NC}"; continue' INT
+    # --------------------------------------------------------
+
     # Show quick stats
     running=$(docker ps --filter "label=playground.managed=true" -q | wc -l)
     total=$(yq '.images | length' "$CONFIG_FILE")
     echo -e "${CYAN}Status:${NC} ${GREEN}$running${NC} running / ${YELLOW}$total${NC} available\n"
     
+    # Esecuzione del menu whiptail
     choice=$(whiptail --title "Docker Playground Manager v2.4" \
       --menu "Choose an action:" 24 75 16 \
       "1" "▶️  Start containers                [Container]" \
@@ -1481,6 +1505,18 @@ main_menu() {
       "15" "🧹 Cleanup (remove all)           [Maintenance]" \
       "16" "❌ Exit                           " 3>&1 1>&2 2>&3)
     
+    # Check the exit status of whiptail. Status 1 usually means ESC/CANCEL/Ctrl+C.
+    if [ $? -ne 0 ]; then
+        continue # Redraw the menu
+    fi
+    
+    # --- Ripristina la trap di default (dummy) ---
+    # PRIMA di chiamare qualsiasi altra funzione (come container_stats), ripristiniamo la
+    # trap alla 'dummy_trap_handler'. Questo è ESSENZIALE per permettere alle funzioni
+    # chiamate (come container_stats) di impostare e gestire le loro proprie trap in modo sicuro.
+    trap 'dummy_trap_handler' INT
+    # ---------------------------------------------
+    
     case $choice in
       1) start_containers ;;
       2) start_by_category ;;
@@ -1489,7 +1525,7 @@ main_menu() {
       5) list_containers ;;
       6) container_logs ;;
       7) restart_container ;;
-      8) container_stats ;;
+      8) container_stats ;; # La funzione stats ora ha il controllo sicuro del Ctrl+C
       9) show_dashboard ;;
       10) quick_search ;;
       11) browse_catalog ;;
@@ -1499,6 +1535,8 @@ main_menu() {
       15) cleanup_all ;;
       16)
         log "Playground manager exited"
+        # Ripristina la trap di sistema prima di uscire completamente
+        trap - INT
         clear
         echo -e "${GREEN}╔════════════════════════════════════════════════╗${NC}"
         echo -e "${GREEN}║  Thank you for using Docker Playground! 🐳     ║${NC}"
@@ -1507,6 +1545,9 @@ main_menu() {
         exit 0
         ;;
       *)
+        # Se whiptail fallisce o viene selezionata un'opzione non prevista
+        # Ripristina la trap di sistema prima di uscire
+        trap - INT
         exit 0
         ;;
     esac
