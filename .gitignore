@@ -1,0 +1,21 @@
+# Generated files
+docker-compose.yml
+
+# Shared volume directory
+shared-volumes/
+
+# Log files
+playground.log
+playground-logs-*.txt
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# macOS-specific
+.DS_Store
+
+# Editor/IDE files
+.vscode/
+.idea/
