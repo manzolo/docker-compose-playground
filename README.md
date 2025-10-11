@@ -94,7 +94,7 @@ chmod +x create_scripts.sh
 ```
 docker-playground/
 ├── playground.sh              # Main entry point
-├── config.yml                # 103 images configuration with MOTD and scripts
+├── config.yml                # 100+ images configuration with MOTD and scripts
 ├── create_scripts.sh         # Helper to generate example scripts
 ├── lib/                      # Modular library files
 │   ├── config.sh            # Configuration management (yq parsing)
@@ -147,7 +147,7 @@ docker-playground/
 
 #### 🔧 Tools
 - **Search images** - Quick search by name or description (fuzzy matching)
-- **Browse catalog** - Explore all 103 available images organized by category
+- **Browse catalog** - Explore all 100+ available images organized by category
 - **System information** - Display Docker version, disk usage, network info
 - **Help** - Comprehensive usage guide with examples
 - **Debug config** - **NEW!** Troubleshoot configuration issues (shows parsed YAML, scripts, MOTDs)
@@ -325,7 +325,7 @@ chmod +x scripts/my_custom_script.sh
 
 4. Done! The script runs automatically when container starts/stops.
 
-## 📦 Available Images (103)
+## 📦 Available Images (100+)
 
 ### Categories
 
@@ -758,7 +758,7 @@ yq eval '.images."your-container".shell' config.yml
 5. **Regular backups** - Pre-stop scripts handle backups automatically, but export important data manually too
 
 ### Container Management
-1. **Start what you need** - Don't start all 103 containers at once! Use category filtering
+1. **Start what you need** - Don't start all 100+ containers at once! Use category filtering
 2. **Monitor resources** - Use Dashboard and Statistics to track CPU/memory usage
 3. **Regular cleanup** - Stop unused containers to free resources
 4. **Check logs** - If something fails, check container logs and playground.log
