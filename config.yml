@@ -12,6 +12,22 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Ubuntu 24.04 LTS (Noble Numbat) - Latest LTS"
     category: linux
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Ubuntu 24.04 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📦 Package Management:
+         apt update                                    # Update package list
+         apt upgrade                                   # Upgrade packages
+         apt install package_name                      # Install package
+         apt search package_name                       # Search package
+      
+      🔧 System Info:
+         lsb_release -a                                # Ubuntu version
+         uname -a                                      # Kernel info
+         df -h                                         # Disk usage
+         free -h                                       # Memory usage
   
   ubuntu-22:
     image: ubuntu:22.04
@@ -47,6 +63,18 @@ images:
     keep_alive_cmd: tail -f /dev/null
     description: "Alpine Linux 3.19 (Lightweight - 5MB)"
     category: linux
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Alpine Linux Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📦 Package Management (apk):
+         apk update                                    # Update package index
+         apk add package_name                          # Install package
+         apk del package_name                          # Remove package
+         apk search package_name                       # Search package
+      
+      ⚠️  Note: Alpine uses musl libc, not glibc
   
   alpine-edge:
     image: alpine:edge
@@ -107,6 +135,43 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Python 3.13 (Latest)"
     category: programming
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Python 3.13 Quick Reference                   ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🐍 Python Environment:
+         python --version                              # Check version
+         pip --version                                 # Check pip version
+         pip list                                      # List installed packages
+      
+      📦 Package Management:
+         pip install requests                          # Install package
+         pip install -r requirements.txt               # Install from file
+         pip freeze > /shared/requirements.txt         # Export packages
+         pip uninstall package_name                    # Uninstall package
+      
+      🧪 Quick Test:
+         python -c "print('Hello from Python 3.13!')"
+         python /shared/your_script.py
+      
+      🌐 Quick Web Server:
+         cd /shared && python -m http.server 8000
+      
+      📊 Quick Flask App:
+         pip install flask
+         Create /shared/app.py with Flask code
+         python /shared/app.py
+      
+      📝 Virtual Environment (if needed):
+         python -m venv /shared/venv
+         source /shared/venv/bin/activate
+         pip install <packages>
+      
+      🔧 Common Packages (auto-installed):
+         requests, beautifulsoup4, pandas, numpy
+    scripts:
+      post_start: python_init.sh
   
   python-3.12:
     image: python:3.12
@@ -114,6 +179,8 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Python 3.12"
     category: programming
+    scripts:
+      post_start: python_init.sh
   
   python-3.11:
     image: python:3.11
@@ -160,6 +227,40 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Node.js 22 LTS (Latest)"
     category: programming
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Node.js 22 LTS Quick Reference                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🟢 Node.js Environment:
+         node --version                                # Check Node version
+         npm --version                                 # Check npm version
+         npm list -g --depth=0                        # List global packages
+      
+      📦 Package Management:
+         npm init -y                                   # Initialize package.json
+         npm install express                           # Install package
+         npm install --save-dev jest                   # Install dev dependency
+         npm install                                   # Install from package.json
+      
+      🚀 Quick Express Server:
+         cd /shared && npm init -y && npm install express
+         Create server.js and run: node server.js
+      
+      🧪 Quick Script Test:
+         node -e "console.log('Hello from Node.js 22!')"
+         node /shared/your_script.js
+      
+      🔧 Useful Commands:
+         npm run script_name                           # Run npm script
+         npm outdated                                  # Check outdated packages
+         npm update                                    # Update packages
+         npm audit                                     # Security audit
+      
+      📝 Common Packages (auto-installed):
+         express, axios
+    scripts:
+      post_start: node_init.sh
   
   node-20:
     image: node:20
@@ -167,6 +268,8 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Node.js 20 LTS"
     category: programming
+    scripts:
+      post_start: node_init.sh
   
   node-18:
     image: node:18
@@ -206,6 +309,48 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Go 1.22 (Latest)"
     category: programming
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Go 1.22 Quick Reference                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔵 Go Environment:
+         go version                                    # Check Go version
+         go env                                        # Show environment
+      
+      📦 Module Management:
+         go mod init myapp                             # Initialize module
+         go mod tidy                                   # Clean dependencies
+         go get package@version                        # Add dependency
+         go mod download                               # Download dependencies
+      
+      🚀 Build & Run:
+         go run main.go                                # Run directly
+         go build -o myapp                             # Build executable
+         go build -o /shared/myapp                     # Build to shared
+      
+      🧪 Testing:
+         go test                                       # Run tests
+         go test -v                                    # Verbose output
+         go test -cover                                # With coverage
+         go test -bench=.                              # Run benchmarks
+      
+      📝 Quick HTTP Server:
+         Create /shared/server.go:
+           package main
+           import ("fmt"; "net/http")
+           func main() {
+             http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+               fmt.Fprintf(w, "Hello from Go!")
+             })
+             http.ListenAndServe(":8080", nil)
+           }
+         go run /shared/server.go
+      
+      🔧 Useful Commands:
+         go fmt ./...                                  # Format code
+         go vet ./...                                  # Examine code
+         go doc package                                # View documentation
   
   golang-alpine:
     image: golang:1.22-alpine
@@ -220,6 +365,46 @@ images:
     keep_alive_cmd: sleep infinity
     description: "Rust 1.75 (Latest stable)"
     category: programming
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Rust 1.75 Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🦀 Rust Environment:
+         rustc --version                               # Compiler version
+         cargo --version                               # Cargo version
+         rustup update                                 # Update Rust
+      
+      📦 Cargo Commands:
+         cargo new myapp                               # Create new project
+         cargo init                                    # Initialize in current dir
+         cargo build                                   # Build debug
+         cargo build --release                         # Build optimized
+         cargo run                                     # Build and run
+         cargo test                                    # Run tests
+         cargo check                                   # Check without building
+      
+      🚀 Quick Program:
+         Create /shared/hello.rs:
+           fn main() {
+               println!("Hello from Rust!");
+               let numbers = vec![1, 2, 3, 4, 5];
+               let sum: i32 = numbers.iter().sum();
+               println!("Sum: {}", sum);
+           }
+         rustc /shared/hello.rs -o /shared/hello
+         /shared/hello
+      
+      🔧 Useful Commands:
+         cargo fmt                                     # Format code
+         cargo clippy                                  # Lint code
+         cargo doc --open                              # Generate docs
+         cargo clean                                   # Clean build
+      
+      📊 Dependencies:
+         cargo add serde                               # Add dependency
+         cargo update                                  # Update dependencies
+         cargo tree                                    # Show dependency tree
   
   rust-alpine:
     image: rust:alpine
@@ -400,12 +585,55 @@ images:
     keep_alive_cmd: postgres
     description: "PostgreSQL 16 (Latest)"
     category: database
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                PostgreSQL 16 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 5432
+         User: playground
+         Password: playground
+         Database: playground
+      
+      📊 Basic Commands:
+         psql -U playground                            # Connect to PostgreSQL
+         \l                                            # List databases
+         \c database_name                              # Connect to database
+         \dt                                           # List tables
+         \d table_name                                 # Describe table
+         \q                                            # Quit
+      
+      💾 Backup & Restore:
+         pg_dump -U playground playground > /shared/backup.sql
+         pg_dump -U playground -Fc playground > /shared/backup.dump
+         psql -U playground playground < /shared/backup.sql
+         pg_restore -U playground -d playground /shared/backup.dump
+      
+      📝 Quick Table Example:
+         CREATE TABLE users (
+           id SERIAL PRIMARY KEY,
+           name VARCHAR(100),
+           email VARCHAR(100) UNIQUE,
+           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );
+         INSERT INTO users (name, email) VALUES ('Test', 'test@example.com');
+         SELECT * FROM users;
+      
+      🔍 Useful Queries:
+         SELECT version();                             # PostgreSQL version
+         SELECT current_database();                    # Current database
+         \timing on                                    # Enable query timing
     environment:
       POSTGRES_PASSWORD: playground
       POSTGRES_USER: playground
       POSTGRES_DB: playground
     ports:
       - "5432:5432"
+    scripts:
+      post_start: postgres_init.sh
+      pre_stop: postgres_backup.sh
   
   postgres-15:
     image: postgres:15
@@ -439,6 +667,41 @@ images:
     keep_alive_cmd: mysqld
     description: "MySQL 8.0 (Latest)"
     category: database
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                    MySQL 8.0 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 3306
+         User: playground / root
+         Password: playground
+         Database: playground
+      
+      📊 Basic Commands:
+         mysql -u root -pplayground                    # Connect as root
+         mysql -u playground -pplayground playground   # Connect to DB
+      
+      📁 Database Operations:
+         SHOW DATABASES;                               # List databases
+         USE playground;                               # Switch database
+         SHOW TABLES;                                  # List tables
+         DESCRIBE tablename;                           # Table structure
+      
+      💾 Quick Test:
+         CREATE TABLE test (id INT, name VARCHAR(50));
+         INSERT INTO test VALUES (1, 'Hello MySQL');
+         SELECT * FROM test;
+      
+      📝 Backup & Restore:
+         mysqldump -u root -pplayground playground > /shared/backup.sql
+         mysql -u root -pplayground playground < /shared/backup.sql
+      
+      🔍 Useful Queries:
+         SELECT USER(), DATABASE();                    # Current user/DB
+         SHOW PROCESSLIST;                            # Active connections
+         SHOW VARIABLES LIKE '%version%';             # MySQL version
     environment:
       MYSQL_ROOT_PASSWORD: playground
       MYSQL_DATABASE: playground
@@ -446,6 +709,9 @@ images:
       MYSQL_PASSWORD: playground
     ports:
       - "3306:3306"
+    scripts:
+      post_start: mysql_init.sh
+      pre_stop: generic_backup.sh
   
   mysql-5.7:
     image: mysql:5.7
@@ -500,6 +766,40 @@ images:
     keep_alive_cmd: mongod
     description: "MongoDB 7 (Latest)"
     category: database
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  MongoDB 7 Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 27017
+         No authentication required (default)
+      
+      📊 Basic Commands:
+         mongosh                                       # Connect to MongoDB
+         show dbs                                      # List databases
+         use mydb                                      # Switch/create database
+         show collections                              # List collections
+         db.collection.find()                          # Show all documents
+      
+      💾 Backup & Restore:
+         mongodump --db playground --out /shared/backup
+         mongorestore --db playground /shared/backup/playground
+         mongoexport --db playground --collection users --out /shared/users.json
+         mongoimport --db playground --collection users --file /shared/users.json
+      
+      🔍 CRUD Operations:
+         db.users.insertOne({name: "John", age: 30})
+         db.users.find({name: "John"})
+         db.users.updateOne({name: "John"}, {$set: {age: 31}})
+         db.users.deleteOne({name: "John"})
+      
+      📈 Aggregation:
+         db.users.aggregate([
+           {$match: {age: {$gte: 18}}},
+           {$group: {_id: "$city", count: {$sum: 1}}}
+         ])
     ports:
       - "27017:27017"
   
@@ -518,6 +818,44 @@ images:
     keep_alive_cmd: redis-server
     description: "Redis 7 (Latest) - In-memory cache"
     category: database
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Redis 7 Quick Reference                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 6379
+         No authentication required (default)
+      
+      📊 Basic Commands:
+         redis-cli                                     # Connect to Redis
+         PING                                          # Test connection
+         INFO                                          # Server information
+         DBSIZE                                        # Number of keys
+         FLUSHDB                                       # Clear current database
+      
+      💾 Backup & Restore:
+         SAVE                                          # Synchronous save
+         BGSAVE                                        # Background save
+         docker cp playground-redis-7:/data/dump.rdb /shared/redis_backup.rdb
+      
+      🔑 String Operations:
+         SET key "value"                               # Set string
+         GET key                                       # Get string
+         MSET key1 "val1" key2 "val2"                 # Set multiple
+         INCR counter                                  # Increment
+         EXPIRE key 3600                               # Set expiry (seconds)
+      
+      📝 List Operations:
+         LPUSH mylist "item1"                          # Push to left
+         RPUSH mylist "item2"                          # Push to right
+         LRANGE mylist 0 -1                            # Get all items
+      
+      🗂️ Hash Operations:
+         HSET user:1 name "John" age 30               # Set hash fields
+         HGET user:1 name                             # Get field
+         HGETALL user:1                               # Get all fields
     ports:
       - "6379:6379"
   
@@ -603,6 +941,51 @@ images:
     keep_alive_cmd: nginx -g 'daemon off;'
     description: "Nginx (Latest) - Web server"
     category: webserver
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Nginx Quick Reference                        ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 Nginx Info:
+         nginx -v                                      # Version
+         nginx -t                                      # Test configuration
+         nginx -T                                      # Test and dump config
+      
+      📁 Important Paths:
+         Config: /etc/nginx/nginx.conf
+         Sites: /etc/nginx/conf.d/
+         HTML: /usr/share/nginx/html/
+         Logs: /var/log/nginx/
+      
+      🔧 Basic Commands:
+         nginx -s reload                               # Reload config
+         nginx -s stop                                 # Stop nginx
+         nginx -s quit                                 # Graceful shutdown
+      
+      📝 Simple Site Setup:
+         echo '<h1>Hello from Nginx!</h1>' > /shared/index.html
+         
+         cat > /etc/nginx/conf.d/mysite.conf <<'EOF'
+         server {
+             listen 80;
+             server_name localhost;
+             root /shared;
+             index index.html;
+             location / {
+                 try_files $uri $uri/ =404;
+             }
+         }
+         EOF
+         
+         nginx -s reload
+      
+      📊 Check Status:
+         ps aux | grep nginx                           # Check processes
+         curl localhost                                # Test locally
+      
+      🔍 View Logs:
+         tail -f /var/log/nginx/access.log             # Access log
+         tail -f /var/log/nginx/error.log              # Error log
     ports:
       - "8080:80"
   
@@ -712,6 +1095,45 @@ images:
     description: "Docker in Docker"
     category: devops
     privileged: true
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║            Docker in Docker (DinD) Quick Reference            ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      ⚠️  This is Docker in Docker - you can run Docker inside!
+      
+      📊 Basic Docker Commands:
+         docker ps                                     # List running containers
+         docker ps -a                                  # List all containers
+         docker images                                 # List images
+         docker pull ubuntu:latest                     # Pull an image
+         docker run -it ubuntu bash                    # Run interactive
+      
+      🏗️ Building Images:
+         Create Dockerfile in /shared:
+           FROM alpine:latest
+           RUN apk add --no-cache curl
+           CMD ["sh"]
+         
+         cd /shared && docker build -t myimage:latest .
+         docker run -it myimage:latest
+      
+      💾 Container Management:
+         docker start container_name                   # Start container
+         docker stop container_name                    # Stop container
+         docker restart container_name                 # Restart container
+         docker rm container_name                      # Remove container
+         docker exec -it container_name sh             # Execute command
+      
+      🌐 Networking:
+         docker network ls                             # List networks
+         docker network create mynet                   # Create network
+         docker network connect mynet container        # Connect container
+      
+      📦 Volumes:
+         docker volume ls                              # List volumes
+         docker volume create myvol                    # Create volume
+         docker run -v myvol:/data ubuntu             # Mount volume
   
   jenkins:
     image: jenkins/jenkins:lts
