@@ -1,4 +1,3 @@
-```markdown
 # 🐳 Docker Playground Manager v3.0
 
 A professional, modular, feature-rich interactive tool for managing multiple Docker development environments with ease. Perfect for developers who need to quickly spin up containers for testing, development, learning, or experimenting with different technologies.
@@ -609,4 +608,3 @@ Contributions are welcome! Areas for contribution include:
 **Made with ❤️ for the developer community**
 
 *Happy containerizing! 🐳*
-```
