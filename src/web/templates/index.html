@@ -1,163 +1,406 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Docker Playground</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐳 Docker Playground Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>Docker Playground</h1>
-    <input type="text" id="filter" placeholder="Filter images..." onkeyup="filterImages()">
-    <div id="images">
-        {% for name, data in images.items() %}
-        <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}">
-            <h3>{{ name }}</h3>
-            <p>{{ data.description }}</p>
-            {% if running[name] %}
-                <p>Status: {{ running[name].status }}</p>
-                <button class="stop" onclick="stopContainer('{{ running[name].name }}')">Stop</button>
-                <button class="logs" onclick="showLogs('{{ running[name].name }}')">Logs</button>
-                <button class="console" onclick="openConsole('{{ running[name].name }}')">Console</button>
-            {% else %}
-                <p>Status: Not running</p>
-                <button class="start" onclick="startContainer('{{ name }}')">Start</button>
-            {% endif %}
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <h1>🐳 Docker Playground</h1>
+            <p class="subtitle">Manage your containerized development environments</p>
         </div>
-        {% endfor %}
+    </header>
+
+    <!-- Search Bar -->
+    <div class="container">
+        <div class="search-bar">
+            <input type="text" id="filter" placeholder="🔍 Search containers by name or category..." autocomplete="off">
+            <span class="search-count" id="search-count"></span>
+        </div>
     </div>
 
-    <!-- Modal for logs -->
+    <!-- Container Grid -->
+    <div class="container">
+        <div id="images" class="image-grid">
+            {% for name, data in images.items() %}
+            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}" data-container="playground-{{ name }}">
+                <div class="card-header">
+                    <h3>{{ name }}</h3>
+                    <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
+                </div>
+                <p class="card-description">{{ data.description }}</p>
+                
+                <div class="card-status">
+                    {% if running.get(name) %}
+                        <span class="status-indicator status-running">●</span>
+                        <span class="status-text">Running</span>
+                    {% else %}
+                        <span class="status-indicator status-stopped">●</span>
+                        <span class="status-text">Stopped</span>
+                    {% endif %}
+                </div>
+
+                <div class="card-actions">
+                    {% if running.get(name) %}
+                        <button class="btn btn-danger" onclick="stopContainer('{{ name }}', '{{ running[name].name }}')">
+                            <span class="btn-icon">⏹</span> Stop
+                        </button>
+                        <button class="btn btn-primary" onclick="showLogs('{{ running[name].name }}')">
+                            <span class="btn-icon">📋</span> Logs
+                        </button>
+                        <button class="btn btn-success" onclick="openConsole('{{ running[name].name }}', '{{ name }}')">
+                            <span class="btn-icon">💻</span> Console
+                        </button>
+                    {% else %}
+                        <button class="btn btn-success btn-block" onclick="startContainer('{{ name }}')">
+                            <span class="btn-icon">▶</span> Start Container
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Modal for Logs -->
     <div id="logModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('logModal')"></div>
         <div class="modal-content">
-            <span class="close" onclick="closeModal('logModal')">&times;</span>
-            <h2>Logs for <span id="logContainerName"></span></h2>
-            <pre id="logContent"></pre>
+            <div class="modal-header">
+                <h2>📋 Container Logs</h2>
+                <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="log-info">
+                    Container: <strong id="logContainerName"></strong>
+                </div>
+                <pre id="logContent" class="log-content"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('logModal')">Close</button>
+            </div>
         </div>
     </div>
 
-    <!-- Modal for console -->
+    <!-- Modal for Console -->
     <div id="consoleModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeConsole()">&times;</span>
-            <h2>Console for <span id="consoleContainerName"></span></h2>
-            <div id="terminal"></div>
+        <div class="modal-overlay" onclick="closeConsole()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>💻 Interactive Console</h2>
+                <button class="modal-close" onclick="closeConsole()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="console-info">
+                    Container: <strong id="consoleContainerName"></strong>
+                    <span class="console-status" id="consoleStatus">● Connected</span>
+                </div>
+                <div id="terminal" class="terminal-wrapper"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeConsole()">Disconnect</button>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
     <script>
-        const filterInput = document.getElementById('filter');
-        const images = document.getElementsByClassName('image-card');
         let ws = null;
         let term = null;
+        let fitAddon = null;
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icons = {
+                success: '✓',
+                error: '✗',
+                info: 'ℹ',
+                warning: '⚠'
+            };
+            
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type]}</span>
+                <span class="toast-message">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => toast.classList.add('toast-show'), 10);
+            
+            // Auto remove
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Filter/Search
+        const filterInput = document.getElementById('filter');
+        const searchCount = document.getElementById('search-count');
+        const imageCards = document.querySelectorAll('.image-card');
+
+        function updateSearchCount() {
+            const visible = Array.from(imageCards).filter(card => card.style.display !== 'none').length;
+            searchCount.textContent = `${visible} of ${imageCards.length} containers`;
+        }
 
         function filterImages() {
             const filter = filterInput.value.toLowerCase();
-            Array.from(images).forEach(image => {
-                const name = image.getAttribute('data-name').toLowerCase();
-                const category = image.getAttribute('data-category').toLowerCase();
-                image.style.display = (name.includes(filter) || category.includes(filter)) ? '' : 'none';
+            imageCards.forEach(card => {
+                const name = card.getAttribute('data-name').toLowerCase();
+                const category = card.getAttribute('data-category').toLowerCase();
+                const match = name.includes(filter) || category.includes(filter);
+                card.style.display = match ? '' : 'none';
             });
+            updateSearchCount();
         }
 
+        filterInput.addEventListener('input', filterImages);
+        updateSearchCount();
+
+        // Update card UI after state change
+        function updateCardUI(imageName, isRunning, containerName) {
+            const card = document.querySelector(`[data-name="${imageName}"]`);
+            if (!card) return;
+
+            const statusIndicator = card.querySelector('.status-indicator');
+            const statusText = card.querySelector('.status-text');
+            const actions = card.querySelector('.card-actions');
+
+            if (isRunning) {
+                statusIndicator.className = 'status-indicator status-running';
+                statusText.textContent = 'Running';
+                actions.innerHTML = `
+                    <button class="btn btn-danger" onclick="stopContainer('${imageName}', '${containerName}')">
+                        <span class="btn-icon">⏹</span> Stop
+                    </button>
+                    <button class="btn btn-primary" onclick="showLogs('${containerName}')">
+                        <span class="btn-icon">📋</span> Logs
+                    </button>
+                    <button class="btn btn-success" onclick="openConsole('${containerName}', '${imageName}')">
+                        <span class="btn-icon">💻</span> Console
+                    </button>
+                `;
+            } else {
+                statusIndicator.className = 'status-indicator status-stopped';
+                statusText.textContent = 'Stopped';
+                actions.innerHTML = `
+                    <button class="btn btn-success btn-block" onclick="startContainer('${imageName}')">
+                        <span class="btn-icon">▶</span> Start Container
+                    </button>
+                `;
+            }
+        }
+
+        // Start Container (AJAX)
         async function startContainer(image) {
+            const card = document.querySelector(`[data-name="${image}"]`);
+            const btn = card.querySelector('.btn-success');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Starting...';
+
             try {
                 const response = await fetch(`/start/${image}`, { method: 'POST' });
                 const data = await response.json();
-                if (data.status === 'started') {
-                    alert(`Container ${data.container} started`);
-                    location.reload();
+                
+                if (response.ok) {
+                    showToast(`Container ${data.container} started successfully`, 'success');
+                    updateCardUI(image, true, data.container);
                 } else {
-                    alert('Error starting container');
+                    showToast(`Failed to start ${image}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="btn-icon">▶</span> Start Container';
                 }
             } catch (e) {
-                alert(`Error: ${e.message}`);
+                showToast(`Error: ${e.message}`, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-icon">▶</span> Start Container';
             }
         }
 
-        async function stopContainer(container) {
+        // Stop Container (AJAX)
+        async function stopContainer(imageName, containerName) {
+            const card = document.querySelector(`[data-name="${imageName}"]`);
+            const btn = card.querySelector('.btn-danger');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Stopping...';
+
             try {
-                const response = await fetch(`/stop/${container}`, { method: 'POST' });
-                const data = await response.json();
-                if (data.status === 'stopped') {
-                    alert(`Container ${container} stopped`);
-                    location.reload();
+                const response = await fetch(`/stop/${containerName}`, { method: 'POST' });
+                
+                if (response.ok) {
+                    showToast(`Container ${containerName} stopped`, 'success');
+                    updateCardUI(imageName, false, '');
                 } else {
-                    alert('Error stopping container');
+                    showToast(`Failed to stop ${containerName}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
                 }
             } catch (e) {
-                alert(`Error: ${e.message}`);
+                showToast(`Error: ${e.message}`, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
             }
         }
 
+        // Show Logs
         async function showLogs(container) {
             try {
                 const response = await fetch(`/logs/${container}`);
                 const data = await response.json();
+                
                 document.getElementById('logContainerName').textContent = container;
-                document.getElementById('logContent').textContent = data.logs;
-                document.getElementById('logModal').style.display = 'block';
+                document.getElementById('logContent').textContent = data.logs || 'No logs available';
+                openModal('logModal');
             } catch (e) {
-                alert(`Error: ${e.message}`);
+                showToast(`Error loading logs: ${e.message}`, 'error');
             }
+        }
+
+        // Modal Management
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+            document.getElementById(modalId).classList.remove('modal-open');
+            document.body.style.overflow = '';
         }
 
-        function openConsole(container) {
+        // Console Management
+        function openConsole(container, imageName) {
             document.getElementById('consoleContainerName').textContent = container;
-            document.getElementById('consoleModal').style.display = 'block';
+            document.getElementById('consoleStatus').textContent = '● Connecting...';
+            openModal('consoleModal');
+
+            // Cleanup previous terminal
             if (term) {
                 term.dispose();
+                term = null;
             }
+
+            // Create new terminal
             term = new Terminal({
                 cursorBlink: true,
-                theme: { background: '#1e1e1e', foreground: '#ffffff' },
+                theme: {
+                    background: '#1e1e1e',
+                    foreground: '#d4d4d4',
+                    cursor: '#ffffff',
+                    selection: '#264f78'
+                },
                 fontSize: 14,
-                fontFamily: 'Consolas, monospace'
+                fontFamily: '"Cascadia Code", "Fira Code", "Consolas", "Monaco", monospace',
+                scrollback: 10000,
+                allowTransparency: true
             });
-            const webglAddon = new WebglAddon.WebglAddon();
-            term.loadAddon(webglAddon);
+
+            fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+
+            try {
+                const webglAddon = new WebglAddon.WebglAddon();
+                term.loadAddon(webglAddon);
+            } catch (e) {
+                console.warn('WebGL addon not available, using canvas renderer');
+            }
+
             term.open(document.getElementById('terminal'));
-            ws = new WebSocket(`ws://${window.location.host}/ws/console/${container}`);
+            fitAddon.fit();
+
+            // Resize on window resize
+            window.addEventListener('resize', () => {
+                if (fitAddon) fitAddon.fit();
+            });
+
+            // Connect WebSocket
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/console/${container}`);
+
             ws.onopen = () => {
-                console.log("WebSocket connected for", container);
-                term.write("Connected to console. Type commands and press Enter.\r\n");
+                console.log('WebSocket connected');
+                document.getElementById('consoleStatus').textContent = '● Connected';
+                document.getElementById('consoleStatus').className = 'console-status console-connected';
+                term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
             };
+
             ws.onmessage = (event) => {
-                console.log("Received data:", event.data);
                 term.write(event.data);
+                // Auto-scroll to bottom
+                term.scrollToBottom();
             };
+
             ws.onerror = (error) => {
-                console.error("WebSocket error:", error);
-                term.write("\r\nError: WebSocket error\r\n");
+                console.error('WebSocket error:', error);
+                document.getElementById('consoleStatus').textContent = '● Error';
+                document.getElementById('consoleStatus').className = 'console-status console-error';
+                term.write('\r\n\x1b[31m✗ Connection error\x1b[0m\r\n');
             };
+
             ws.onclose = () => {
-                console.log("WebSocket closed for", container);
-                term.write("\r\nConsole disconnected.\r\n");
+                console.log('WebSocket closed');
+                document.getElementById('consoleStatus').textContent = '● Disconnected';
+                document.getElementById('consoleStatus').className = 'console-status console-disconnected';
+                term.write('\r\n\x1b[33m⚠ Console disconnected\x1b[0m\r\n');
             };
+
             term.onData(data => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(data);
-                    console.log("Sent data:", data);
                 }
             });
         }
 
         function closeConsole() {
+            // Close WebSocket
             if (ws) {
                 ws.close();
                 ws = null;
             }
+
+            // Dispose terminal
             if (term) {
                 term.dispose();
                 term = null;
             }
-            document.getElementById('consoleModal').style.display = 'none';
+
+            fitAddon = null;
+
+            // Close modal
+            closeModal('consoleModal');
         }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // ESC to close modals
+            if (e.key === 'Escape') {
+                if (document.getElementById('consoleModal').classList.contains('modal-open')) {
+                    closeConsole();
+                } else if (document.getElementById('logModal').classList.contains('modal-open')) {
+                    closeModal('logModal');
+                }
+            }
+            // Ctrl+K to focus search
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                filterInput.focus();
+            }
+        });
     </script>
 </body>
 </html>

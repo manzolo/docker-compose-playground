@@ -8,6 +8,8 @@ import yaml
 import logging
 import glob
 import asyncio
+import subprocess
+import os
 
 # Configura logging
 logging.basicConfig(
@@ -25,6 +27,8 @@ docker_client = docker.from_env()
 # Path alla directory config.d e al file config.yml
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config.d"
 CONFIG_FILE = Path(__file__).parent.parent.parent / "config.yml"
+SCRIPTS_DIR = Path(__file__).parent.parent.parent / "scripts"
+SHARED_DIR = Path(__file__).parent.parent.parent / "shared-volumes"
 
 # Carica configurazioni da config.yml e config.d
 def load_config():
@@ -58,6 +62,73 @@ def load_config():
         raise HTTPException(500, "No valid configurations found")
     
     return dict(sorted(images.items(), key=lambda x: x[0].lower()))
+
+def execute_script(script_config, container_name, image_name):
+    """Execute post-start or pre-stop script"""
+    if not script_config:
+        return
+    
+    try:
+        # Check if it's inline script
+        if isinstance(script_config, dict) and 'inline' in script_config:
+            logger.info("Executing inline script for %s", container_name)
+            script_content = script_config['inline']
+            
+            # Create temporary script file
+            temp_script = f"/tmp/playground-script-{container_name}.sh"
+            with open(temp_script, 'w') as f:
+                f.write("#!/bin/bash\n")
+                f.write(f'CONTAINER_NAME="{container_name}"\n')
+                f.write(f'SHARED_DIR="{SHARED_DIR}"\n')
+                f.write(script_content)
+            
+            os.chmod(temp_script, 0o755)
+            
+            # Execute script
+            result = subprocess.run(
+                ['bash', temp_script, container_name],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if result.stdout:
+                logger.info("Script output: %s", result.stdout)
+            if result.stderr:
+                logger.warning("Script stderr: %s", result.stderr)
+            
+            # Cleanup
+            os.remove(temp_script)
+            
+        # Check if it's file-based script
+        elif isinstance(script_config, str):
+            script_path = SCRIPTS_DIR / script_config
+            if script_path.exists():
+                logger.info("Executing script file: %s", script_config)
+                result = subprocess.run(
+                    ['bash', str(script_path), container_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    env={**os.environ, 'SHARED_DIR': str(SHARED_DIR)}
+                )
+                
+                if result.stdout:
+                    logger.info("Script output: %s", result.stdout)
+                if result.stderr:
+                    logger.warning("Script stderr: %s", result.stderr)
+            else:
+                logger.warning("Script file not found: %s", script_path)
+    
+    except subprocess.TimeoutExpired:
+        logger.error("Script timeout for %s", container_name)
+    except Exception as e:
+        logger.error("Script execution failed for %s: %s", container_name, str(e))
+
+def get_motd(image_name, config):
+    """Get MOTD for image"""
+    img_data = config.get(image_name, {})
+    return img_data.get('motd', '')
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -110,13 +181,20 @@ async def start_container(image: str):
             name=container_name,
             environment=img_data.get("environment", {}),
             ports=ports,
-            volumes=[f"{Path.cwd() / 'shared-volumes'}:/shared"],
+            volumes=[f"{SHARED_DIR}:/shared"],
             command=img_data["keep_alive_cmd"],
             stdin_open=True,
             tty=True,
             labels={"playground.managed": "true"}
         )
         logger.info("Container started: %s", container.name)
+        
+        # Execute post-start script
+        scripts = img_data.get('scripts', {})
+        if 'post_start' in scripts:
+            logger.info("Running post-start script for %s", image)
+            execute_script(scripts['post_start'], container_name, image)
+        
         return {"status": "started", "container": container.name}
     except Exception as e:
         logger.error("Failed to start %s: %s", image, str(e))
@@ -126,9 +204,23 @@ async def start_container(image: str):
 async def stop_container(container: str):
     logger.info("Stopping container: %s", container)
     try:
+        # Get image name from container name
+        image_name = container.replace("playground-", "", 1)
+        config = load_config()
+        
+        # Execute pre-stop script
+        if image_name in config:
+            scripts = config[image_name].get('scripts', {})
+            if 'pre_stop' in scripts:
+                logger.info("Running pre-stop script for %s", image_name)
+                execute_script(scripts['pre_stop'], container, image_name)
+        
+        # Stop and remove container
         cont = docker_client.containers.get(container)
         cont.stop()
         cont.remove()
+        logger.info("Container stopped: %s", container)
+        
         return {"status": "stopped"}
     except docker.errors.NotFound:
         raise HTTPException(404, "Container not found")
@@ -147,6 +239,17 @@ async def get_logs(container: str):
     except Exception as e:
         raise HTTPException(500, str(e))
 
+@app.get("/motd/{image}")
+async def get_motd_endpoint(image: str):
+    """Get MOTD for an image"""
+    try:
+        config = load_config()
+        motd = get_motd(image, config)
+        return {"motd": motd}
+    except Exception as e:
+        logger.error("Error getting MOTD for %s: %s", image, str(e))
+        return {"motd": ""}
+
 @app.websocket("/ws/console/{container}")
 async def websocket_console(websocket: WebSocket, container: str):
     await websocket.accept()
@@ -157,6 +260,9 @@ async def websocket_console(websocket: WebSocket, container: str):
         config = load_config()
         image_name = container.replace("playground-", "", 1)
         shell = config.get(image_name, {}).get("shell", "/bin/bash")
+        
+        # Get MOTD
+        motd = get_motd(image_name, config)
         
         # Create exec instance
         exec_instance = docker_client.api.exec_create(
@@ -178,20 +284,21 @@ async def websocket_console(websocket: WebSocket, container: str):
         
         logger.info("Console session started for %s", container)
         
+        # Send MOTD if available
+        if motd:
+            await websocket.send_text(motd + "\r\n\r\n")
+        
         async def read_from_container():
             """Read output from container and send to websocket"""
             while True:
                 try:
-                    await asyncio.sleep(0.01)  # Small delay to prevent busy waiting
+                    await asyncio.sleep(0.01)
                     try:
                         data = socket.recv(4096)
                         if data:
-                            # Decode and send to websocket
                             text = data.decode('utf-8', errors='replace')
                             await websocket.send_text(text)
-                            logger.debug("Sent %d bytes to websocket", len(text))
                     except BlockingIOError:
-                        # No data available, continue
                         continue
                 except Exception as e:
                     logger.error("Error reading from container: %s", str(e))
@@ -204,7 +311,6 @@ async def websocket_console(websocket: WebSocket, container: str):
                     data = await websocket.receive_text()
                     if data:
                         socket.send(data.encode('utf-8'))
-                        logger.debug("Sent %d bytes to container", len(data))
                 except WebSocketDisconnect:
                     logger.info("WebSocket disconnected")
                     break
@@ -212,7 +318,6 @@ async def websocket_console(websocket: WebSocket, container: str):
                     logger.error("Error writing to container: %s", str(e))
                     break
         
-        # Run both tasks concurrently
         await asyncio.gather(
             read_from_container(),
             write_to_container(),
