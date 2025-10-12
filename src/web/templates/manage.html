@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛠️ Advanced Manager - Docker Playground</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <h1>🛠️ Advanced Manager</h1>
+            <p class="subtitle">Bulk operations and system management</p>
+            <nav class="header-nav">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/manage" class="nav-link active">Advanced Manager</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="stat-total">{{ total_images }}</div>
+                    <div class="stat-label">Total Containers</div>
+                </div>
+            </div>
+            <div class="stat-card stat-success">
+                <div class="stat-icon">▶</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="stat-running">{{ running_count }}</div>
+                    <div class="stat-label">Running</div>
+                </div>
+            </div>
+            <div class="stat-card stat-warning">
+                <div class="stat-icon">⏸</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="stat-stopped">{{ stopped_count }}</div>
+                    <div class="stat-label">Stopped</div>
+                </div>
+            </div>
+            <div class="stat-card stat-info">
+                <div class="stat-icon">🌐</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ network_info.name }}</div>
+                    <div class="stat-label">Network</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Operations -->
+        <div class="manager-section">
+            <h2>🚀 Bulk Operations</h2>
+            <div class="action-grid">
+                <button class="action-card" onclick="startByCategory()">
+                    <span class="action-icon">▶</span>
+                    <h3>Start by Category</h3>
+                    <p>Start multiple containers from a specific category</p>
+                </button>
+
+                <button class="action-card action-danger" onclick="stopAll()">
+                    <span class="action-icon">⏹</span>
+                    <h3>Stop All</h3>
+                    <p>Stop all running containers at once</p>
+                </button>
+
+                <button class="action-card action-warning" onclick="restartAll()">
+                    <span class="action-icon">🔄</span>
+                    <h3>Restart All</h3>
+                    <p>Restart all running containers</p>
+                </button>
+
+                <button class="action-card action-danger" onclick="cleanupAll()">
+                    <span class="action-icon">🧹</span>
+                    <h3>Cleanup All</h3>
+                    <p>Stop and remove ALL containers</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- System Information -->
+        <div class="manager-section">
+            <h2>📊 System Information</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>🐳 Docker Info</h3>
+                    <pre id="docker-info">Loading...</pre>
+                </div>
+                <div class="info-card">
+                    <h3>🌐 Network Details</h3>
+                    <pre id="network-info">Loading...</pre>
+                </div>
+                <div class="info-card">
+                    <h3>💾 Volume Info</h3>
+                    <pre id="volume-info">Loading...</pre>
+                </div>
+                <div class="info-card">
+                    <h3>📋 Active Containers</h3>
+                    <div id="active-list">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Browser -->
+        <div class="manager-section">
+            <h2>📚 Browse by Category</h2>
+            <div class="category-browser">
+                {% for category, count in categories.items() %}
+                <div class="category-item" onclick="viewCategory('{{ category }}')">
+                    <div class="category-header">
+                        <span class="category-name">{{ category|title }}</span>
+                        <span class="category-count">{{ count }} containers</span>
+                    </div>
+                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); startCategory('{{ category }}')">
+                        Start All
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Export & Logs -->
+        <div class="manager-section">
+            <h2>📤 Export & Logs</h2>
+            <div class="action-grid">
+                <button class="action-card action-info" onclick="exportConfig()">
+                    <span class="action-icon">📄</span>
+                    <h3>Export Configuration</h3>
+                    <p>Download current configuration as YAML</p>
+                </button>
+
+                <button class="action-card action-info" onclick="viewLogs()">
+                    <span class="action-icon">📋</span>
+                    <h3>View Server Logs</h3>
+                    <p>Check application logs</p>
+                </button>
+
+                <button class="action-card action-info" onclick="exportBackups()">
+                    <span class="action-icon">💾</span>
+                    <h3>Manage Backups</h3>
+                    <p>View and manage container backups</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/manager.js"></script>
+</body>
+</html>

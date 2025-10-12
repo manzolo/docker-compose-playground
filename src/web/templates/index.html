@@ -16,14 +16,50 @@
         <div class="container">
             <h1>🐳 Docker Playground</h1>
             <p class="subtitle">Manage your containerized development environments</p>
+            <nav class="header-nav">
+                <a href="/" class="nav-link active">Dashboard</a>
+                <a href="/manage" class="nav-link">Advanced Manager</a>
+            </nav>
         </div>
     </header>
 
-    <!-- Search Bar -->
+    <!-- Filters & Stats Bar -->
     <div class="container">
-        <div class="search-bar">
-            <input type="text" id="filter" placeholder="🔍 Search containers by name or category..." autocomplete="off">
-            <span class="search-count" id="search-count"></span>
+        <div class="filters-bar">
+            <div class="search-section">
+                <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
+                <span class="search-count" id="search-count"></span>
+            </div>
+            
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all" onclick="filterByStatus('all')">
+                    <span class="filter-icon">📦</span> All
+                    <span class="filter-badge" id="count-all">0</span>
+                </button>
+                <button class="filter-btn" data-filter="running" onclick="filterByStatus('running')">
+                    <span class="filter-icon">▶</span> Running
+                    <span class="filter-badge badge-success" id="count-running">0</span>
+                </button>
+                <button class="filter-btn" data-filter="stopped" onclick="filterByStatus('stopped')">
+                    <span class="filter-icon">⏹</span> Stopped
+                    <span class="filter-badge badge-secondary" id="count-stopped">0</span>
+                </button>
+            </div>
+
+            <div class="category-filter">
+                <select id="category-filter" onchange="filterByCategory(this.value)">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category|title }} ({{ category_counts[category] }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="bulk-actions">
+                <button class="btn btn-sm btn-danger" onclick="stopAllRunning()" title="Stop all running containers">
+                    <span class="btn-icon">⏹</span> Stop All
+                </button>
+            </div>
         </div>
     </div>
 
@@ -114,357 +150,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
-    <script>
-        let ws = null;
-        let term = null;
-        let fitAddon = null;
+    <script src="/static/app.js"></script>
 
-        // Toast Notification System
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            
-            const icons = {
-                success: '✓',
-                error: '✗',
-                info: 'ℹ',
-                warning: '⚠'
-            };
-            
-            toast.innerHTML = `
-                <span class="toast-icon">${icons[type]}</span>
-                <span class="toast-message">${message}</span>
-            `;
-            
-            container.appendChild(toast);
-            
-            // Animate in
-            setTimeout(() => toast.classList.add('toast-show'), 10);
-            
-            // Auto remove
-            setTimeout(() => {
-                toast.classList.remove('toast-show');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-
-        // Filter/Search
-        const filterInput = document.getElementById('filter');
-        const searchCount = document.getElementById('search-count');
-        const imageCards = document.querySelectorAll('.image-card');
-
-        function updateSearchCount() {
-            const visible = Array.from(imageCards).filter(card => card.style.display !== 'none').length;
-            searchCount.textContent = `${visible} of ${imageCards.length} containers`;
-        }
-
-        function filterImages() {
-            const filter = filterInput.value.toLowerCase();
-            imageCards.forEach(card => {
-                const name = card.getAttribute('data-name').toLowerCase();
-                const category = card.getAttribute('data-category').toLowerCase();
-                const match = name.includes(filter) || category.includes(filter);
-                card.style.display = match ? '' : 'none';
-            });
-            updateSearchCount();
-        }
-
-        filterInput.addEventListener('input', filterImages);
-        updateSearchCount();
-
-        // Update card UI after state change
-        function updateCardUI(imageName, isRunning, containerName) {
-            const card = document.querySelector(`[data-name="${imageName}"]`);
-            if (!card) return;
-
-            const statusIndicator = card.querySelector('.status-indicator');
-            const statusText = card.querySelector('.status-text');
-            const actions = card.querySelector('.card-actions');
-
-            if (isRunning) {
-                statusIndicator.className = 'status-indicator status-running';
-                statusText.textContent = 'Running';
-                actions.innerHTML = `
-                    <button class="btn btn-danger" onclick="stopContainer('${imageName}', '${containerName}')">
-                        <span class="btn-icon">⏹</span> Stop
-                    </button>
-                    <button class="btn btn-primary" onclick="showLogs('${containerName}')">
-                        <span class="btn-icon">📋</span> Logs
-                    </button>
-                    <button class="btn btn-success" onclick="openConsole('${containerName}', '${imageName}')">
-                        <span class="btn-icon">💻</span> Console
-                    </button>
-                `;
-            } else {
-                statusIndicator.className = 'status-indicator status-stopped';
-                statusText.textContent = 'Stopped';
-                actions.innerHTML = `
-                    <button class="btn btn-success btn-block" onclick="startContainer('${imageName}')">
-                        <span class="btn-icon">▶</span> Start Container
-                    </button>
-                `;
-            }
-        }
-
-        // Start Container (AJAX)
-        async function startContainer(image) {
-            const card = document.querySelector(`[data-name="${image}"]`);
-            const btn = card.querySelector('.btn-success');
-            const originalHTML = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Starting...';
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout
-
-                const response = await fetch(`/start/${image}`, { 
-                    method: 'POST',
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                const data = await response.json();
-                
-                if (response.ok && data.ready) {
-                    showToast(`Container ${data.container} started successfully`, 'success');
-                    updateCardUI(image, true, data.container);
-                } else if (response.ok) {
-                    // Started but not ready yet
-                    showToast(`Container ${data.container} is starting...`, 'info');
-                    btn.innerHTML = '<span class="spinner"></span> Please wait...';
-                    // Poll status
-                    pollContainerStatus(image, btn);
-                } else {
-                    const errorMsg = data.detail || 'Failed to start container';
-                    showToast(`Error: ${errorMsg}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = originalHTML;
-                }
-            } catch (e) {
-                if (e.name === 'AbortError') {
-                    showToast(`Timeout starting ${image} - check container logs`, 'warning');
-                    // Still try to update UI in case it actually started
-                    setTimeout(() => location.reload(), 2000);
-                } else {
-                    showToast(`Error: ${e.message}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = originalHTML;
-                }
-            }
-        }
-
-        // Poll container status after start
-        async function pollContainerStatus(image, btn) {
-            let attempts = 0;
-            const maxAttempts = 20; // 10 seconds total
-            
-            const poll = async () => {
-                try {
-                    const response = await fetch('/');
-                    const text = await response.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(text, 'text/html');
-                    const newCard = doc.querySelector(`[data-name="${image}"]`);
-                    
-                    if (newCard) {
-                        const statusText = newCard.querySelector('.status-text').textContent;
-                        if (statusText === 'Running') {
-                            showToast(`Container ${image} is now ready!`, 'success');
-                            location.reload();
-                            return;
-                        }
-                    }
-                    
-                    attempts++;
-                    if (attempts < maxAttempts) {
-                        setTimeout(poll, 500);
-                    } else {
-                        showToast(`Container may still be starting - refresh page to check`, 'warning');
-                        btn.disabled = false;
-                        btn.innerHTML = '<span class="btn-icon">▶</span> Start Container';
-                    }
-                } catch (e) {
-                    console.error('Poll error:', e);
-                    attempts++;
-                    if (attempts < maxAttempts) {
-                        setTimeout(poll, 500);
-                    }
-                }
-            };
-            
-            poll();
-        }
-
-        // Stop Container (AJAX)
-        async function stopContainer(imageName, containerName) {
-            const card = document.querySelector(`[data-name="${imageName}"]`);
-            const btn = card.querySelector('.btn-danger');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Stopping...';
-
-            try {
-                const response = await fetch(`/stop/${containerName}`, { method: 'POST' });
-                
-                if (response.ok) {
-                    showToast(`Container ${containerName} stopped`, 'success');
-                    updateCardUI(imageName, false, '');
-                } else {
-                    showToast(`Failed to stop ${containerName}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
-                }
-            } catch (e) {
-                showToast(`Error: ${e.message}`, 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
-            }
-        }
-
-        // Show Logs
-        async function showLogs(container) {
-            try {
-                const response = await fetch(`/logs/${container}`);
-                const data = await response.json();
-                
-                document.getElementById('logContainerName').textContent = container;
-                document.getElementById('logContent').textContent = data.logs || 'No logs available';
-                openModal('logModal');
-            } catch (e) {
-                showToast(`Error loading logs: ${e.message}`, 'error');
-            }
-        }
-
-        // Modal Management
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('modal-open');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('modal-open');
-            document.body.style.overflow = '';
-        }
-
-        // Console Management
-        function openConsole(container, imageName) {
-            document.getElementById('consoleContainerName').textContent = container;
-            document.getElementById('consoleStatus').textContent = '● Connecting...';
-            openModal('consoleModal');
-
-            // Cleanup previous terminal
-            if (term) {
-                term.dispose();
-                term = null;
-            }
-
-            // Create new terminal
-            term = new Terminal({
-                cursorBlink: true,
-                theme: {
-                    background: '#1e1e1e',
-                    foreground: '#d4d4d4',
-                    cursor: '#ffffff',
-                    selection: '#264f78'
-                },
-                fontSize: 14,
-                fontFamily: '"Cascadia Code", "Fira Code", "Consolas", "Monaco", monospace',
-                scrollback: 10000,
-                allowTransparency: true
-            });
-
-            fitAddon = new FitAddon.FitAddon();
-            term.loadAddon(fitAddon);
-
-            try {
-                const webglAddon = new WebglAddon.WebglAddon();
-                term.loadAddon(webglAddon);
-            } catch (e) {
-                console.warn('WebGL addon not available, using canvas renderer');
-            }
-
-            term.open(document.getElementById('terminal'));
-            fitAddon.fit();
-
-            // Resize on window resize
-            window.addEventListener('resize', () => {
-                if (fitAddon) fitAddon.fit();
-            });
-
-            // Connect WebSocket
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${window.location.host}/ws/console/${container}`);
-
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                document.getElementById('consoleStatus').textContent = '● Connected';
-                document.getElementById('consoleStatus').className = 'console-status console-connected';
-                term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
-            };
-
-            ws.onmessage = (event) => {
-                term.write(event.data);
-                // Auto-scroll to bottom
-                term.scrollToBottom();
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                document.getElementById('consoleStatus').textContent = '● Error';
-                document.getElementById('consoleStatus').className = 'console-status console-error';
-                term.write('\r\n\x1b[31m✗ Connection error\x1b[0m\r\n');
-            };
-
-            ws.onclose = () => {
-                console.log('WebSocket closed');
-                document.getElementById('consoleStatus').textContent = '● Disconnected';
-                document.getElementById('consoleStatus').className = 'console-status console-disconnected';
-                term.write('\r\n\x1b[33m⚠ Console disconnected\x1b[0m\r\n');
-            };
-
-            term.onData(data => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(data);
-                }
-            });
-        }
-
-        function closeConsole() {
-            // Close WebSocket
-            if (ws) {
-                ws.close();
-                ws = null;
-            }
-
-            // Dispose terminal
-            if (term) {
-                term.dispose();
-                term = null;
-            }
-
-            fitAddon = null;
-
-            // Close modal
-            closeModal('consoleModal');
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            // ESC to close modals
-            if (e.key === 'Escape') {
-                if (document.getElementById('consoleModal').classList.contains('modal-open')) {
-                    closeConsole();
-                } else if (document.getElementById('logModal').classList.contains('modal-open')) {
-                    closeModal('logModal');
-                }
-            }
-            // Ctrl+K to focus search
-            if (e.ctrlKey && e.key === 'k') {
-                e.preventDefault();
-                filterInput.focus();
-            }
-        });
-    </script>
 </body>
 </html>
