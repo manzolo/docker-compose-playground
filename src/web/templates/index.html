@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docker Playground</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Docker Playground</h1>
+    <input type="text" id="filter" placeholder="Filter images..." onkeyup="filterImages()">
+    <div id="images">
+        {% for name, data in images.items() %}
+        <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}">
+            <h3>{{ name }}</h3>
+            <p>{{ data.description }}</p>
+            {% if running[name] %}
+                <p>Status: {{ running[name].status }}</p>
+                <button class="stop" onclick="stopContainer('{{ running[name].name }}')">Stop</button>
+                <button class="logs" onclick="showLogs('{{ running[name].name }}')">Logs</button>
+                <button class="console" onclick="openConsole('{{ running[name].name }}')">Console</button>
+            {% else %}
+                <p>Status: Not running</p>
+                <button class="start" onclick="startContainer('{{ name }}')">Start</button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Modal for logs -->
+    <div id="logModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('logModal')">&times;</span>
+            <h2>Logs for <span id="logContainerName"></span></h2>
+            <pre id="logContent"></pre>
+        </div>
+    </div>
+
+    <!-- Modal for console -->
+    <div id="consoleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeConsole()">&times;</span>
+            <h2>Console for <span id="consoleContainerName"></span></h2>
+            <div id="terminal"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.9.0/lib/xterm-addon-attach.js"></script>
+    <script>
+        const filterInput = document.getElementById('filter');
+        const images = document.getElementsByClassName('image-card');
+        let ws = null;
+        let term = null;
+
+        function filterImages() {
+            const filter = filterInput.value.toLowerCase();
+            Array.from(images).forEach(image => {
+                const name = image.getAttribute('data-name').toLowerCase();
+                const category = image.getAttribute('data-category').toLowerCase();
+                image.style.display = (name.includes(filter) || category.includes(filter)) ? '' : 'none';
+            });
+        }
+
+        async function startContainer(image) {
+            try {
+                const response = await fetch(`/start/${image}`, { method: 'POST' });
+                const data = await response.json();
+                if (data.status === 'started') {
+                    alert(`Container ${data.container} started`);
+                    location.reload();
+                } else {
+                    alert('Error starting container');
+                }
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+        }
+
+        async function stopContainer(container) {
+            try {
+                const response = await fetch(`/stop/${container}`, { method: 'POST' });
+                const data = await response.json();
+                if (data.status === 'stopped') {
+                    alert(`Container ${container} stopped`);
+                    location.reload();
+                } else {
+                    alert('Error stopping container');
+                }
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+        }
+
+        async function showLogs(container) {
+            try {
+                const response = await fetch(`/logs/${container}`);
+                const data = await response.json();
+                document.getElementById('logContainerName').textContent = container;
+                document.getElementById('logContent').textContent = data.logs;
+                document.getElementById('logModal').style.display = 'block';
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function openConsole(container) {
+            document.getElementById('consoleContainerName').textContent = container;
+            document.getElementById('consoleModal').style.display = 'block';
+            if (term) {
+                term.dispose();
+            }
+            term = new Terminal({
+                cursorBlink: true,
+                theme: { background: '#1e1e1e', foreground: '#ffffff' },
+                fontSize: 14,
+                fontFamily: 'Consolas, monospace'
+            });
+            term.open(document.getElementById('terminal'));
+            ws = new WebSocket(`ws://${window.location.host}/ws/console/${container}`);
+            const attachAddon = new AttachAddon.AttachAddon(ws);
+            term.loadAddon(attachAddon);
+            ws.onopen = () => {
+                console.log("WebSocket connected for", container);
+                term.write("Connected to console. Type commands and press Enter.\r\n");
+            };
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                term.write("\r\nError: WebSocket error\r\n");
+            };
+            ws.onclose = () => {
+                console.log("WebSocket closed for", container);
+                term.write("\r\nConsole disconnected.\r\n");
+            };
+            ws.onmessage = (event) => {
+                console.log("Received data:", event.data);
+            };
+        }
+
+        function closeConsole() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            if (term) {
+                term.dispose();
+                term = null;
+            }
+            document.getElementById('consoleModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
