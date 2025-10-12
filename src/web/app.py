@@ -29,6 +29,21 @@ CONFIG_DIR = Path(__file__).parent.parent.parent / "config.d"
 CONFIG_FILE = Path(__file__).parent.parent.parent / "config.yml"
 SCRIPTS_DIR = Path(__file__).parent.parent.parent / "scripts"
 SHARED_DIR = Path(__file__).parent.parent.parent / "shared-volumes"
+NETWORK_NAME = "playground-network"
+
+# Create playground network if not exists
+def ensure_network():
+    """Ensure playground network exists"""
+    try:
+        docker_client.networks.get(NETWORK_NAME)
+        logger.info("Network %s already exists", NETWORK_NAME)
+    except docker.errors.NotFound:
+        logger.info("Creating network %s", NETWORK_NAME)
+        docker_client.networks.create(NETWORK_NAME, driver="bridge")
+        logger.info("Network %s created", NETWORK_NAME)
+
+# Call on startup
+ensure_network()
 
 # Carica configurazioni da config.yml e config.d
 def load_config():
@@ -130,6 +145,33 @@ def get_motd(image_name, config):
     img_data = config.get(image_name, {})
     return img_data.get('motd', '')
 
+def format_motd_for_terminal(motd):
+    """Format MOTD with proper ANSI colors and line endings"""
+    if not motd:
+        return ""
+    
+    # Replace line endings with \r\n for terminal
+    formatted = motd.replace('\n', '\r\n')
+    
+    # Add some ANSI colors for better readability
+    # Headers with ═ get cyan color
+    lines = formatted.split('\r\n')
+    colored_lines = []
+    for line in lines:
+        if '═' in line or '║' in line:
+            # Box drawing characters - cyan
+            colored_lines.append(f'\x1b[36m{line}\x1b[0m')
+        elif line.strip().startswith('🔐') or line.strip().startswith('📊') or line.strip().startswith('📁'):
+            # Section headers - green bold
+            colored_lines.append(f'\x1b[1;32m{line}\x1b[0m')
+        elif line.strip().startswith('💡') or line.strip().startswith('⚠️'):
+            # Tips/warnings - yellow
+            colored_lines.append(f'\x1b[33m{line}\x1b[0m')
+        else:
+            colored_lines.append(line)
+    
+    return '\r\n'.join(colored_lines) + '\r\n'
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     try:
@@ -160,6 +202,9 @@ async def start_container(image: str):
     container_name = f"playground-{image}"
     
     try:
+        # Ensure network exists
+        ensure_network()
+        
         # Remove existing container
         try:
             existing = docker_client.containers.get(container_name)
@@ -174,20 +219,25 @@ async def start_container(image: str):
             host_port, container_port = p.split(":")
             ports[container_port] = host_port
         
+        # Get network
+        network = docker_client.networks.get(NETWORK_NAME)
+        
         # Start container
         container = docker_client.containers.run(
             img_data["image"],
             detach=True,
             name=container_name,
+            hostname=image,  # Use image name as hostname for easy communication
             environment=img_data.get("environment", {}),
             ports=ports,
             volumes=[f"{SHARED_DIR}:/shared"],
             command=img_data["keep_alive_cmd"],
+            network=NETWORK_NAME,  # Connect to playground network
             stdin_open=True,
             tty=True,
             labels={"playground.managed": "true"}
         )
-        logger.info("Container started: %s", container.name)
+        logger.info("Container started: %s on network %s", container.name, NETWORK_NAME)
         
         # Execute post-start script
         scripts = img_data.get('scripts', {})
@@ -261,8 +311,9 @@ async def websocket_console(websocket: WebSocket, container: str):
         image_name = container.replace("playground-", "", 1)
         shell = config.get(image_name, {}).get("shell", "/bin/bash")
         
-        # Get MOTD
+        # Get and format MOTD
         motd = get_motd(image_name, config)
+        formatted_motd = format_motd_for_terminal(motd)
         
         # Create exec instance
         exec_instance = docker_client.api.exec_create(
@@ -284,9 +335,10 @@ async def websocket_console(websocket: WebSocket, container: str):
         
         logger.info("Console session started for %s", container)
         
-        # Send MOTD if available
-        if motd:
-            await websocket.send_text(motd + "\r\n\r\n")
+        # Send formatted MOTD if available
+        if formatted_motd:
+            await websocket.send_text(formatted_motd)
+            logger.debug("Sent MOTD (%d chars) for %s", len(formatted_motd), image_name)
         
         async def read_from_container():
             """Read output from container and send to websocket"""
