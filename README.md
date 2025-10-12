@@ -1,4 +1,4 @@
-# 🐳 Docker Playground Manager v3.0
+# 🐳 Docker Playground Manager
 
 A professional, modular, feature-rich interactive tool for managing multiple Docker development environments with ease. Perfect for developers who need to quickly spin up containers for testing, development, learning, or experimenting with different technologies.
 
@@ -88,6 +88,11 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 - **Docker Python SDK** (auto-installed via `requirements.txt`)
 - **Modern web browser** (Chrome, Firefox, Safari, Edge)
 
+<img width="1883" height="592" alt="image" src="https://github.com/user-attachments/assets/712a5e7a-ad92-4c30-b6dd-e9a472c819bb" />
+<img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/a7e31b44-3fbb-4a0c-8069-2f5ca47ef886" />
+<img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/6af387f7-4f5e-462a-b907-8bf0ded13eb9" />
+
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -100,12 +105,6 @@ cd docker-compose-playground
 # Make the scripts executable
 chmod +x playground.sh start-webui.sh
 
-# Generate example scripts (optional but recommended)
-chmod +x create_scripts.sh
-./create_scripts.sh
-
-# Install Web UI dependencies (optional, for Web UI only)
-pip install -r requirements.txt
 ```
 
 ### Using the TUI
