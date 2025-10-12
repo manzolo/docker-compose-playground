@@ -208,7 +208,8 @@ async def start_container(image: str):
         # Remove existing container
         try:
             existing = docker_client.containers.get(container_name)
-            existing.stop()
+            logger.info("Removing existing container: %s", container_name)
+            existing.stop(timeout=10)
             existing.remove()
         except docker.errors.NotFound:
             pass
@@ -219,36 +220,86 @@ async def start_container(image: str):
             host_port, container_port = p.split(":")
             ports[container_port] = host_port
         
-        # Get network
-        network = docker_client.networks.get(NETWORK_NAME)
-        
         # Start container
+        logger.info("Starting new container: %s", container_name)
         container = docker_client.containers.run(
             img_data["image"],
             detach=True,
             name=container_name,
-            hostname=image,  # Use image name as hostname for easy communication
+            hostname=image,
             environment=img_data.get("environment", {}),
             ports=ports,
             volumes=[f"{SHARED_DIR}:/shared"],
             command=img_data["keep_alive_cmd"],
-            network=NETWORK_NAME,  # Connect to playground network
+            network=NETWORK_NAME,
             stdin_open=True,
             tty=True,
             labels={"playground.managed": "true"}
         )
-        logger.info("Container started: %s on network %s", container.name, NETWORK_NAME)
+        logger.info("Container created: %s", container.name)
         
-        # Execute post-start script
+        # Wait for container to be running (with timeout)
+        max_wait = 30  # 30 seconds max
+        wait_interval = 0.5  # Check every 500ms
+        elapsed = 0
+        
+        while elapsed < max_wait:
+            try:
+                container.reload()  # Refresh container state
+                if container.status == "running":
+                    logger.info("Container %s is now running after %.1fs", container_name, elapsed)
+                    break
+                elif container.status in ["exited", "dead"]:
+                    logger.error("Container %s failed to start: %s", container_name, container.status)
+                    # Get logs for debugging
+                    logs = container.logs(tail=50).decode('utf-8', errors='replace')
+                    logger.error("Container logs: %s", logs)
+                    raise HTTPException(500, f"Container failed to start: {container.status}")
+            except docker.errors.NotFound:
+                logger.error("Container %s not found after creation", container_name)
+                raise HTTPException(500, "Container disappeared after creation")
+            
+            await asyncio.sleep(wait_interval)
+            elapsed += wait_interval
+        
+        # Check final status
+        container.reload()
+        if container.status != "running":
+            logger.warning("Container %s not running after %ds (status: %s)", 
+                          container_name, max_wait, container.status)
+            raise HTTPException(500, f"Container did not start in time (status: {container.status})")
+        
+        # Execute post-start script (async, don't wait)
         scripts = img_data.get('scripts', {})
         if 'post_start' in scripts:
-            logger.info("Running post-start script for %s", image)
-            execute_script(scripts['post_start'], container_name, image)
+            logger.info("Scheduling post-start script for %s", image)
+            # Run in background
+            asyncio.create_task(run_script_async(scripts['post_start'], container_name, image))
         
-        return {"status": "started", "container": container.name}
+        return {
+            "status": "started", 
+            "container": container.name,
+            "ready": True
+        }
+        
+    except docker.errors.ImageNotFound:
+        logger.error("Image not found: %s", img_data["image"])
+        raise HTTPException(404, f"Docker image not found: {img_data['image']}")
+    except docker.errors.APIError as e:
+        logger.error("Docker API error starting %s: %s", image, str(e))
+        raise HTTPException(500, f"Docker error: {str(e)}")
     except Exception as e:
         logger.error("Failed to start %s: %s", image, str(e))
         raise HTTPException(500, str(e))
+
+async def run_script_async(script_config, container_name, image_name):
+    """Run script asynchronously without blocking response"""
+    try:
+        logger.info("Running post-start script for %s", image_name)
+        await asyncio.to_thread(execute_script, script_config, container_name, image_name)
+        logger.info("Post-start script completed for %s", image_name)
+    except Exception as e:
+        logger.error("Post-start script failed for %s: %s", image_name, str(e))
 
 @app.post("/stop/{container}")
 async def stop_container(container: str):

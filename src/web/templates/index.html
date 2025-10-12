@@ -211,26 +211,90 @@
         async function startContainer(image) {
             const card = document.querySelector(`[data-name="${image}"]`);
             const btn = card.querySelector('.btn-success');
+            const originalHTML = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span> Starting...';
 
             try {
-                const response = await fetch(`/start/${image}`, { method: 'POST' });
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout
+
+                const response = await fetch(`/start/${image}`, { 
+                    method: 'POST',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
                 const data = await response.json();
                 
-                if (response.ok) {
+                if (response.ok && data.ready) {
                     showToast(`Container ${data.container} started successfully`, 'success');
                     updateCardUI(image, true, data.container);
+                } else if (response.ok) {
+                    // Started but not ready yet
+                    showToast(`Container ${data.container} is starting...`, 'info');
+                    btn.innerHTML = '<span class="spinner"></span> Please wait...';
+                    // Poll status
+                    pollContainerStatus(image, btn);
                 } else {
-                    showToast(`Failed to start ${image}`, 'error');
+                    const errorMsg = data.detail || 'Failed to start container';
+                    showToast(`Error: ${errorMsg}`, 'error');
                     btn.disabled = false;
-                    btn.innerHTML = '<span class="btn-icon">▶</span> Start Container';
+                    btn.innerHTML = originalHTML;
                 }
             } catch (e) {
-                showToast(`Error: ${e.message}`, 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<span class="btn-icon">▶</span> Start Container';
+                if (e.name === 'AbortError') {
+                    showToast(`Timeout starting ${image} - check container logs`, 'warning');
+                    // Still try to update UI in case it actually started
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast(`Error: ${e.message}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }
             }
+        }
+
+        // Poll container status after start
+        async function pollContainerStatus(image, btn) {
+            let attempts = 0;
+            const maxAttempts = 20; // 10 seconds total
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch('/');
+                    const text = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const newCard = doc.querySelector(`[data-name="${image}"]`);
+                    
+                    if (newCard) {
+                        const statusText = newCard.querySelector('.status-text').textContent;
+                        if (statusText === 'Running') {
+                            showToast(`Container ${image} is now ready!`, 'success');
+                            location.reload();
+                            return;
+                        }
+                    }
+                    
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, 500);
+                    } else {
+                        showToast(`Container may still be starting - refresh page to check`, 'warning');
+                        btn.disabled = false;
+                        btn.innerHTML = '<span class="btn-icon">▶</span> Start Container';
+                    }
+                } catch (e) {
+                    console.error('Poll error:', e);
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, 500);
+                    }
+                }
+            };
+            
+            poll();
         }
 
         // Stop Container (AJAX)
