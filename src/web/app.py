@@ -8,7 +8,6 @@ import yaml
 import logging
 import glob
 import asyncio
-import signal
 
 # Configura logging
 logging.basicConfig(
@@ -27,69 +26,38 @@ docker_client = docker.from_env()
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config.d"
 CONFIG_FILE = Path(__file__).parent.parent.parent / "config.yml"
 
-# Lista per tracciare i socket attivi
-active_sockets = []
-
-# Gestore per Ctrl+C
-def handle_shutdown(loop):
-    tasks = [task for task in asyncio.all_tasks(loop) if task is not asyncio.current_task()]
-    for task in tasks:
-        task.cancel()
-    loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.close()
-
 # Carica configurazioni da config.yml e config.d
 def load_config():
     images = {}
-    
-    # Carica config.yml
     if CONFIG_FILE.exists():
         try:
             with CONFIG_FILE.open("r") as f:
                 config = yaml.safe_load(f)
                 if config and isinstance(config, dict) and "images" in config:
                     images.update(config["images"])
-                    logger.info("Loaded %d images from config.yml: %s", len(config["images"]), list(config["images"].keys()))
-                else:
-                    logger.warning("Invalid or empty config.yml at %s", CONFIG_FILE)
+                    logger.info("Loaded %d images from config.yml", len(config["images"]))
         except yaml.YAMLError as e:
             logger.error("Failed to parse config.yml: %s", str(e))
             raise HTTPException(500, f"Failed to parse config.yml: {str(e)}")
-    else:
-        logger.warning("Config file not found at %s", CONFIG_FILE)
-
-    # Carica e unisce config.d
+    
     if CONFIG_DIR.exists():
         config_files = glob.glob(str(CONFIG_DIR / "*.yml"))
-        logger.info("Found %d config files in %s: %s", len(config_files), CONFIG_DIR, [Path(f).name for f in config_files])
         for config_file in config_files:
             try:
                 with open(config_file, "r") as f:
                     config = yaml.safe_load(f)
-                    if not config or not isinstance(config, dict):
-                        logger.warning("Invalid or empty config file: %s", config_file)
-                        continue
-                    if "images" not in config:
-                        logger.warning("Missing images key in config file: %s", config_file)
-                        continue
-                    images.update(config["images"])
-                    logger.info("Loaded images from %s: %s", config_file, list(config["images"].keys()))
+                    if config and isinstance(config, dict) and "images" in config:
+                        images.update(config["images"])
+                        logger.info("Loaded images from %s", config_file)
             except yaml.YAMLError as e:
-                logger.error("Failed to parse config file %s: %s", config_file, str(e))
+                logger.error("Failed to parse %s: %s", config_file, str(e))
                 continue
-        if not config_files:
-            logger.warning("No config files found in %s", CONFIG_DIR)
-    else:
-        logger.warning("Config directory not found at %s", CONFIG_DIR)
-
+    
     if not images:
-        logger.error("No valid configurations found in config.yml or config.d")
+        logger.error("No valid configurations found")
         raise HTTPException(500, "No valid configurations found")
-
-    # Ordina le immagini alfabeticamente
-    sorted_images = dict(sorted(images.items(), key=lambda x: x[0].lower()))
-    logger.info("Final loaded images: %s", list(sorted_images.keys()))
-    return sorted_images
+    
+    return dict(sorted(images.items(), key=lambda x: x[0].lower()))
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -101,7 +69,6 @@ async def dashboard(request: Request):
             if c.name.startswith("playground-"):
                 image_name = c.name.replace("playground-", "", 1)
                 running_dict[image_name] = {"name": c.name, "status": c.status}
-        logger.info("Loaded %d running containers: %s", len(running_dict), list(running_dict.keys()))
         return templates.TemplateResponse("index.html", {
             "request": request,
             "images": config,
@@ -113,42 +80,30 @@ async def dashboard(request: Request):
 
 @app.post("/start/{image}")
 async def start_container(image: str):
-    logger.info("Attempting to start container for image: %s", image)
+    logger.info("Starting container: %s", image)
     config = load_config()
     if image not in config:
-        logger.error("Image not found in config: %s", image)
         raise HTTPException(404, "Image not found")
+    
     img_data = config[image]
-
-    # Validazione dei dati
-    if "image" not in img_data:
-        logger.error("Missing 'image' key for %s", image)
-        raise HTTPException(500, "Missing 'image' key in config")
-    if "keep_alive_cmd" not in img_data:
-        logger.error("Missing 'keep_alive_cmd' key for %s", image)
-        raise HTTPException(500, "Missing 'keep_alive_cmd' key in config")
-
     container_name = f"playground-{image}"
+    
     try:
-        # Controlla se il container esiste
+        # Remove existing container
         try:
-            existing_container = docker_client.containers.get(container_name)
-            logger.info("Container %s already exists, stopping and removing it", container_name)
-            existing_container.stop()
-            existing_container.remove()
+            existing = docker_client.containers.get(container_name)
+            existing.stop()
+            existing.remove()
         except docker.errors.NotFound:
-            logger.info("No existing container found for %s", container_name)
-
-        # Gestione porte
+            pass
+        
+        # Parse ports
         ports = {}
         for p in img_data.get("ports", []):
-            try:
-                host_port, container_port = p.split(":")
-                ports[container_port] = host_port
-            except ValueError:
-                logger.error("Invalid port format for %s: %s", image, p)
-                raise HTTPException(500, f"Invalid port format: {p}")
-
+            host_port, container_port = p.split(":")
+            ports[container_port] = host_port
+        
+        # Start container
         container = docker_client.containers.run(
             img_data["image"],
             detach=True,
@@ -157,176 +112,125 @@ async def start_container(image: str):
             ports=ports,
             volumes=[f"{Path.cwd() / 'shared-volumes'}:/shared"],
             command=img_data["keep_alive_cmd"],
-            labels={"playground.independent": "true"}
+            stdin_open=True,
+            tty=True,
+            labels={"playground.managed": "true"}
         )
         logger.info("Container started: %s", container.name)
         return {"status": "started", "container": container.name}
-    except docker.errors.DockerException as e:
-        logger.error("Failed to start container %s: %s", image, str(e))
-        raise HTTPException(500, f"Failed to start container: {str(e)}")
     except Exception as e:
-        logger.error("Unexpected error starting container %s: %s", image, str(e))
-        raise HTTPException(500, f"Unexpected error: {str(e)}")
+        logger.error("Failed to start %s: %s", image, str(e))
+        raise HTTPException(500, str(e))
 
 @app.post("/stop/{container}")
 async def stop_container(container: str):
-    logger.info("Attempting to stop container: %s", container)
+    logger.info("Stopping container: %s", container)
     try:
         cont = docker_client.containers.get(container)
-        if not container.startswith("playground-"):
-            logger.error("Container not managed by this dashboard: %s", container)
-            raise HTTPException(400, "Container not managed by this dashboard")
         cont.stop()
         cont.remove()
-        logger.info("Container stopped and removed: %s", container)
         return {"status": "stopped"}
     except docker.errors.NotFound:
-        logger.error("Container not found: %s", container)
         raise HTTPException(404, "Container not found")
     except Exception as e:
-        logger.error("Error stopping container %s: %s", container, str(e))
-        raise HTTPException(500, f"Error stopping container: {str(e)}")
+        logger.error("Error stopping %s: %s", container, str(e))
+        raise HTTPException(500, str(e))
 
 @app.get("/logs/{container}")
 async def get_logs(container: str):
-    logger.info("Fetching logs for container: %s", container)
     try:
         cont = docker_client.containers.get(container)
-        if not container.startswith("playground-"):
-            logger.error("Container not managed by this dashboard: %s", container)
-            raise HTTPException(400, "Container not managed by this dashboard")
         logs = cont.logs(tail=100).decode()
-        logger.info("Logs retrieved for container: %s", container)
         return {"logs": logs}
     except docker.errors.NotFound:
-        logger.error("Container not found: %s", container)
         raise HTTPException(404, "Container not found")
     except Exception as e:
-        logger.error("Error fetching logs for container %s: %s", container, str(e))
-        raise HTTPException(500, f"Error fetching logs: {str(e)}")
+        raise HTTPException(500, str(e))
 
 @app.websocket("/ws/console/{container}")
 async def websocket_console(websocket: WebSocket, container: str):
     await websocket.accept()
-    logger.info("WebSocket connection opened for %s", container)
-    socket = None
+    logger.info("WebSocket opened for %s", container)
+    
     try:
         cont = docker_client.containers.get(container)
-        if not container.startswith("playground-"):
-            logger.error("Container not managed by this dashboard: %s", container)
-            await websocket.send_json({"error": "Container not managed by this dashboard"})
-            await websocket.close()
-            return
-
-        # Ottiene la shell dal config
         config = load_config()
         image_name = container.replace("playground-", "", 1)
-        shell = config.get(image_name, {}).get("shell", "/bin/sh")
-        logger.info("Opening console for container %s with shell %s", container, shell)
-
-        # Avvia una sessione interattiva con docker-py
-        try:
-            exec_id = docker_client.api.exec_create(
-                container,
-                shell,
-                stdin=True,
-                tty=True,
-                environment={"TERM": "xterm-256color"}
-            )
-            exec_stream = docker_client.api.exec_start(
-                exec_id,
-                socket=True,
-                tty=True
-            )
-            socket = exec_stream._sock
-            socket.settimeout(None)
-            active_sockets.append(socket)
-            logger.debug("Exec session started for %s with exec_id %s", container, exec_id['Id'])
-        except docker.errors.APIError as e:
-            logger.error("Failed to start exec session for %s: %s", container, str(e))
-            await websocket.send_text(f"Error: Failed to start console: {str(e)}")
-            await websocket.close()
-            return
-
-        async def forward_output():
+        shell = config.get(image_name, {}).get("shell", "/bin/bash")
+        
+        # Create exec instance
+        exec_instance = docker_client.api.exec_create(
+            container,
+            shell,
+            stdin=True,
+            tty=True,
+            environment={"TERM": "xterm-256color"}
+        )
+        
+        exec_stream = docker_client.api.exec_start(
+            exec_instance['Id'],
+            socket=True,
+            tty=True
+        )
+        
+        socket = exec_stream._sock
+        socket.setblocking(False)
+        
+        logger.info("Console session started for %s", container)
+        
+        async def read_from_container():
+            """Read output from container and send to websocket"""
             while True:
                 try:
-                    data = socket.recv(4096)
-                    if not data:
-                        logger.debug("No more data from %s, closing output", container)
-                        break
-                    decoded_data = data.decode('utf-8', errors='replace')
-                    logger.debug("Output from %s: %s", container, decoded_data.strip())
-                    await websocket.send_text(decoded_data)
-                    logger.debug("Sent %d bytes to WebSocket for %s", len(decoded_data), container)
+                    await asyncio.sleep(0.01)  # Small delay to prevent busy waiting
+                    try:
+                        data = socket.recv(4096)
+                        if data:
+                            # Decode and send to websocket
+                            text = data.decode('utf-8', errors='replace')
+                            await websocket.send_text(text)
+                            logger.debug("Sent %d bytes to websocket", len(text))
+                    except BlockingIOError:
+                        # No data available, continue
+                        continue
                 except Exception as e:
-                    logger.error("Error reading from container %s: %s", container, str(e))
-                    await websocket.send_text(f"Error: {str(e)}")
+                    logger.error("Error reading from container: %s", str(e))
                     break
-
-        async def forward_input():
+        
+        async def write_to_container():
+            """Read input from websocket and send to container"""
             while True:
                 try:
                     data = await websocket.receive_text()
-                    logger.debug("Input to %s: %s", container, data.strip())
-                    socket.send(data.encode('utf-8'))
-                    logger.debug("Sent %d bytes to container %s", len(data), container)
-                except WebSocketDisconnect as e:
-                    logger.info("WebSocket disconnected for %s: %s", container, str(e))
+                    if data:
+                        socket.send(data.encode('utf-8'))
+                        logger.debug("Sent %d bytes to container", len(data))
+                except WebSocketDisconnect:
+                    logger.info("WebSocket disconnected")
                     break
                 except Exception as e:
-                    logger.error("Error sending input to container %s: %s", container, str(e))
-                    await websocket.send_text(f"Error: {str(e)}")
+                    logger.error("Error writing to container: %s", str(e))
                     break
-
-        async def keep_alive():
-            while True:
-                try:
-                    await websocket.send_text("")
-                    logger.debug("Sent keep-alive to WebSocket for %s", container)
-                    await asyncio.sleep(30)
-                except Exception as e:
-                    logger.debug("Keep-alive failed for %s: %s", container, str(e))
-                    break
-
-        # Esegui input, output e keep-alive in parallelo
-        tasks = [
-            asyncio.create_task(forward_output()),
-            asyncio.create_task(forward_input()),
-            asyncio.create_task(keep_alive())
-        ]
-        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-
-        # Pulizia
-        logger.debug("Closing exec socket for %s", container)
-        if socket:
-            socket.close()
-            if socket in active_sockets:
-                active_sockets.remove(socket)
-        logger.info("Console session for container %s closed", container)
+        
+        # Run both tasks concurrently
+        await asyncio.gather(
+            read_from_container(),
+            write_to_container(),
+            return_exceptions=True
+        )
+        
     except docker.errors.NotFound:
-        logger.error("Container not found for console: %s", container)
         await websocket.send_json({"error": "Container not found"})
     except Exception as e:
-        logger.error("Error in console for container %s: %s", container, str(e))
-        await websocket.send_text(f"Error: {str(e)}")
+        logger.error("Console error for %s: %s", container, str(e))
+        await websocket.send_json({"error": str(e)})
     finally:
         try:
-            await websocket.close()
-            logger.debug("WebSocket closed for %s", container)
-            if socket and socket in active_sockets:
-                socket.close()
-                active_sockets.remove(socket)
-        except Exception as e:
-            logger.debug("Error closing WebSocket for %s: %s", container, str(e))
-
-# Gestione shutdown pulito
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Shutting down server, closing all active sockets")
-    for sock in active_sockets:
+            socket.close()
+        except:
+            pass
         try:
-            sock.close()
-        except Exception as e:
-            logger.debug("Error closing socket: %s", str(e))
-    active_sockets.clear()
+            await websocket.close()
+        except:
+            pass
+        logger.info("Console session closed for %s", container)

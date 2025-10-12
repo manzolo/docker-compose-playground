@@ -45,7 +45,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.9.0/lib/xterm-addon-attach.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
     <script>
         const filterInput = document.getElementById('filter');
         const images = document.getElementsByClassName('image-card');
@@ -119,13 +119,17 @@
                 fontSize: 14,
                 fontFamily: 'Consolas, monospace'
             });
+            const webglAddon = new WebglAddon.WebglAddon();
+            term.loadAddon(webglAddon);
             term.open(document.getElementById('terminal'));
             ws = new WebSocket(`ws://${window.location.host}/ws/console/${container}`);
-            const attachAddon = new AttachAddon.AttachAddon(ws);
-            term.loadAddon(attachAddon);
             ws.onopen = () => {
                 console.log("WebSocket connected for", container);
                 term.write("Connected to console. Type commands and press Enter.\r\n");
+            };
+            ws.onmessage = (event) => {
+                console.log("Received data:", event.data);
+                term.write(event.data);
             };
             ws.onerror = (error) => {
                 console.error("WebSocket error:", error);
@@ -135,9 +139,12 @@
                 console.log("WebSocket closed for", container);
                 term.write("\r\nConsole disconnected.\r\n");
             };
-            ws.onmessage = (event) => {
-                console.log("Received data:", event.data);
-            };
+            term.onData(data => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                    console.log("Sent data:", data);
+                }
+            });
         }
 
         function closeConsole() {
