@@ -106,17 +106,8 @@ start_container() {
       log_warn "Container $image_name may not be fully started yet"
     fi
     
-    # Run post-start script if exists
-    local post_script=$(get_post_start_script "$image_name")
-    if [ -n "$post_script" ]; then
-      local script_path="$SCRIPTS_DIR/$post_script"
-      if [ -f "$script_path" ]; then
-        log_info "Running post-start script: $post_script"
-        bash "$script_path" "$image_name" 2>&1 | tee -a "$LOG_FILE" || log_warn "Post-start script failed: $post_script"
-      else
-        log_warn "Post-start script not found: $script_path"
-      fi
-    fi
+    # Run post-start script (file-based or inline)
+    execute_post_start_script "$image_name"
     
     return 0
   else
@@ -130,7 +121,81 @@ stop_container() {
   
   log_info "Stopping container: $image_name"
   
-  # Run pre-stop script if exists
+  # Run pre-stop script (file-based or inline)
+  execute_pre_stop_script "$image_name"
+  
+  # Stop and remove container
+  if docker stop "playground-$image_name" 2>/dev/null && docker rm "playground-$image_name" 2>/dev/null; then
+    log_success "Stopped container: $image_name"
+    return 0
+  else
+    log_error "Failed to stop container: $image_name (may not exist)"
+    return 1
+  fi
+}
+
+# New function to execute post-start scripts (file or inline)
+execute_post_start_script() {
+  local image_name="$1"
+  
+  # Check for inline script first
+  local inline_script
+  inline_script=$(yq eval ".images.\"$image_name\".scripts.post_start.inline" "$CONFIG_FILE" 2>/dev/null)
+  
+  if [ -n "$inline_script" ] && [ "$inline_script" != "null" ]; then
+    log_info "Running inline post-start script for: $image_name"
+    
+    # Create temporary script file
+    local temp_script="/tmp/playground-post-start-$image_name-$$.sh"
+    echo "$inline_script" > "$temp_script"
+    chmod +x "$temp_script"
+    
+    # Execute inline script
+    bash "$temp_script" "$image_name" 2>&1 | tee -a "$LOG_FILE" || log_warn "Inline post-start script failed"
+    
+    # Cleanup
+    rm -f "$temp_script"
+    return
+  fi
+  
+  # Check for file-based script
+  local post_script=$(get_post_start_script "$image_name")
+  if [ -n "$post_script" ]; then
+    local script_path="$SCRIPTS_DIR/$post_script"
+    if [ -f "$script_path" ]; then
+      log_info "Running post-start script: $post_script"
+      bash "$script_path" "$image_name" 2>&1 | tee -a "$LOG_FILE" || log_warn "Post-start script failed: $post_script"
+    else
+      log_warn "Post-start script not found: $script_path"
+    fi
+  fi
+}
+
+# New function to execute pre-stop scripts (file or inline)
+execute_pre_stop_script() {
+  local image_name="$1"
+  
+  # Check for inline script first
+  local inline_script
+  inline_script=$(yq eval ".images.\"$image_name\".scripts.pre_stop.inline" "$CONFIG_FILE" 2>/dev/null)
+  
+  if [ -n "$inline_script" ] && [ "$inline_script" != "null" ]; then
+    log_info "Running inline pre-stop script for: $image_name"
+    
+    # Create temporary script file
+    local temp_script="/tmp/playground-pre-stop-$image_name-$$.sh"
+    echo "$inline_script" > "$temp_script"
+    chmod +x "$temp_script"
+    
+    # Execute inline script
+    bash "$temp_script" "$image_name" 2>&1 | tee -a "$LOG_FILE" || log_warn "Inline pre-stop script failed"
+    
+    # Cleanup
+    rm -f "$temp_script"
+    return
+  fi
+  
+  # Check for file-based script
   local pre_script=$(get_pre_stop_script "$image_name")
   if [ -n "$pre_script" ]; then
     local script_path="$SCRIPTS_DIR/$pre_script"
@@ -140,15 +205,6 @@ stop_container() {
     else
       log_warn "Pre-stop script not found: $script_path"
     fi
-  fi
-  
-  # Stop and remove container
-  if docker stop "playground-$image_name" 2>/dev/null && docker rm "playground-$image_name" 2>/dev/null; then
-    log_success "Stopped container: $image_name"
-    return 0
-  else
-    log_error "Failed to stop container: $image_name (may not exist)"
-    return 1
   fi
 }
 

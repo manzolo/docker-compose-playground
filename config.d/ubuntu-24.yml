@@ -1,0 +1,62 @@
+images:
+  ubuntu-24:
+    image: ubuntu:24.04
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Ubuntu 24.04 LTS (Noble Numbat) - Latest LTS"
+    category: linux
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Ubuntu 24.04 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📦 Package Management:
+         apt update                                    # Update package list
+         apt upgrade                                   # Upgrade packages
+         apt install package_name                      # Install package
+         apt search package_name                       # Search package
+      
+      🔧 System Info:
+         lsb_release -a                                # Ubuntu version
+         uname -a                                      # Kernel info
+         df -h                                         # Disk usage
+         free -h                                       # Memory usage
+      
+      📁 Useful Directories:
+         /shared                                       # Shared with host
+         /etc/apt/sources.list                         # Package sources
+      
+      🚀 Quick Setup:
+         apt update && apt install -y vim curl git wget build-essential
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "🐧 Initializing Ubuntu 24.04 for $CONTAINER_NAME..."
+          
+          # Update package list
+          docker exec "playground-$CONTAINER_NAME" apt-get update -qq 2>/dev/null
+          
+          # Install essential tools
+          docker exec "playground-$CONTAINER_NAME" apt-get install -y -qq \
+            vim curl wget git build-essential 2>/dev/null
+          
+          echo "✓ Ubuntu 24.04 initialized with essential tools"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Backing up Ubuntu configuration for $CONTAINER_NAME..."
+          
+          # Backup installed packages list
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups"
+          mkdir -p "$BACKUP_DIR"
+          
+          docker exec "playground-$CONTAINER_NAME" dpkg --get-selections > \
+            "$BACKUP_DIR/ubuntu_packages_$(date +%Y%m%d_%H%M%S).txt" 2>/dev/null
+          
+          echo "✓ Package list saved to backups/"

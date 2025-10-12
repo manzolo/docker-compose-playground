@@ -1,0 +1,99 @@
+images:
+  mysql-8:
+    image: mysql:8
+    shell: /bin/bash
+    keep_alive_cmd: mysqld
+    description: "MySQL 8.0 (Latest)"
+    category: database
+    
+    environment:
+      MYSQL_ROOT_PASSWORD: playground
+      MYSQL_DATABASE: playground
+      MYSQL_USER: playground
+      MYSQL_PASSWORD: playground
+    
+    ports:
+      - "3306:3306"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                    MySQL 8.0 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 3306
+         User: playground / root
+         Password: playground
+         Database: playground
+      
+      📊 Basic Commands:
+         mysql -u root -pplayground                    # Connect as root
+         mysql -u playground -pplayground playground   # Connect to DB
+      
+      📁 Database Operations:
+         SHOW DATABASES;                               # List databases
+         USE playground;                               # Switch database
+         SHOW TABLES;                                  # List tables
+         DESCRIBE tablename;                           # Table structure
+      
+      💾 Quick Test:
+         CREATE TABLE test (id INT, name VARCHAR(50));
+         INSERT INTO test VALUES (1, 'Hello MySQL');
+         SELECT * FROM test;
+      
+      📝 Backup & Restore:
+         mysqldump -u root -pplayground playground > /shared/backup.sql
+         mysql -u root -pplayground playground < /shared/backup.sql
+      
+      🔍 Useful Queries:
+         SELECT USER(), DATABASE();                    # Current user/DB
+         SHOW PROCESSLIST;                            # Active connections
+         SHOW VARIABLES LIKE '%version%';             # MySQL version
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "🐬 Initializing MySQL for $CONTAINER_NAME..."
+          
+          # Wait for MySQL to be ready
+          echo "Waiting for MySQL to start..."
+          sleep 5
+          
+          # Create example table
+          docker exec "playground-$CONTAINER_NAME" mysql -u playground -pplayground playground -e "
+          CREATE TABLE IF NOT EXISTS playground_info (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              message TEXT
+          );
+          
+          INSERT INTO playground_info (message) 
+          VALUES ('MySQL initialized by playground manager');
+          " 2>/dev/null
+          
+          echo "✓ MySQL initialized with test table"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Backing up MySQL database from $CONTAINER_NAME..."
+          
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups"
+          mkdir -p "$BACKUP_DIR"
+          
+          BACKUP_FILE="$BACKUP_DIR/mysql_${CONTAINER_NAME}_$(date +%Y%m%d_%H%M%S).sql"
+          
+          # Create backup
+          docker exec "playground-$CONTAINER_NAME" \
+            mysqldump -u root -pplayground playground > "$BACKUP_FILE" 2>/dev/null
+          
+          if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+              echo "✓ Backup saved to: $(basename $BACKUP_FILE)"
+          else
+              rm -f "$BACKUP_FILE"
+              echo "✗ Backup failed"
+          fi

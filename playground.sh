@@ -23,6 +23,7 @@ export PLAYGROUND_LABEL="playground.managed=true"
 # Source all library modules
 source "${SCRIPT_DIR}/lib/logging.sh"
 source "${SCRIPT_DIR}/lib/utils.sh"
+source "${SCRIPT_DIR}/lib/config_loader.sh"  # NEW!
 source "${SCRIPT_DIR}/lib/config.sh"
 source "${SCRIPT_DIR}/lib/motd.sh"
 source "${SCRIPT_DIR}/lib/docker.sh"
@@ -40,6 +41,15 @@ main() {
   
   # Initialize environment
   initialize_environment
+  
+  # Merge configuration files from config.d/
+  merge_configs || {
+    log_error "Failed to merge configuration files"
+    exit 1
+  }
+  
+  # Trap to cleanup merged config on exit
+  trap cleanup_merged_config EXIT
   
   # Start main menu
   main_menu
