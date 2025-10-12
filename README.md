@@ -7,6 +7,10 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 ![Docker](https://img.shields.io/badge/docker-required-blue.svg)
 ![Version](https://img.shields.io/badge/version-3.0-orange.svg)
 
+<a href="https://www.buymeacoffee.com/manzolo">
+  <img src=".github/blue-button.png" alt="Buy Me A Coffee" width="200">
+</a>
+
 ## ✨ Features
 
 ### Core Features
