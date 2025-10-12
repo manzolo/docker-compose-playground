@@ -19,3 +19,7 @@ playground-logs-*.txt
 # Editor/IDE files
 .vscode/
 .idea/
+
+venv/
+venv.log
+**__pycache__**
