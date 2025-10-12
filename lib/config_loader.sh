@@ -12,7 +12,6 @@ MERGED_CONFIG="/tmp/playground-merged-config-$$.yml"
 merge_configs() {
   log_info "Merging configuration files..."
   
-  # Start with base config.yml
   if [ ! -f "$CONFIG_FILE" ]; then
     log_error "Base config file not found: $CONFIG_FILE"
     return 1
@@ -20,53 +19,45 @@ merge_configs() {
   
   cp "$CONFIG_FILE" "$MERGED_CONFIG"
   
-  # Check if config.d directory exists
   if [ ! -d "$CONFIG_D_DIR" ]; then
     log_info "No config.d directory found, using base config only"
     export CONFIG_FILE="$MERGED_CONFIG"
     return 0
   fi
   
-  # Count files to merge
   local config_files=("$CONFIG_D_DIR"/*.yml)
   local file_count=0
   
-  # Check if any yml files exist
   if [ ! -e "${config_files[0]}" ]; then
     log_info "No additional config files in config.d/"
     export CONFIG_FILE="$MERGED_CONFIG"
     return 0
   fi
   
-  # Merge each config.d/*.yml file
   for config_file in "$CONFIG_D_DIR"/*.yml; do
     [ -f "$config_file" ] || continue
     
     local filename=$(basename "$config_file")
     log_info "Merging: $filename"
     
-    # Extract images from the config.d file and merge
-    local temp_merged="/tmp/playground-temp-$$.yml"
-    
-    # Use yq to merge the images section
-    yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
-      "$MERGED_CONFIG" "$config_file" > "$temp_merged"
+    # Semplicemente appendi/sovrascrivi usando yq eval-all con strategia corretta
+    yq eval-all '. as $item ireduce ({}; . *+ $item)' \
+      "$MERGED_CONFIG" "$config_file" > "${MERGED_CONFIG}.tmp"
     
     if [ $? -eq 0 ]; then
-      mv "$temp_merged" "$MERGED_CONFIG"
+      mv "${MERGED_CONFIG}.tmp" "$MERGED_CONFIG"
       file_count=$((file_count + 1))
-      log_info "✓ Merged: $filename"
+      log_success "  ✓ Merged: $filename"
     else
-      log_error "✗ Failed to merge: $filename"
-      rm -f "$temp_merged"
+      log_error "  ✗ Failed to merge: $filename"
+      rm -f "${MERGED_CONFIG}.tmp"
     fi
   done
   
-  log_success "Merged base config + $file_count additional files"
+  local total_images=$(yq eval '.images | length' "$MERGED_CONFIG" 2>/dev/null)
+  log_success "Merged base config + $file_count files = $total_images total images"
   
-  # Export the merged config path for use by other modules
   export CONFIG_FILE="$MERGED_CONFIG"
-  
   return 0
 }
 
@@ -76,12 +67,22 @@ cleanup_merged_config() {
     rm -f "$MERGED_CONFIG"
     log_info "Cleaned up merged configuration"
   fi
+  
+  # Cleanup any temporary files
+  rm -f /tmp/playground-img-*.yml
+  rm -f /tmp/playground-temp-$$.yml
 }
 
 # Function to list all config files
 list_config_files() {
   echo "Base configuration:"
   echo "  - config.yml"
+  
+  if [ -f "$CONFIG_FILE" ]; then
+    local base_count=$(yq eval '.images | length' "$CONFIG_FILE" 2>/dev/null)
+    echo "    ($base_count images)"
+  fi
+  
   echo ""
   
   if [ -d "$CONFIG_D_DIR" ]; then
@@ -89,7 +90,8 @@ list_config_files() {
     local found=0
     for config_file in "$CONFIG_D_DIR"/*.yml; do
       [ -f "$config_file" ] || continue
-      echo "  - $(basename "$config_file")"
+      local img_count=$(yq eval '.images | length' "$config_file" 2>/dev/null)
+      echo "  - $(basename "$config_file") ($img_count images)"
       found=1
     done
     
@@ -122,7 +124,8 @@ validate_config_file() {
     return 1
   fi
   
-  echo "✓ Valid: $file"
+  local img_count=$(yq eval '.images | length' "$file" 2>/dev/null)
+  echo "✓ Valid: $file ($img_count images)"
   return 0
 }
 
@@ -155,5 +158,15 @@ validate_all_configs() {
   else
     echo "✗ Found $errors error(s) in configuration files"
     return 1
+  fi
+}
+
+# Function to show merged config (for debugging)
+show_merged_config() {
+  if [ -f "$MERGED_CONFIG" ]; then
+    echo "Merged configuration images:"
+    yq eval '.images | keys | .[]' "$MERGED_CONFIG" 2>/dev/null | nl
+  else
+    echo "No merged configuration available"
   fi
 }

@@ -1,6 +1,6 @@
 images:
   mysql-8:
-    image: mysql:8
+    image: mysql:8.0
     shell: /bin/bash
     keep_alive_cmd: mysqld
     description: "MySQL 8.0 (Latest)"
@@ -23,77 +23,123 @@ images:
       🔐 Connection Info:
          Host: localhost / Container IP
          Port: 3306
-         User: playground / root
+         Root User: root
+         Root Password: playground
+         User: playground
          Password: playground
          Database: playground
       
       📊 Basic Commands:
          mysql -u root -pplayground                    # Connect as root
-         mysql -u playground -pplayground playground   # Connect to DB
+         mysql -u playground -pplayground playground   # Connect to playground DB
       
       📁 Database Operations:
-         SHOW DATABASES;                               # List databases
-         USE playground;                               # Switch database
+         SHOW DATABASES;                               # List all databases
+         CREATE DATABASE mydb;                         # Create database
+         USE mydb;                                     # Switch to database
+         DROP DATABASE mydb;                           # Delete database
          SHOW TABLES;                                  # List tables
-         DESCRIBE tablename;                           # Table structure
+         DESCRIBE tablename;                           # Show table structure
       
-      💾 Quick Test:
-         CREATE TABLE test (id INT, name VARCHAR(50));
-         INSERT INTO test VALUES (1, 'Hello MySQL');
-         SELECT * FROM test;
-      
-      📝 Backup & Restore:
+      💾 Backup & Restore:
+         # Backup single database
          mysqldump -u root -pplayground playground > /shared/backup.sql
+         
+         # Backup all databases
+         mysqldump -u root -pplayground --all-databases > /shared/full_backup.sql
+         
+         # Backup specific table
+         mysqldump -u root -pplayground playground users > /shared/users_backup.sql
+         
+         # Restore database
          mysql -u root -pplayground playground < /shared/backup.sql
+         
+         # Restore with creation
+         mysql -u root -pplayground < /shared/backup.sql
+      
+      📝 Quick Table Example:
+         CREATE TABLE users (
+           id INT AUTO_INCREMENT PRIMARY KEY,
+           name VARCHAR(100),
+           email VARCHAR(100) UNIQUE,
+           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );
+         
+         INSERT INTO users (name, email) VALUES 
+           ('Alice', 'alice@example.com'),
+           ('Bob', 'bob@example.com');
+         
+         SELECT * FROM users;
       
       🔍 Useful Queries:
-         SELECT USER(), DATABASE();                    # Current user/DB
+         SELECT USER(), DATABASE();                    # Current user & DB
          SHOW PROCESSLIST;                            # Active connections
-         SHOW VARIABLES LIKE '%version%';             # MySQL version
+         SHOW VARIABLES LIKE '%version%';             # MySQL version info
+         SHOW TABLE STATUS;                           # Table information
+         SHOW FULL PROCESSLIST;                       # Detailed process list
+      
+      🔧 User Management:
+         CREATE USER 'newuser'@'%' IDENTIFIED BY 'password';
+         GRANT ALL PRIVILEGES ON database.* TO 'newuser'@'%';
+         FLUSH PRIVILEGES;
+         SHOW GRANTS FOR 'username'@'%';
+      
+      💡 Tips:
+         - Use /shared for SQL dumps
+         - root password: playground
+         - Default character set: utf8mb4
     
     scripts:
       post_start:
         inline: |
           #!/bin/bash
           CONTAINER_NAME="$1"
-          echo "🐬 Initializing MySQL for $CONTAINER_NAME..."
+          echo "🐬 Initializing MySQL 8.0 for $CONTAINER_NAME..."
           
           # Wait for MySQL to be ready
-          echo "Waiting for MySQL to start..."
-          sleep 5
+          sleep 10
           
           # Create example table
           docker exec "playground-$CONTAINER_NAME" mysql -u playground -pplayground playground -e "
           CREATE TABLE IF NOT EXISTS playground_info (
               id INT AUTO_INCREMENT PRIMARY KEY,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              message TEXT
+              message TEXT,
+              version VARCHAR(50)
           );
           
-          INSERT INTO playground_info (message) 
-          VALUES ('MySQL initialized by playground manager');
+          INSERT INTO playground_info (message, version) 
+          VALUES ('MySQL initialized by playground manager', '8.0');
           " 2>/dev/null
           
-          echo "✓ MySQL initialized with test table"
+          echo "✓ MySQL 8.0 initialized with test table"
       
       pre_stop:
         inline: |
           #!/bin/bash
           CONTAINER_NAME="$1"
-          echo "💾 Backing up MySQL database from $CONTAINER_NAME..."
+          echo "💾 Backing up MySQL databases from $CONTAINER_NAME..."
           
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups"
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/mysql-8"
           mkdir -p "$BACKUP_DIR"
           
-          BACKUP_FILE="$BACKUP_DIR/mysql_${CONTAINER_NAME}_$(date +%Y%m%d_%H%M%S).sql"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
-          # Create backup
+          # Backup playground database
+          BACKUP_FILE="$BACKUP_DIR/mysql_playground_${TIMESTAMP}.sql"
           docker exec "playground-$CONTAINER_NAME" \
             mysqldump -u root -pplayground playground > "$BACKUP_FILE" 2>/dev/null
           
           if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
-              echo "✓ Backup saved to: $(basename $BACKUP_FILE)"
+            echo "✓ Database backup saved to: backups/mysql-8/mysql_playground_${TIMESTAMP}.sql"
           else
-              rm -f "$BACKUP_FILE"
-              echo "✗ Backup failed"
+            rm -f "$BACKUP_FILE"
+            echo "⚠ Database backup failed"
           fi
+          
+          # Backup list of all databases
+          docker exec "playground-$CONTAINER_NAME" \
+            mysql -u root -pplayground -e "SHOW DATABASES;" > \
+            "$BACKUP_DIR/databases_${TIMESTAMP}.txt" 2>/dev/null || true
+          
+          echo "✓ Backup completed"

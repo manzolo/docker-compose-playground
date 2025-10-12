@@ -1,0 +1,79 @@
+images:
+  alpine-3.19:
+    image: alpine:3.19
+    shell: /bin/sh
+    keep_alive_cmd: tail -f /dev/null
+    description: "Alpine Linux 3.19 (Lightweight - 5MB)"
+    category: linux
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Alpine Linux 3.19 Quick Reference             ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📦 Package Management (apk):
+         apk update                                    # Update package index
+         apk add package_name                          # Install package
+         apk del package_name                          # Remove package
+         apk search package_name                       # Search package
+         apk info                                      # List installed packages
+      
+      🔧 Common Tools:
+         apk add vim curl wget git bash               # Install basics
+         apk add build-base                           # Install build tools
+         apk add python3 py3-pip                      # Install Python
+      
+      ⚠️  Important Notes:
+         - Alpine uses musl libc (not glibc)
+         - Very lightweight: base image ~5MB
+         - Perfect for Docker containers
+         - Uses OpenRC instead of systemd
+      
+      🚀 Quick Setup:
+         apk update && apk add vim curl wget git bash
+      
+      📁 Useful Directories:
+         /shared                                       # Shared with host
+         /etc/apk/repositories                         # Package repositories
+      
+      💡 Tips:
+         - Use 'sh' not 'bash' by default
+         - Install bash if needed: apk add bash
+         - Smaller binaries, faster builds
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/sh
+          CONTAINER_NAME="$1"
+          echo "🏔️  Initializing Alpine Linux 3.19 for $CONTAINER_NAME..."
+          
+          # Update package index
+          docker exec "playground-$CONTAINER_NAME" apk update 2>/dev/null
+          
+          # Install essential tools
+          docker exec "playground-$CONTAINER_NAME" apk add --no-cache \
+            vim curl wget git bash 2>/dev/null
+          
+          echo "✓ Alpine Linux 3.19 initialized with essential tools"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Backing up Alpine configuration for $CONTAINER_NAME..."
+          
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/alpine-3.19"
+          mkdir -p "$BACKUP_DIR"
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Backup installed packages list
+          docker exec "playground-$CONTAINER_NAME" apk info > \
+            "$BACKUP_DIR/packages_${TIMESTAMP}.txt" 2>/dev/null
+          
+          # Backup apk repositories
+          docker exec "playground-$CONTAINER_NAME" cat /etc/apk/repositories > \
+            "$BACKUP_DIR/repositories_${TIMESTAMP}.txt" 2>/dev/null || true
+          
+          echo "✓ Backup saved to: backups/alpine-3.19/"

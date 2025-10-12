@@ -9,10 +9,6 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 
 ## ✨ Features
 
-<img width="788" height="484" alt="image" src="https://github.com/user-attachments/assets/d341037f-d006-4d08-b432-0e91aad22dcf" />
-<img width="940" height="476" alt="image" src="https://github.com/user-attachments/assets/2c28f6ee-5ea8-4d91-9a9c-d61ecdff92bb" />
-
-
 ### Core Features
 - 🎯 **Interactive TUI** - Beautiful terminal user interface using whiptail
 - 📦 **100+ Pre-configured Images** - Linux distros, programming languages, databases, and more
@@ -29,19 +25,28 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 - **Extensible design** - Add new features without touching core code
 - **Professional organization** - Follows best practices for large bash projects
 
+#### 📂 Modular Configuration System
+- **Split configuration files** - Keep your config organized with `config.d/` directory
+- **Auto-merge on startup** - Base `config.yml` + all `config.d/*.yml` files merged automatically
+- **Easy to extend** - Add new containers without touching the main config file
+- **Validate independently** - Each config file can be validated separately
+- **Share configurations** - Team members can add their own config files to `config.d/`
+
 #### 📝 Inline MOTD System
-- **YAML-based MOTDs** - Define help text directly in `config.yml`
-- **File-based MOTDs** - Support for external `.txt` files in `motd/`
+- **YAML-based MOTDs** - Define help text directly in `config.yml` or `config.d/*.yml`
+- **File-based MOTDs** - Support for external `.txt` files in `motd/` (legacy)
 - **Context-aware** - Automatic detection and display when entering containers
 - **Always visible** - MOTD stays on screen like real system login messages (no more disappearing!)
 - **10+ pre-built guides** - MySQL, PostgreSQL, MongoDB, Redis, Python, Node.js, Go, Rust, Nginx, Docker-in-Docker
 
-#### 🔧 Pre/Post Script System
+#### 🔧 Inline Pre/Post Script System
+- **Inline scripts** - Define scripts directly in YAML configuration (no separate files needed!)
+- **File-based scripts** - Support for external scripts in `scripts/` directory
 - **post_start scripts** - Execute custom scripts after container starts (auto-install packages, initialize DBs, etc.)
 - **pre_stop scripts** - Run cleanup or backup before stopping containers
-- **Auto-discovery** - Scripts defined in `config.yml`, stored in `scripts/`
+- **Auto-discovery** - Scripts defined inline or referenced from `scripts/`
 - **Built-in examples** - MySQL/PostgreSQL initialization, Python/Node package installation, automatic backups
-- **Easy to extend** - Add your own custom scripts for any container
+- **Easy to extend** - Add your own custom scripts inline or as files
 
 #### 📊 Enhanced Features
 - 🔍 **Debug mode** - Built-in configuration debugging tool to troubleshoot issues
@@ -58,6 +63,11 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 - **yq** (YAML processor - auto-installed via snap if missing)
 - **whiptail** (usually pre-installed on most Linux distributions)
 - **Bash** (version 4.0 or higher)
+
+
+<img width="788" height="484" alt="image" src="https://github.com/user-attachments/assets/d341037f-d006-4d08-b432-0e91aad22dcf" />
+<img width="940" height="476" alt="image" src="https://github.com/user-attachments/assets/2c28f6ee-5ea8-4d91-9a9c-d61ecdff92bb" />
+
 
 ## 🚀 Quick Start
 
@@ -94,34 +104,34 @@ chmod +x create_scripts.sh
 ```
 docker-playground/
 ├── playground.sh              # Main entry point
-├── config.yml                # 100+ images configuration with MOTD and scripts
+├── config.yml                # Base configuration (100+ images)
+├── config.d/                 # 🆕 Modular configuration directory
+│   ├── ubuntu-24.yml        # Example: Ubuntu 24.04 with inline MOTD & scripts
+│   ├── postgres-16.yml      # Example: PostgreSQL 16 with inline scripts
+│   ├── mysql-8.yml          # Example: MySQL 8 with initialization
+│   ├── python-3.13.yml      # Example: Python with auto-pip install
+│   └── custom.yml           # Add your own custom containers here!
 ├── create_scripts.sh         # Helper to generate example scripts
 ├── lib/                      # Modular library files
 │   ├── config.sh            # Configuration management (yq parsing)
+│   ├── config_loader.sh     # 🆕 Config merging and validation
 │   ├── docker.sh            # Docker operations (start/stop/enter)
 │   ├── logging.sh           # Logging utilities with colors
 │   ├── motd.sh              # MOTD management (inline + file-based)
 │   ├── ui.sh                # User interface (whiptail menus)
 │   └── utils.sh             # Utility functions (dependencies, init)
-├── scripts/                  # Pre/Post execution scripts
-│   ├── mysql_init.sh        # MySQL initialization (creates test table)
-│   ├── postgres_init.sh     # PostgreSQL setup (creates test table)
-│   ├── postgres_backup.sh   # PostgreSQL automatic backup
-│   ├── python_init.sh       # Python packages (requests, pandas, numpy)
-│   ├── node_init.sh         # Node.js packages (express, axios)
-│   └── generic_backup.sh    # Generic backup script for any container
+├── scripts/                  # Pre/Post execution scripts (optional)
+│   ├── mysql_init.sh        # MySQL initialization (legacy)
+│   ├── postgres_init.sh     # PostgreSQL setup (legacy)
+│   ├── postgres_backup.sh   # PostgreSQL automatic backup (legacy)
+│   ├── python_init.sh       # Python packages (legacy)
+│   ├── node_init.sh         # Node.js packages (legacy)
+│   └── generic_backup.sh    # Generic backup script
 ├── motd/                     # Message of the Day files (legacy support)
 │   ├── mysql.txt
 │   ├── postgres.txt
 │   ├── python.txt
-│   ├── node.txt
-│   ├── golang.txt
-│   ├── rust.txt
-│   ├── nginx.txt
-│   ├── docker.txt
-│   ├── redis.txt
-│   ├── mongodb.txt
-│   └── elasticsearch.txt
+│   └── ...
 ├── shared-volumes/           # Shared data directory (mounted at /shared)
 │   ├── backups/             # Auto-created by backup scripts
 │   └── README.txt           # Instructions for shared volume
@@ -175,7 +185,7 @@ Use this to:
 
 When entering containers, you'll see helpful quick reference guides that **stay visible** on your terminal (just like real SSH logins!).
 
-### Supported Containers with Inline MOTD (in config.yml)
+### Supported Containers with Inline MOTD
 
 - **MySQL 8.0** - Connection info, backup/restore, common queries, quick test examples
 - **PostgreSQL 16** - psql commands, pg_dump/restore, useful queries, table examples
@@ -190,185 +200,45 @@ When entering containers, you'll see helpful quick reference guides that **stay 
 - **Ubuntu 24.04** - apt commands, system info utilities
 - **Alpine Linux 3.19** - apk package manager, musl libc notes
 
-### Supported Containers with File-based MOTD (in motd/ directory)
-
-All the above plus legacy support for external `.txt` files.
-
-### MOTD Example
-
-When you enter MySQL, you'll see:
-```
-╔══════════════════════════════════════════════════════════════╗
-║                    MySQL 8.0 Quick Reference                  ║
-╚══════════════════════════════════════════════════════════════╝
-
-🔐 Connection Info:
-   Host: localhost / Container IP
-   Port: 3306
-   User: playground / root
-   Password: playground
-   Database: playground
-
-📊 Basic Commands:
-   mysql -u root -pplayground                    # Connect as root
-   mysql -u playground -pplayground playground   # Connect to DB
-
-📁 Database Operations:
-   SHOW DATABASES;                               # List databases
-   USE playground;                               # Switch database
-   SHOW TABLES;                                  # List tables
-   DESCRIBE tablename;                           # Table structure
-
-💾 Quick Test:
-   CREATE TABLE test (id INT, name VARCHAR(50));
-   INSERT INTO test VALUES (1, 'Hello MySQL');
-   SELECT * FROM test;
-
-📝 Backup & Restore:
-   mysqldump -u root -pplayground playground > /shared/backup.sql
-   mysql -u root -pplayground playground < /shared/backup.sql
-
-🔍 Useful Queries:
-   SELECT USER(), DATABASE();                    # Current user/DB
-   SHOW PROCESSLIST;                            # Active connections
-   SHOW VARIABLES LIKE '%version%';             # MySQL version
-
-╔════════════════════════════════════════════════════════╗
-║  Entering container: playground-mysql-8
-╚════════════════════════════════════════════════════════╝
-Type 'exit' to return to the menu
-
-bash-5.1# _
-```
-
-The MOTD **stays visible** so you can reference it while working!
-
-## 🔧 Script System
-
-### Post-Start Scripts (Automatic Initialization)
-
-These scripts run automatically after a container starts:
-
-**mysql_init.sh** (MySQL 8)
-```bash
-# Auto-executed after MySQL starts
-# - Waits for MySQL to be ready
-# - Creates a test table: playground_info
-# - Inserts initialization message
-```
-
-**postgres_init.sh** (PostgreSQL 16)
-```bash
-# Auto-executed after PostgreSQL starts
-# - Waits for PostgreSQL to be ready
-# - Creates a test table: playground_info
-# - Inserts initialization message
-```
-
-**python_init.sh** (Python 3.13, 3.12)
-```bash
-# Auto-executed after Python container starts
-# - Upgrades pip to latest version
-# - Installs: requests, beautifulsoup4, pandas, numpy
-```
-
-**node_init.sh** (Node.js 22, 20)
-```bash
-# Auto-executed after Node.js container starts
-# - Initializes package.json in /shared if not exists
-# - Installs: express, axios
-```
-
-### Pre-Stop Scripts (Cleanup & Backup)
-
-These scripts run automatically before a container stops:
-
-**postgres_backup.sh** (PostgreSQL 16)
-```bash
-# Auto-executed before PostgreSQL stops
-# - Creates timestamped backup: postgres_YYYYMMDD_HHMMSS.sql
-# - Saves to /shared/backups/
-```
-
-**generic_backup.sh** (MySQL 8, others)
-```bash
-# Auto-executed before container stops
-# - Attempts to backup /data directory
-# - Creates timestamped tar.gz: container_YYYYMMDD_HHMMSS.tar.gz
-# - Saves to /shared/backups/
-```
-
-### Adding Custom Scripts
-
-1. Create your script in `scripts/` directory:
-```bash
-#!/bin/bash
-CONTAINER_NAME="$1"
-echo "Running custom setup for $CONTAINER_NAME"
-# Your commands here
-```
-
-2. Make it executable:
-```bash
-chmod +x scripts/my_custom_script.sh
-```
-
-3. Add to `config.yml`:
-```yaml
-  my-container:
-    image: myimage:latest
-    # ... other settings ...
-    scripts:
-      post_start: my_custom_script.sh
-      pre_stop: my_cleanup_script.sh
-```
-
-4. Done! The script runs automatically when container starts/stops.
-
-## 📦 Available Images (100+)
-
-### Categories
-
-#### 🐧 Linux Distributions (13)
-Ubuntu (24.04, 22.04, 20.04), Debian (12, 11), Alpine (3.19, Edge), Fedora 39, Rocky Linux 9, AlmaLinux 9, Arch, openSUSE Leap, Kali Rolling
-
-#### 💻 Programming Languages (42)
-- **Python**: 3.13, 3.12, 3.11, 3.10, Alpine, Anaconda, Miniconda (with post-start package installation)
-- **JavaScript/Node**: Node 22/20/18, Alpine, Deno, Bun (with post-start package installation)
-- **JVM**: OpenJDK 21/17/11, Gradle, Maven, Kotlin, Scala
-- **Compiled**: Go 1.22/Alpine, Rust 1.75/Alpine, GCC, Clang, Zig
-- **Others**: PHP 8.3/8.2/FPM, Ruby 3.3/Alpine, Elixir, Erlang, Haskell, Swift, .NET 8, Lua, Perl
-
-#### 🗄️ Databases (20)
-- **SQL**: PostgreSQL 16/15/Alpine (with init scripts), MySQL 8/5.7 (with init scripts), MariaDB 11/10, CockroachDB
-- **NoSQL**: MongoDB 7/6, Redis 7/Alpine, Memcached, Cassandra, CouchDB, Neo4j
-- **Analytics**: Elasticsearch 8.11, InfluxDB
-
-#### 🌐 Web Servers (7)
-Nginx (Latest/Alpine), Apache (Latest/Alpine), Caddy, Traefik, HAProxy
-
-#### 📨 Message Queues (4)
-RabbitMQ (with management UI), Apache Kafka, NATS, ActiveMQ Classic
-
-#### 🔧 DevOps & CI/CD (8)
-Docker-in-Docker (privileged), Jenkins LTS, GitLab Runner, Ansible, Terraform, Packer, Vault (dev mode), Consul (dev mode)
-
-#### 📊 Monitoring (4)
-Prometheus, Grafana (admin:playground), Jaeger, Zipkin
-
-#### 🤖 Machine Learning (3)
-Jupyter Notebook (with JupyterLab), TensorFlow, PyTorch
-
-#### 🛠️ Utilities (7)
-BusyBox, Alpine Tools, curl, Ubuntu Full, Netshoot (network troubleshooting), Selenium Chrome, Selenium Firefox
-
 ## ⚙️ Configuration
+
+### 🆕 Modular Configuration System
+
+The v3.0 introduces a powerful modular configuration system that allows you to split your configuration into multiple files!
+
+#### Directory Structure
+
+```
+docker-playground/
+├── config.yml              # Base configuration (required)
+└── config.d/               # Additional configurations (optional)
+    ├── ubuntu-24.yml       # Example: Custom Ubuntu config
+    ├── postgres-16.yml     # Example: PostgreSQL with inline scripts
+    ├── mysql-8.yml         # Example: MySQL configuration
+    └── my-custom.yml       # Your custom containers
+```
+
+#### How It Works
+
+1. **Base Config**: `config.yml` contains 100+ pre-configured images
+2. **Modular Configs**: Files in `config.d/*.yml` are automatically merged on startup
+3. **Override Behavior**: Files in `config.d/` can override base configuration
+4. **Validation**: Each file is validated independently before merging
+
+#### Benefits
+
+✅ **Organization** - Keep related containers together in separate files  
+✅ **Team Collaboration** - Team members can add their own config files  
+✅ **Easy Updates** - Update base config without touching custom configs  
+✅ **Version Control** - Commit only your custom configs, ignore others  
+✅ **No Conflicts** - Each file can be edited independently  
 
 ### Basic Configuration
 
-Edit `config.yml` to add or modify images:
+Create a new file in `config.d/` directory:
 
 ```yaml
+# config.d/my-custom-image.yml
 images:
   my-custom-image:
     image: custom/image:tag           # Docker image
@@ -383,18 +253,21 @@ images:
     privileged: false                # Optional: privileged mode
 ```
 
-### Advanced Configuration with MOTD and Scripts
+### 🆕 Advanced Configuration with Inline MOTD and Scripts
+
+This is the **new way** to configure containers in v3.0 - everything in one YAML file!
 
 ```yaml
+# config.d/my-advanced-container.yml
 images:
   my-advanced-image:
     image: myimage:latest
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Advanced Container with MOTD and Scripts"
+    description: "Advanced Container with Inline MOTD and Scripts"
     category: custom
     
-    # Inline MOTD (displayed when entering container)
+    # 🆕 Inline MOTD (displayed when entering container)
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                  My Custom Quick Reference                    ║
@@ -403,22 +276,245 @@ images:
       🔧 Important Commands:
          myapp start                                   # Start service
          myapp status                                  # Check status
+         myapp logs                                    # View logs
       
       📁 Important Paths:
          Config: /etc/myapp/config.yml
          Data: /var/lib/myapp/
+         Logs: /var/log/myapp/
+      
+      💡 Quick Tips:
+         - Use /shared for persistent storage
+         - Logs are automatically backed up on stop
+         - Check /shared/backups/ for backups
     
-    # Scripts (auto-executed)
+    # 🆕 Inline Scripts (no separate files needed!)
     scripts:
-      post_start: my_init_script.sh      # Runs after container starts
-      pre_stop: my_cleanup_script.sh     # Runs before container stops
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "🚀 Initializing $CONTAINER_NAME..."
+          
+          # Install dependencies
+          docker exec "playground-$CONTAINER_NAME" apt-get update -qq
+          docker exec "playground-$CONTAINER_NAME" apt-get install -y -qq curl wget
+          
+          # Create necessary directories
+          docker exec "playground-$CONTAINER_NAME" mkdir -p /app/data
+          
+          # Initialize application
+          docker exec "playground-$CONTAINER_NAME" sh -c "
+            echo 'Container initialized at $(date)' > /app/initialized.txt
+          "
+          
+          echo "✓ $CONTAINER_NAME initialized successfully"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Creating backup for $CONTAINER_NAME..."
+          
+          # Create backup directory
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/my-advanced-image"
+          mkdir -p "$BACKUP_DIR"
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Backup application data
+          docker exec "playground-$CONTAINER_NAME" tar czf - /app/data \
+            > "$BACKUP_DIR/data_${TIMESTAMP}.tar.gz" 2>/dev/null
+          
+          # Backup logs
+          docker exec "playground-$CONTAINER_NAME" tar czf - /var/log/myapp \
+            > "$BACKUP_DIR/logs_${TIMESTAMP}.tar.gz" 2>/dev/null
+          
+          echo "✓ Backup saved to: backups/my-advanced-image/"
     
     environment:
       MY_VAR: "custom_value"
+      DEBUG: "true"
     
     ports:
       - "8080:80"
       - "8443:443"
+```
+
+### 🆕 Real-World Example: PostgreSQL 16
+
+Here's a complete real-world example from `config.d/postgres-16.yml`:
+
+```yaml
+# config.d/postgres-16.yml
+images:
+  postgres-16:
+    image: postgres:16
+    shell: /bin/bash
+    keep_alive_cmd: postgres
+    description: "PostgreSQL 16 (Latest)"
+    category: database
+    
+    environment:
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+      POSTGRES_DB: playground
+    
+    ports:
+      - "5432:5432"
+    
+    # Inline MOTD with PostgreSQL quick reference
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                PostgreSQL 16 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 5432
+         User: playground
+         Password: playground
+         Database: playground
+      
+      📊 Basic Commands:
+         psql -U playground                            # Connect to PostgreSQL
+         \l                                            # List databases
+         \c database_name                              # Connect to database
+         \dt                                           # List tables
+         \d table_name                                 # Describe table
+         \q                                            # Quit
+      
+      💾 Backup & Restore:
+         pg_dump -U playground playground > /shared/backup.sql
+         psql -U playground playground < /shared/backup.sql
+      
+      📝 Quick Table Example:
+         CREATE TABLE users (
+           id SERIAL PRIMARY KEY,
+           name VARCHAR(100),
+           email VARCHAR(100) UNIQUE,
+           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );
+         INSERT INTO users (name, email) VALUES ('Test', 'test@example.com');
+         SELECT * FROM users;
+    
+    # Inline post-start script: Initialize PostgreSQL
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "🐘 Initializing PostgreSQL for $CONTAINER_NAME..."
+          
+          # Wait for PostgreSQL to be ready
+          sleep 3
+          
+          # Create example table
+          docker exec "playground-$CONTAINER_NAME" psql -U playground -d playground -c "
+          CREATE TABLE IF NOT EXISTS playground_info (
+              id SERIAL PRIMARY KEY,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              message TEXT
+          );
+          
+          INSERT INTO playground_info (message) 
+          VALUES ('PostgreSQL initialized by playground manager');
+          " 2>/dev/null
+          
+          echo "✓ PostgreSQL initialized with test table"
+      
+      # Inline pre-stop script: Automatic backup
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Backing up PostgreSQL database from $CONTAINER_NAME..."
+          
+          # Create backup directory for this specific container
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/postgres-16"
+          mkdir -p "$BACKUP_DIR"
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="$BACKUP_DIR/postgres_${TIMESTAMP}.sql"
+          
+          # Create backup
+          docker exec "playground-$CONTAINER_NAME" \
+            pg_dump -U playground playground > "$BACKUP_FILE" 2>/dev/null
+          
+          if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+              echo "✓ Backup saved to: backups/postgres-16/postgres_${TIMESTAMP}.sql"
+          else
+              rm -f "$BACKUP_FILE"
+              echo "✗ Backup failed"
+          fi
+```
+
+### 🆕 Real-World Example: Ubuntu 24.04
+
+Here's another complete example from `config.d/ubuntu-24.yml`:
+
+```yaml
+# config.d/ubuntu-24.yml
+images:
+  ubuntu-24:
+    image: ubuntu:24.04
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Ubuntu 24.04 LTS (Noble Numbat) - Latest LTS"
+    category: linux
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Ubuntu 24.04 Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📦 Package Management:
+         apt update                                    # Update package list
+         apt upgrade                                   # Upgrade packages
+         apt install package_name                      # Install package
+         apt search package_name                       # Search package
+      
+      🔧 System Info:
+         lsb_release -a                                # Ubuntu version
+         uname -a                                      # Kernel info
+         df -h                                         # Disk usage
+         free -h                                       # Memory usage
+      
+      🚀 Quick Setup:
+         apt update && apt install -y vim curl git wget build-essential
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "🐧 Initializing Ubuntu 24.04 for $CONTAINER_NAME..."
+          
+          # Update package list
+          docker exec "playground-$CONTAINER_NAME" apt-get update -qq 2>/dev/null
+          
+          # Install essential tools
+          docker exec "playground-$CONTAINER_NAME" apt-get install -y -qq \
+            vim curl wget git build-essential 2>/dev/null
+          
+          echo "✓ Ubuntu 24.04 initialized with essential tools"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Backing up Ubuntu configuration for $CONTAINER_NAME..."
+          
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/ubuntu-24"
+          mkdir -p "$BACKUP_DIR"
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Backup installed packages list
+          docker exec "playground-$CONTAINER_NAME" dpkg --get-selections > \
+            "$BACKUP_DIR/packages_${TIMESTAMP}.txt" 2>/dev/null
+          
+          echo "✓ Backup saved to: backups/ubuntu-24/"
 ```
 
 ### Configuration Options Reference
@@ -430,173 +526,142 @@ images:
 | `keep_alive_cmd` | ✅ | string | Command to keep container running | `sleep infinity` |
 | `description` | ✅ | string | Human-readable description | `"Ubuntu 24.04 LTS"` |
 | `category` | ✅ | string | Category for organization | `linux`, `programming`, `database` |
-| `motd` | ❌ | multiline | Inline MOTD text (YAML block) | See examples above |
-| `scripts.post_start` | ❌ | string | Script to run after start | `python_init.sh` |
-| `scripts.pre_stop` | ❌ | string | Script to run before stop | `generic_backup.sh` |
+| `motd` | ❌ | multiline | 🆕 Inline MOTD text (YAML block) | See examples above |
+| `scripts.post_start` | ❌ | string or object | Script file name or inline script | `python_init.sh` or `{inline: "#!/bin/bash..."}` |
+| `scripts.pre_stop` | ❌ | string or object | Script file name or inline script | `generic_backup.sh` or `{inline: "#!/bin/bash..."}` |
 | `environment` | ❌ | map | Environment variables | `{VAR: value}` |
 | `ports` | ❌ | array | Port mappings | `["8080:80"]` |
 | `privileged` | ❌ | boolean | Enable privileged mode | `true` or `false` |
 
+### 🆕 Script Configuration: File vs Inline
+
+You can configure scripts in two ways:
+
+**Method 1: File-based (Legacy)**
+```yaml
+scripts:
+  post_start: mysql_init.sh      # References scripts/mysql_init.sh
+  pre_stop: generic_backup.sh    # References scripts/generic_backup.sh
+```
+
+**Method 2: Inline (New in v3.0)** ⭐ Recommended
+```yaml
+scripts:
+  post_start:
+    inline: |
+      #!/bin/bash
+      CONTAINER_NAME="$1"
+      echo "Initializing..."
+      # Your script here
+  pre_stop:
+    inline: |
+      #!/bin/bash
+      CONTAINER_NAME="$1"
+      echo "Cleaning up..."
+      # Your script here
+```
+
+**Benefits of Inline Scripts:**
+- ✅ Everything in one file - easier to manage
+- ✅ No need to create separate script files
+- ✅ Better for version control (single file to track)
+- ✅ Easier to share configurations
+- ✅ Inline scripts are automatically made executable
+
 ## 🔍 Examples
 
-### Example 1: Database Development with Automatic Initialization
+### Example 1: Creating a Custom Container with Inline Config
 
-```bash
-# 1. Start PostgreSQL container
-./playground.sh
-# Select "Start by category" → "database" → postgres-16
+Create a new file `config.d/my-python-ml.yml`:
 
-# 2. Post-start script automatically:
-#    - Waits for PostgreSQL to be ready
-#    - Creates test table "playground_info"
-#    - Inserts initialization message
-
-# 3. Enter the container
-# Select "Enter a container" → postgres-16
-# You'll see the PostgreSQL MOTD with all commands!
-
-# 4. Inside container, verify initialization
-psql -U playground
-\dt                                # See playground_info table
-SELECT * FROM playground_info;     # See initialization message
-\q
-
-# 5. Create your own data
-psql -U playground
-CREATE TABLE users (id INT, name VARCHAR(50));
-INSERT INTO users VALUES (1, 'Alice'), (2, 'Bob');
-\q
-
-# 6. Stop the container (automatic backup!)
-# Select "Stop containers" → postgres-16
-# Pre-stop script automatically creates backup in shared-volumes/backups/
-
-# 7. Check your backup on host
-ls -lh shared-volumes/backups/
-# You'll see: postgres_postgres-16_20251011_235959.sql
+```yaml
+images:
+  python-ml-custom:
+    image: python:3.13
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "Python 3.13 with ML Libraries"
+    category: programming
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              Python ML Environment Ready!                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📊 Installed Libraries:
+         - TensorFlow, PyTorch
+         - scikit-learn, pandas, numpy
+         - matplotlib, seaborn
+      
+      🚀 Quick Start:
+         python /shared/your_script.py
+         jupyter notebook --ip=0.0.0.0 --allow-root
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "🤖 Installing ML libraries..."
+          
+          docker exec "playground-$CONTAINER_NAME" pip install --quiet \
+            tensorflow pytorch scikit-learn pandas numpy \
+            matplotlib seaborn jupyter
+          
+          echo "✓ ML environment ready!"
+    
+    ports:
+      - "8888:8888"
 ```
 
-### Example 2: Python Development with Auto-Installed Packages
+Now run: `./playground.sh` → "Start containers" → "python-ml-custom"
 
-```bash
-# 1. Start Python container
-./playground.sh
-# Select "Start containers" → python-3.13
+### Example 2: Override Base Configuration
 
-# 2. Post-start script automatically:
-#    - Upgrades pip
-#    - Installs requests, beautifulsoup4, pandas, numpy
+Create `config.d/postgres-custom.yml` to override base postgres-16:
 
-# 3. Create a test script on host
-cat > shared-volumes/test_pandas.py <<'EOF'
-import pandas as pd
-import numpy as np
-
-data = pd.DataFrame({
-    'name': ['Alice', 'Bob', 'Charlie'],
-    'age': [25, 30, 35],
-    'score': np.random.randint(60, 100, 3)
-})
-
-print(data)
-data.to_csv('/shared/output.csv', index=False)
-print("\nSaved to /shared/output.csv")
-EOF
-
-# 4. Enter container and run
-# Select "Enter a container" → python-3.13
-# You'll see Python MOTD with pip commands
-
-python /shared/test_pandas.py
-
-# 5. Check output on host
-cat shared-volumes/output.csv
+```yaml
+images:
+  postgres-16:
+    # This will merge with base postgres-16 config
+    environment:
+      POSTGRES_PASSWORD: my_secure_password  # Override password
+      POSTGRES_DB: my_database               # Override database name
+    
+    ports:
+      - "5433:5432"  # Use different host port
 ```
 
-### Example 3: Full Stack Development Environment
+### Example 3: Team Collaboration
 
-```bash
-# Setup a complete web development environment
+Each team member can have their own config file:
 
-# 1. Start backend (Node.js with auto-installed express)
-# Select "Start by category" → "programming" → node-22
-
-# 2. Start database (PostgreSQL with test table)
-# Select "Start by category" → "database" → postgres-16
-
-# 3. Start cache (Redis)
-# Select "Start by category" → "database" → redis-7
-
-# 4. Start web server (Nginx)
-# Select "Start by category" → "webserver" → nginx-latest
-
-# 5. Create Express app
-cat > shared-volumes/server.js <<'EOF'
-const express = require('express');
-const app = express();
-
-app.get('/', (req, res) => {
-    res.json({ 
-        message: 'Full stack playground!',
-        services: ['node', 'postgres', 'redis', 'nginx']
-    });
-});
-
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
-});
-EOF
-
-# 6. Run in Node container
-# Enter node-22 → node /shared/server.js
-
-# Now you have a complete environment ready!
-```
-
-### Example 4: Using Debug Mode
-
-```bash
-# If something isn't working, use debug mode
-
-./playground.sh
-# Select "Debug config"
-
-# You'll see:
-# - Config file location
-# - Total images found
-# - Sample parsing of mysql-8:
-#   * Image name
-#   * Description
-#   * Category
-#   * Post-start script
-#   * Pre-stop script
-#   * MOTD length
-# - This helps identify configuration issues!
-```
-
-### Example 5: Docker-in-Docker (Build Images Inside Container)
-
-```bash
-# 1. Start Docker-in-Docker
-# Select "Start containers" → docker-dind
-
-# 2. Create a Dockerfile in shared volume
-cat > shared-volumes/Dockerfile <<'EOF'
-FROM alpine:latest
-RUN apk add --no-cache curl vim
-CMD ["sh"]
-EOF
-
-# 3. Enter Docker-in-Docker container
-# Select "Enter a container" → docker-dind
-# You'll see Docker-in-Docker MOTD with commands!
-
-# 4. Build and run your image
-cd /shared
-docker build -t myimage:latest .
-docker run -it myimage:latest
-
-# 5. Your custom image runs inside the playground container!
+```yaml
+# config.d/john-dev-env.yml
+images:
+  john-workspace:
+    image: ubuntu:24.04
+    shell: /bin/bash
+    keep_alive_cmd: sleep infinity
+    description: "John's Development Workspace"
+    category: custom
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          
+          # Install John's preferred tools
+          docker exec "playground-$CONTAINER_NAME" apt-get update -qq
+          docker exec "playground-$CONTAINER_NAME" apt-get install -y -qq \
+            vim tmux zsh git nodejs npm python3
+          
+          # Setup John's dotfiles
+          docker exec "playground-$CONTAINER_NAME" sh -c "
+            git clone https://github.com/john/dotfiles /root/dotfiles
+            cd /root/dotfiles && ./install.sh
+          "
 ```
 
 ## 📝 Logging
@@ -606,184 +671,69 @@ All operations are logged to `playground.log` with detailed timestamps and conte
 ### Log Format
 
 ```
-[2025-10-11 23:30:45] [INFO] Docker Playground Manager v3.0 starting...
-[2025-10-11 23:30:45] [INFO] All dependencies check passed
-[2025-10-11 23:30:45] [INFO] Environment initialized successfully
-[2025-10-11 23:30:50] [INFO] Starting container: mysql-8
-[2025-10-11 23:30:51] [SUCCESS] Started container: mysql-8
-[2025-10-11 23:30:51] [INFO] Container mysql-8 is now running
-[2025-10-11 23:30:51] [INFO] Running post-start script: mysql_init.sh
-[2025-10-11 23:30:56] [INFO] Entering container: mysql-8
-[2025-10-11 23:30:56] [INFO] MOTD length for mysql-8: 1278
-[2025-10-11 23:30:56] [INFO] Showing inline MOTD for mysql-8
-[2025-10-11 23:32:15] [INFO] Exited container: mysql-8
-[2025-10-11 23:35:20] [INFO] Stopping container: mysql-8
-[2025-10-11 23:35:20] [INFO] Running pre-stop script: generic_backup.sh
-[2025-10-11 23:35:22] [SUCCESS] Stopped container: mysql-8
-```
-
-### Viewing Logs
-
-```bash
-# View recent logs
-tail -50 playground.log
-
-# Follow logs in real-time
-tail -f playground.log
-
-# Export logs with timestamp
-# Use menu option "Export logs"
-# Creates: playground-logs-YYYYMMDD-HHMMSS.txt
+[2025-10-12 11:01:14] [INFO] Docker Playground Manager v3.0 starting...
+[2025-10-12 11:01:14] [INFO] Merging configuration files...
+[2025-10-12 11:01:14] [INFO] Merging: ubuntu-24.yml
+[2025-10-12 11:01:14] [SUCCESS]   ✓ Merged: ubuntu-24.yml
+[2025-10-12 11:01:14] [INFO] Merging: postgres-16.yml
+[2025-10-12 11:01:14] [SUCCESS]   ✓ Merged: postgres-16.yml
+[2025-10-12 11:01:15] [SUCCESS] Merged base config + 12 files = 103 total images
 ```
 
 ## 🛟 Troubleshooting
 
-### Container won't start
+### Config file not merging
+
 ```bash
-# 1. Check if the image exists
-docker pull 
+# Check if config.d/ exists
+ls -la config.d/
 
-# 2. Verify Docker daemon is running
-docker ps
+# Validate individual config files
+yq eval '.' config.d/ubuntu-24.yml
 
-# 3. View logs from the menu
-# Select "View container logs" → your-container
-
-# 4. Check playground log
-tail -50 playground.log
-
-# 5. Use debug mode
-# Select "Debug config" to verify configuration
+# Use debug mode
+./playground.sh → "Debug config"
 ```
 
-### Post-start script not running
+### Container not visible in menu
+
 ```bash
-# 1. Check if script exists
-ls -la scripts/
+# Check if container is already running
+docker ps --filter "label=playground.managed=true"
 
-# 2. Verify script is executable
-chmod +x scripts/*.sh
-
-# 3. Check config.yml syntax
-yq eval '.images."mysql-8".scripts.post_start' config.yml
-
-# 4. View log for script execution
-grep "post-start" playground.log
-
-# 5. Test script manually
-bash scripts/mysql_init.sh mysql-8
+# Containers already running won't appear in "Start" menu
+# Use "List active containers" or "Stop containers" first
 ```
 
-### MOTD not showing
+### Inline script not executing
+
 ```bash
-# 1. Test MOTD retrieval
-source lib/config.sh
-export CONFIG_FILE="./config.yml"
-get_image_motd "mysql-8" | head -5
+# Check log for script execution
+grep "post-start\|pre-stop" playground.log
 
-# 2. Check config.yml indentation (YAML is strict!)
-# MOTD must be indented correctly under the image
+# Verify script syntax in config file
+yq eval '.images."your-container".scripts.post_start.inline' config.d/your-file.yml
 
-# 3. Look for errors in log
-grep "MOTD" playground.log
-
-# 4. Verify /dev/tty output (MOTD uses TTY)
-# Should work in most terminals
-```
-
-### Port conflicts
-```bash
-# 1. Check what's using the port
-sudo netstat -tlnp | grep 
-
-# 2. Modify port mapping in config.yml
-# Change "5432:5432" to "5433:5432"
-
-# 3. Restart the container
-```
-
-### Permission denied on shared volume
-```bash
-# 1. Check permissions
-ls -la shared-volumes/
-
-# 2. Fix permissions
-chmod -R 777 shared-volumes/
-
-# 3. Create backup directory manually if needed
-mkdir -p shared-volumes/backups
-chmod 777 shared-volumes/backups
-```
-
-### yq not found
-```bash
-# Auto-install (recommended)
-# Script will offer to install via snap
-
-# Manual install
-sudo snap install yq
-
-# Verify installation
-yq --version
-```
-
-### Container not visible after restart
-```bash
-# Containers use Docker labels for tracking
-# Verify label exists
-docker ps -a --filter "label=playground.managed=true"
-
-# If missing, restart from menu
-# The playground will recreate with correct labels
-```
-
-### Can't enter container (shell not found)
-```bash
-# 1. Check shell configuration in config.yml
-yq eval '.images."your-container".shell' config.yml
-
-# 2. Common shells: /bin/bash, /bin/sh
-# Alpine uses /bin/sh, most others use /bin/bash
-
-# 3. Fix in config.yml if needed
+# Test script manually (extract to temp file and run)
 ```
 
 ## 🎯 Best Practices
 
-### Development Workflow
-1. **Use categories** - Start containers by category to get complete environments (e.g., "database" for all DB tools)
-2. **Read MOTDs** - Always check the MOTD for important connection info and commands
-3. **Use shared volume** - Store all your work in `/shared` for persistence and easy access from host
-4. **Leverage scripts** - Let post-start scripts handle initialization (no manual package installation!)
-5. **Regular backups** - Pre-stop scripts handle backups automatically, but export important data manually too
+### Configuration Management
 
-### Container Management
-1. **Start what you need** - Don't start all 100+ containers at once! Use category filtering
-2. **Monitor resources** - Use Dashboard and Statistics to track CPU/memory usage
-3. **Regular cleanup** - Stop unused containers to free resources
-4. **Check logs** - If something fails, check container logs and playground.log
-5. **Use restart** - Instead of stop/start, use the "Restart" option to preserve data
+1. **Use config.d/** - Keep custom configs separate from base config.yml
+2. **One container per file** - Makes it easier to manage and share
+3. **Use inline scripts** - Keep everything in one YAML file for better organization
+4. **Version control** - Commit your `config.d/*.yml` files
+5. **Validate before commit** - Use `yq eval '.' config.d/yourfile.yml` to check syntax
 
-### Configuration
-1. **Backup config** - Keep a copy of config.yml before major changes
-2. **Test scripts** - Test custom scripts manually before adding to config.yml
-3. **Validate YAML** - Use `yq eval '.' config.yml` to check syntax
-4. **Document MOTDs** - Add helpful MOTDs to your custom containers
-5. **Use debug mode** - When adding new containers, use "Debug config" to verify
+### Modular Configuration Tips
 
-### Shared Volume
-1. **Organize files** - Create subdirectories in shared-volumes/ for different projects
-2. **Check backups** - Periodically verify backups in shared-volumes/backups/
-3. **Clean old files** - Remove old backups and test files to save space
-4. **Use .gitignore** - Add shared-volumes/ to .gitignore (it's already there!)
-5. **Share configs** - Store config files in /shared for reuse across containers
-
-### Troubleshooting
-1. **Start simple** - Test with basic containers (Ubuntu, Alpine) first
-2. **Check logs** - Always check playground.log for detailed error messages
-3. **Use debug** - The "Debug config" option shows parsed configuration
-4. **One at a time** - When troubleshooting, start one container at a time
-5. **Export logs** - Export logs before reporting issues
+1. **Naming convention** - Use descriptive names: `postgres-16.yml`, `python-ml.yml`
+2. **Category organization** - Group related containers in same file if needed
+3. **Document inline scripts** - Add comments in your bash scripts
+4. **Test incrementally** - Test each new config file separately
+5. **Share with team** - Team members can add their own config files without conflicts
 
 ## 🤝 Contributing
 
@@ -791,15 +741,34 @@ Contributions are very welcome! This project benefits from community input.
 
 ### Areas for Contribution
 
-- 📝 **More MOTDs** - Add inline MOTDs for containers that don't have them yet
-- 🔧 **More scripts** - Create useful post-start/pre-stop scripts for common tasks
+- 📝 **More inline configs** - Add complete container configs in `config.d/`
+- 🔧 **More inline scripts** - Create useful initialization and backup scripts
 - 📦 **New images** - Add more pre-configured containers to the catalog
-- 🎨 **UI improvements** - Enhance the whiptail interface with better layouts
+- 🎨 **UI improvements** - Enhance the whiptail interface
 - 🐛 **Bug fixes** - Fix issues and improve reliability
-- 📖 **Documentation** - Improve README, add tutorials, create video guides
-- 🧪 **Testing** - Test on different platforms and Docker versions
-- 🌍 **Internationalization** - Translate MOTDs and UI to other languages
-  
+- 📖 **Documentation** - Improve README, add tutorials
+- 🧪 **Testing** - Test on different platforms
+- 🌍 **Internationalization** - Translate MOTDs and UI
+
+### How to Contribute a Container Configuration
+
+1. Create a new file in `config.d/`:
+```bash
+cp config.d/ubuntu-24.yml config.d/my-new-container.yml
+```
+
+2. Edit with your configuration (inline MOTD + inline scripts)
+
+3. Test it:
+```bash
+./playground.sh
+# Select "Start containers" → your-new-container
+```
+
+4. Submit a pull request!
+
+---
+
 **Made with ❤️ for the developer community**
 
-*Happy containerizing!
+*Happy containerizing! 🐳*

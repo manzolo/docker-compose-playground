@@ -100,22 +100,44 @@ debug_config() {
   echo "Config file: $CONFIG_FILE"
   echo "File exists: $([ -f "$CONFIG_FILE" ] && echo "YES" || echo "NO")"
   echo ""
+  
+  echo "=== Configuration Sources ==="
+  list_config_files
+  echo ""
+  
+  echo "=== Merged Configuration ==="
   echo "Total images found: $(get_total_image_count)"
   echo ""
-  echo "First 5 images:"
-  get_all_images | head -5
+  
+  echo "Images in merged config:"
+  show_merged_config
   echo ""
+  
+  echo "First 10 images:"
+  get_all_images | head -10
+  echo ""
+  
   echo "Categories:"
   get_all_categories
   echo ""
-  echo "Sample image (mysql-8):"
-  echo "  Image: $(get_image_property 'mysql-8' 'image')"
-  echo "  Description: $(get_image_property 'mysql-8' 'description')"
-  echo "  Category: $(get_image_property 'mysql-8' 'category')"
-  echo "  Post-start script: $(get_post_start_script 'mysql-8')"
-  echo "  Pre-stop script: $(get_pre_stop_script 'mysql-8')"
+  
+  echo "Sample images:"
+  for img in ubuntu-24 mysql-8 python-3.13; do
+    if image_exists "$img" 2>/dev/null; then
+      echo ""
+      echo "  $img:"
+      echo "    Image: $(get_image_property "$img" 'image')"
+      echo "    Description: $(get_image_property "$img" 'description')"
+      echo "    Category: $(get_image_property "$img" 'category')"
+      echo "    MOTD length: $(get_image_motd "$img" | wc -c) chars"
+      echo "    Post-start: $(get_post_start_script "$img")"
+      local inline=$(yq eval ".images.\"$img\".scripts.post_start.inline" "$CONFIG_FILE" 2>/dev/null)
+      if [ -n "$inline" ] && [ "$inline" != "null" ]; then
+        echo "    Post-start inline: YES ($(echo "$inline" | wc -l) lines)"
+      fi
+    fi
+  done
+  
   echo ""
-  echo "Sample image (ubuntu-24):"
-  echo "  MOTD length: $(get_image_motd 'ubuntu-24' | wc -c) chars"
   echo "======================="
 }

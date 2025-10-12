@@ -1,0 +1,108 @@
+images:
+  docker-dind:
+    image: docker:dind
+    shell: /bin/sh
+    keep_alive_cmd: dockerd-entrypoint.sh
+    description: "Docker in Docker"
+    category: devops
+    privileged: true
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║            Docker in Docker (DinD) Quick Reference            ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      ⚠️  This is Docker in Docker - you can run Docker inside!
+      
+      📊 Basic Docker Commands:
+         docker ps                                     # List running containers
+         docker ps -a                                  # List all containers
+         docker images                                 # List images
+         docker pull ubuntu:latest                     # Pull an image
+         docker run -it ubuntu bash                    # Run interactive
+      
+      🏗️ Building Images:
+         # Create Dockerfile in /shared
+         cat > /shared/Dockerfile <<'EOF'
+         FROM alpine:latest
+         RUN apk add --no-cache curl
+         CMD ["sh"]
+         EOF
+         
+         cd /shared && docker build -t myimage:latest .
+         docker run -it myimage:latest
+      
+      💾 Container Management:
+         docker start container_name                   # Start container
+         docker stop container_name                    # Stop container
+         docker restart container_name                 # Restart container
+         docker rm container_name                      # Remove container
+         docker exec -it container_name sh             # Execute command
+      
+      🔍 Inspect & Logs:
+         docker inspect container_name                 # Detailed info
+         docker logs container_name                    # View logs
+         docker logs -f container_name                 # Follow logs
+         docker stats                                  # Resource usage
+      
+      🌐 Networking:
+         docker network ls                             # List networks
+         docker network create mynet                   # Create network
+         docker network connect mynet container        # Connect container
+      
+      📦 Volumes:
+         docker volume ls                              # List volumes
+         docker volume create myvol                    # Create volume
+         docker run -v myvol:/data ubuntu             # Mount volume
+      
+      🔧 Docker Compose:
+         docker compose up -d                          # Start services
+         docker compose down                           # Stop services
+         docker compose ps                             # List services
+      
+      💡 Tips:
+         - Use /shared for Dockerfiles
+         - Built images persist until removed
+         - Can run full Docker workflows
+    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/sh
+          CONTAINER_NAME="$1"
+          echo "🐳 Initializing Docker in Docker for $CONTAINER_NAME..."
+          
+          # Wait for Docker daemon to be ready
+          sleep 5
+          
+          # Test Docker is working
+          docker exec "playground-$CONTAINER_NAME" docker version > /dev/null 2>&1
+          
+          if [ $? -eq 0 ]; then
+            echo "✓ Docker daemon is running inside $CONTAINER_NAME"
+          else
+            echo "⚠ Docker daemon may still be starting..."
+          fi
+          
+          echo "✓ Docker in Docker initialized"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          CONTAINER_NAME="$1"
+          echo "💾 Backing up Docker data for $CONTAINER_NAME..."
+          
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/docker-dind"
+          mkdir -p "$BACKUP_DIR"
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Backup list of images
+          docker exec "playground-$CONTAINER_NAME" docker images --format "{{.Repository}}:{{.Tag}}" > \
+            "$BACKUP_DIR/images_${TIMESTAMP}.txt" 2>/dev/null || true
+          
+          # Backup list of containers
+          docker exec "playground-$CONTAINER_NAME" docker ps -a --format "{{.Names}}: {{.Image}}" > \
+            "$BACKUP_DIR/containers_${TIMESTAMP}.txt" 2>/dev/null || true
+          
+          echo "✓ Backup saved to: backups/docker-dind/"
