@@ -1,0 +1,12 @@
+images:
+  php-5.6:
+    image: php:5.6
+    category: programming
+    description: Old php:5.6
+    keep_alive_cmd: tail -f /dev/null
+    shell: /bin/bash
+    ports:
+    - 8080:80
+    environment:
+      MY_ENV: '1.1'
+    motd: == Welcome to php5.6 !!! ==

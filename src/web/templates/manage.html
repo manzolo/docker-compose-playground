@@ -108,21 +108,84 @@
             </div>
         </div>
 
-        <!-- Category Browser -->
         <div class="manager-section">
-            <h2>📚 Browse by Category</h2>
-            <div class="category-browser">
-                {% for category, count in categories.items() %}
-                <div class="category-item" onclick="viewCategory('{{ category }}')">
-                    <div class="category-header">
-                        <span class="category-name">{{ category|title }}</span>
-                        <span class="category-count">{{ count }} containers</span>
+            <h2>📚 Browse by Category & Groups</h2>
+
+            <!-- Groups Section -->
+            {% if groups %}
+            <div class="browser-subsection">
+                <h3 class="subsection-title">🚀 Application Stacks ({{ groups|length }})</h3>
+                <div class="category-browser">
+                    {% for group_name, group in groups.items() %}
+                    <div class="category-item group-item">
+                        <div class="category-header">
+                            <div class="category-info">
+                                <span class="category-icon">🚀</span>
+                                <div>
+                                    <span class="category-name">{{ group.name }}</span>
+                                    <span class="category-description">{{ group.description }}</span>
+                                </div>
+                            </div>
+                            <span class="category-count">{{ group.containers|length }} containers</span>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-sm btn-success" onclick="startGroupFromManage('{{ group_name }}')">
+                                <span class="btn-icon">▶</span> Start Stack
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="stopGroupFromManage('{{ group_name }}')">
+                                <span class="btn-icon">⏹</span> Stop Stack
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="viewGroup('{{ group_name }}')">
+                                <span class="btn-icon">👁</span> View
+                            </button>
+                        </div>
                     </div>
+<<<<<<< Updated upstream
                     <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); startCategory('{{ category }}')">
                         Start All
                     </button>
+=======
+                    {% endfor %}
                 </div>
-                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Categories Section -->
+            <div class="browser-subsection">
+                <h3 class="subsection-title">📁 Individual Containers by Category ({{ categories|length }})</h3>
+                <div class="category-browser">
+                    {% for category, count in categories.items() %}
+                    <div class="category-item">
+                        <div class="category-header">
+                            <div class="category-info">
+                                <span class="category-icon">
+                                    {% if category == 'linux' %}🐧
+                                    {% elif category == 'programming' %}💻
+                                    {% elif category == 'database' %}🗄️
+                                    {% elif category == 'webserver' %}🌐
+                                    {% elif category == 'devops' %}⚙️
+                                    {% elif category == 'messaging' %}📨
+                                    {% elif category == 'monitoring' %}📊
+                                    {% elif category == 'ml' %}🤖
+                                    {% else %}📦
+                                    {% endif %}
+                                </span>
+                                <span class="category-name">{{ category|title }}</span>
+                            </div>
+                            <span class="category-count">{{ count }} containers</span>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-sm btn-success" onclick="startCategory('{{ category }}')">
+                                <span class="btn-icon">▶</span> Start All
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="viewCategory('{{ category }}')">
+                                <span class="btn-icon">👁</span> View
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+>>>>>>> Stashed changes
+                </div>
             </div>
         </div>
 

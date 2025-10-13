@@ -1,0 +1,29 @@
+/* Search Clear Button */
+.search-section {
+    position: relative;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 150px; /* Space for the search count */
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: none; /* Hidden by default */
+}
+
+.search-clear-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.search-section input:not(:placeholder-shown) ~ .search-clear-btn {
+    display: block; /* Show only when input has text */
+}

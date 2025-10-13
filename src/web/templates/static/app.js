@@ -476,5 +476,404 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+async function startGroup(groupName) {
+    const button = event.target;
+    const originalText = button.textContent;
+    
+    button.textContent = '🔄 Starting...';
+    button.disabled = true;
+    
+    try {
+        showLoader(`Initiating start for group '${groupName}'...`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for initial request
+        
+        const response = await fetch(`/api/start-group/${encodeURIComponent(groupName)}`, {
+            method: 'POST',
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast(`Starting group '${groupName}'...`, 'info');
+            // Start polling for status
+            pollStartGroupStatus(data.operation_id, groupName);
+        } else {
+            showToast(`Error: ${data.detail || 'Failed to start group'}`, 'error');
+            hideLoader();
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            showToast('Request timed out', 'warning');
+        } else {
+            showToast('Error starting group', 'error');
+            console.error('Error starting group:', error);
+        }
+        hideLoader();
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+/**
+ * Poll the status of a start group operation
+ */
+async function pollStartGroupStatus(operationId, groupName) {
+    const maxAttempts = 180; // 3 minutes max
+    let attempts = 0;
+
+    const poll = async () => {
+        try {
+            const response = await fetch(`/api/operation-status/${operationId}`);
+            const statusData = await response.json();
+
+            const total = statusData.total || '?';
+            const started = statusData.started || 0;
+            const alreadyRunning = statusData.already_running || 0;
+            const failed = statusData.failed || 0;
+            const completed = started + alreadyRunning + failed;
+            const remaining = total !== '?' ? total - completed : '?';
+            
+            // Update loader with detailed progress
+            showLoader(
+                `Starting '${groupName}': ${completed}/${total} | ` +
+                `✓ ${started} started, ` +
+                `⚡ ${alreadyRunning} running, ` +
+                `✗ ${failed} failed, ` +
+                `⏳ ${remaining} remaining`
+            );
+
+            if (statusData.status === 'completed') {
+                hideLoader();
+                
+                // Build success message
+                let message = `Group '${groupName}' started! `;
+                let details = [];
+                if (started > 0) details.push(`${started} started`);
+                if (alreadyRunning > 0) details.push(`${alreadyRunning} already running`);
+                if (failed > 0) details.push(`${failed} failed`);
+                message += details.join(', ');
+                
+                // Show appropriate toast
+                if (failed > 0) {
+                    showToast(message, 'warning');
+                    console.warn('Start group errors:', statusData.errors);
+                } else {
+                    showToast(message, 'success');
+                }
+                
+                // Reload page after delay
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+                return;
+            }
+
+            if (statusData.status === 'error') {
+                showToast(`Start group failed: ${statusData.error}`, 'error');
+                hideLoader();
+                return;
+            }
+            
+            // Continue polling
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000); // Poll every second
+            } else {
+                showToast(`Operation timed out after ${maxAttempts} seconds. Check status manually.`, 'warning');
+                hideLoader();
+            }
+
+        } catch (e) {
+            console.error('Polling error:', e);
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Polling failed. Please refresh the page.', 'error');
+                hideLoader();
+            }
+        }
+    };
+
+    // Start polling
+    poll();
+}
+
+/**
+ * Poll the status of a stop group operation
+ */
+async function pollStopGroupStatus(operationId, groupName) {
+    const maxAttempts = 180;
+    let attempts = 0;
+
+    const poll = async () => {
+        try {
+            const response = await fetch(`/api/operation-status/${operationId}`);
+            const statusData = await response.json();
+
+            // *** FIX: Usa default values se i campi non esistono ***
+            const total = statusData.total || 0;
+            const stopped = statusData.stopped || 0;
+            const notRunning = statusData.not_running || 0;
+            const failed = statusData.failed || 0;
+            const completed = stopped + notRunning + failed;
+            const remaining = total > 0 ? total - completed : 0;
+            
+            showLoader(
+                `Stopping '${groupName}': ${completed}/${total} | ` +
+                `⏹ ${stopped} stopped, ` +
+                `⏸ ${notRunning} not running, ` +
+                `✗ ${failed} failed, ` +
+                `⏳ ${remaining} remaining`
+            );
+
+            if (statusData.status === 'completed') {
+                let message = `Group '${groupName}' stopped! `;
+                let details = [];
+                if (stopped > 0) details.push(`${stopped} stopped`);
+                if (notRunning > 0) details.push(`${notRunning} were not running`);
+                if (failed > 0) details.push(`${failed} failed`);
+                
+                if (details.length > 0) {
+                    message += details.join(', ');
+                } else {
+                    message = `Group '${groupName}' operation completed`;
+                }
+                
+                showToast(message, failed > 0 ? 'warning' : 'success');
+                hideLoader();
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+                return;
+            }
+
+            if (statusData.status === 'error') {
+                showToast(`Stop group failed: ${statusData.error || 'Unknown error'}`, 'error');
+                hideLoader();
+                return;
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Operation timed out. Check status manually.', 'warning');
+                hideLoader();
+            }
+
+        } catch (e) {
+            console.error('Polling error:', e);
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Polling failed. Please refresh the page.', 'error');
+                hideLoader();
+            }
+        }
+    };
+
+    poll();
+}
+
+// Nuova funzione per stop group
+async function stopGroup(groupName) {
+    try {
+        const confirmed = await showConfirmModal(
+            'Stop Group',
+            `Are you sure you want to stop all containers in group '<strong>${groupName}</strong>'?`,
+            'warning'
+        );
+        
+        if (!confirmed) return;
+        
+        showLoader(`Initiating stop for group '${groupName}'...`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for initial request
+        
+        const response = await fetch(`/api/stop-group/${encodeURIComponent(groupName)}`, {
+            method: 'POST',
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast(`Stopping group '${groupName}'...`, 'info');
+            // Start polling for status
+            pollStopGroupStatus(data.operation_id, groupName);
+        } else {
+            showToast(`Error: ${data.detail || 'Failed to stop group'}`, 'error');
+            hideLoader();
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            showToast('Request timed out', 'warning');
+        } else {
+            showToast('Error stopping group', 'error');
+            console.error('Error stopping group:', error);
+        }
+        hideLoader();
+    }
+}
+
+// Nuova funzione per controllare lo stato del gruppo
+async function checkGroupStatus(groupName) {
+    try {
+        const response = await fetch(`/api/group-status/${groupName}`);
+        const result = await response.json();
+        
+        if (response.ok) {
+            console.log('Group status:', result);
+            return result;
+        }
+    } catch (error) {
+        console.error('Error checking group status:', error);
+    }
+    return null;
+}
+
+// =========================================================
+// Quick Search from Group Container Tags
+// =========================================================
+
+/**
+ * Filter containers by clicking on container tags in groups
+ */
+function quickSearchContainer(containerName) {
+    // Set the search input
+    const filterInput = document.getElementById('filter');
+    if (filterInput) {
+        filterInput.value = containerName;
+        filterInput.focus();
+        
+        // Trigger the filter
+        applyFilters();
+        
+        // Scroll to the container cards section
+        const imageGrid = document.querySelector('.image-grid');
+        if (imageGrid) {
+            imageGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // Visual feedback - highlight the matching card briefly
+        setTimeout(() => {
+            const matchingCard = document.querySelector(`.image-card[data-name="${containerName}"]`);
+            if (matchingCard) {
+                matchingCard.style.transition = 'all 0.3s ease';
+                matchingCard.style.transform = 'scale(1.02)';
+                matchingCard.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.3)';
+                
+                setTimeout(() => {
+                    matchingCard.style.transform = '';
+                    matchingCard.style.boxShadow = '';
+                }, 600);
+            }
+        }, 300);
+        
+        // Show toast notification
+        showToast(`🔍 Filtered to: ${containerName}`, 'info');
+    }
+}
+
+/**
+ * Initialize click handlers for container tags
+ */
+function initializeContainerTagHandlers() {
+    const containerTags = document.querySelectorAll('.container-tag');
+    
+    containerTags.forEach(tag => {
+        const containerName = tag.getAttribute('data-container');
+        
+        if (containerName) {
+            // Add click handler
+            tag.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                quickSearchContainer(containerName);
+            });
+            
+            // Make it visually clear it's clickable
+            tag.style.cursor = 'pointer';
+            
+            // Add hover tooltip
+            tag.title = `Click to filter by ${containerName}`;
+            
+            // Update status dot based on actual container status
+            updateContainerTagStatus(tag, containerName);
+        }
+    });
+}
+
+/**
+ * Update the status dot color based on container state
+ */
+function updateContainerTagStatus(tag, containerName) {
+    const statusDot = tag.querySelector('.container-status-dot');
+    const matchingCard = document.querySelector(`.image-card[data-name="${containerName}"]`);
+    
+    if (statusDot && matchingCard) {
+        const statusText = matchingCard.querySelector('.status-text');
+        if (statusText) {
+            const isRunning = statusText.textContent.toLowerCase() === 'running';
+            
+            if (isRunning) {
+                statusDot.style.background = '#10b981'; // Green
+                statusDot.style.animation = 'pulse 2s ease-in-out infinite';
+                tag.setAttribute('data-running', 'true');
+            } else {
+                statusDot.style.background = '#94a3b8'; // Gray
+                statusDot.style.animation = 'none';
+                tag.setAttribute('data-running', 'false');
+            }
+        }
+    }
+}
+
+/**
+ * Refresh all container tag statuses
+ */
+function refreshContainerTagStatuses() {
+    const containerTags = document.querySelectorAll('.container-tag');
+    containerTags.forEach(tag => {
+        const containerName = tag.getAttribute('data-container');
+        if (containerName) {
+            updateContainerTagStatus(tag, containerName);
+        }
+    });
+}
+
+function clearSearch() {
+    const filterInput = document.getElementById('filter');
+    if (filterInput) {
+        filterInput.value = '';
+        filterInput.focus();
+        applyFilters();
+        showToast('🔄 Search cleared', 'info');
+    }
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeContainerTagHandlers();
+        refreshContainerTagStatuses();
+    });
+} else {
+    initializeContainerTagHandlers();
+    refreshContainerTagStatuses();
+}
+
 // Initialize
 applyFilters();
