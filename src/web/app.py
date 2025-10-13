@@ -206,10 +206,16 @@ async def dashboard(request: Request):
         config = load_config()
         running = docker_client.containers.list(all=True)
         running_dict = {}
+        features_dict = {}  # NEW: Store features for each container
+        
         for c in running:
             if c.name.startswith("playground-"):
                 image_name = c.name.replace("playground-", "", 1)
                 running_dict[image_name] = {"name": c.name, "status": c.status}
+        
+        # NEW: Get features for all containers
+        for img_name in config.keys():
+            features_dict[img_name] = get_container_features(img_name, config)
         
         # Get all unique categories and their counts
         categories = set()
@@ -223,6 +229,7 @@ async def dashboard(request: Request):
             "request": request,
             "images": config,
             "running": running_dict,
+            "features": features_dict,  # NEW: Pass features to template
             "categories": sorted(categories),
             "category_counts": category_counts
         })
@@ -1148,3 +1155,14 @@ async def detect_shell(request: Request):
     except Exception as e:
         logger.error("Error detecting shell: %s", str(e))
         return {"shell": "/bin/sh"}
+
+def get_container_features(image_name: str, config: dict) -> dict:
+    """Get special features of a container (MOTD, scripts, etc.)"""
+    img_data = config.get(image_name, {})
+    features = {
+        'has_motd': bool(img_data.get('motd')),
+        'has_scripts': bool(img_data.get('scripts')),
+        'has_post_start': bool(img_data.get('scripts', {}).get('post_start')),
+        'has_pre_stop': bool(img_data.get('scripts', {}).get('pre_stop'))
+    }
+    return features

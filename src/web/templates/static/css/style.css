@@ -959,3 +959,32 @@ header .subtitle {
 .hidden {
     display: none !important;
 }
+
+/* Feature Icons */
+.feature-icon {
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: help;
+    display: inline-block;
+}
+
+.feature-icon:hover {
+    transform: scale(1.2);
+    transition: transform 0.2s;
+}
+
+.feature-icon:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1000;
+}

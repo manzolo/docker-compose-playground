@@ -8,7 +8,7 @@ echo "🐘 Initializing PostgreSQL for $CONTAINER_NAME..."
 sleep 3
 
 # Create example table
-docker exec "playground-$CONTAINER_NAME" psql -U playground -d playground -c "
+docker exec "$CONTAINER_NAME" psql -U playground -d playground -c "
 CREATE TABLE IF NOT EXISTS playground_info (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

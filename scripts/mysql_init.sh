@@ -8,7 +8,7 @@ echo "🐬 Initializing MySQL for $CONTAINER_NAME..."
 sleep 5
 
 # Create example table
-docker exec "playground-$CONTAINER_NAME" mysql -u playground -pplayground playground -e "
+docker exec "$CONTAINER_NAME" mysql -u playground -pplayground playground -e "
 CREATE TABLE IF NOT EXISTS playground_info (
     id INT AUTO_INCREMENT PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -83,7 +83,22 @@
                 data-container="playground-{{ name }}">
                 <div class="card-header">
                     <h3>{{ name }}</h3>
-                    <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
+                    <div class="header-badges">
+                        <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
+
+                        <!-- Icone compatte -->
+                        {% if features[name].has_motd %}
+                        <span class="feature-icon feature-motd" title="Has MOTD">📋</span>
+                        {% endif %}
+
+                        {% if features[name].has_post_start %}
+                        <span class="feature-icon feature-post-start" title="Has post-start script">🚀</span>
+                        {% endif %}
+
+                        {% if features[name].has_pre_stop %}
+                        <span class="feature-icon feature-pre-stop" title="Has pre-stop script">💾</span>
+                        {% endif %}
+                    </div>
                 </div>
                 <p class="card-description">{{ data.description }}</p>
 
