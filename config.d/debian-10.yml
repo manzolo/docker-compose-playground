@@ -1,7 +1,7 @@
 images:
-  debian-12:
+  debian-10:
     category: linux
-    description: Debian 12 (Bookworm)
-    image: debian:12
+    description: Debian 10 (Buster)
+    image: debian:10
     keep_alive_cmd: sleep infinity
     shell: /bin/bash

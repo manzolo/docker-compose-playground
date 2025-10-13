@@ -204,32 +204,35 @@ def format_motd_for_terminal(motd):
 async def dashboard(request: Request):
     try:
         config = load_config()
+        
+        # NEW: Natural sorting by image name
+        sorted_config = dict(sorted(config.items(), key=lambda x: natural_sort_key(x[0])))
+        
         running = docker_client.containers.list(all=True)
         running_dict = {}
-        features_dict = {}  # NEW: Store features for each container
+        features_dict = {}
         
         for c in running:
             if c.name.startswith("playground-"):
                 image_name = c.name.replace("playground-", "", 1)
                 running_dict[image_name] = {"name": c.name, "status": c.status}
         
-        # NEW: Get features for all containers
-        for img_name in config.keys():
-            features_dict[img_name] = get_container_features(img_name, config)
+        for img_name in sorted_config.keys():  # Use sorted_config here
+            features_dict[img_name] = get_container_features(img_name, sorted_config)
         
         # Get all unique categories and their counts
         categories = set()
         category_counts = {}
-        for img_name, img_data in config.items():
+        for img_name, img_data in sorted_config.items():  # Use sorted_config here
             cat = img_data.get('category', 'other')
             categories.add(cat)
             category_counts[cat] = category_counts.get(cat, 0) + 1
         
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "images": config,
+            "images": sorted_config,  # Pass sorted config to template
             "running": running_dict,
-            "features": features_dict,  # NEW: Pass features to template
+            "features": features_dict,
             "categories": sorted(categories),
             "category_counts": category_counts
         })
@@ -1166,3 +1169,11 @@ def get_container_features(image_name: str, config: dict) -> dict:
         'has_pre_stop': bool(img_data.get('scripts', {}).get('pre_stop'))
     }
     return features
+
+def natural_sort_key(key):
+    """Convert string to tuple for natural sorting (10 > 2)"""
+    import re
+    def convert(text):
+        return int(text) if text.isdigit() else text.lower()
+    
+    return [convert(c) for c in re.split('([0-9]+)', key)]
