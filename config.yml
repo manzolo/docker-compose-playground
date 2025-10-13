@@ -1,4 +1,3 @@
-# Global settings
 settings:
   shared_volume_path: ./shared-volumes
   compose_file: docker-compose.yml

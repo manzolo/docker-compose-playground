@@ -4,27 +4,44 @@ images:
     description: Docker in Docker
     image: docker:dind
     keep_alive_cmd: dockerd-entrypoint.sh
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \         Docker in Docker (DinD) Quick Reference            ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n⚠️  This is Docker in Docker - you can run Docker inside!\n\n\U0001F4CA Basic\
-      \ Docker Commands:\n   docker ps                                     # List\
-      \ running containers\n   docker ps -a                                  # List\
-      \ all containers\n   docker images                                 # List images\n\
-      \   docker pull ubuntu:latest                     # Pull an image\n   docker\
-      \ run -it ubuntu bash                    # Run interactive\n\n\U0001F3D7️ Building\
-      \ Images:\n   Create Dockerfile in /shared:\n     FROM alpine:latest\n     RUN\
-      \ apk add --no-cache curl\n     CMD [\"sh\"]\n   \n   cd /shared && docker build\
-      \ -t myimage:latest .\n   docker run -it myimage:latest\n\n\U0001F4BE Container\
-      \ Management:\n   docker start container_name                   # Start container\n\
-      \   docker stop container_name                    # Stop container\n   docker\
-      \ restart container_name                 # Restart container\n   docker rm container_name\
-      \                      # Remove container\n   docker exec -it container_name\
-      \ sh             # Execute command\n\n\U0001F310 Networking:\n   docker network\
-      \ ls                             # List networks\n   docker network create mynet\
-      \                   # Create network\n   docker network connect mynet container\
-      \        # Connect container\n\n\U0001F4E6 Volumes:\n   docker volume ls   \
-      \                           # List volumes\n   docker volume create myvol  \
-      \                  # Create volume\n   docker run -v myvol:/data ubuntu    \
-      \         # Mount volume\n"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Docker in Docker (DinD) Quick Reference            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      ⚠️  This is Docker in Docker - you can run Docker inside!
+
+      📊 Basic Docker Commands:
+         docker ps                                     # List running containers
+         docker ps -a                                  # List all containers
+         docker images                                 # List images
+         docker pull ubuntu:latest                     # Pull an image
+         docker run -it ubuntu bash                    # Run interactive
+
+      🏗️ Building Images:
+         Create Dockerfile in /shared:
+           FROM alpine:latest
+           RUN apk add --no-cache curl
+           CMD ["sh"]
+         
+         cd /shared && docker build -t myimage:latest .
+         docker run -it myimage:latest
+
+      💾 Container Management:
+         docker start container_name                   # Start container
+         docker stop container_name                    # Stop container
+         docker restart container_name                 # Restart container
+         docker rm container_name                      # Remove container
+         docker exec -it container_name sh             # Execute command
+
+      🌐 Networking:
+         docker network ls                             # List networks
+         docker network create mynet                   # Create network
+         docker network connect mynet container        # Connect container
+
+      📦 Volumes:
+         docker volume ls                              # List volumes
+         docker volume create myvol                    # Create volume
+         docker run -v myvol:/data ubuntu              # Mount volume
     privileged: true
     shell: /bin/sh

@@ -4,25 +4,51 @@ images:
     description: Nginx (Latest) - Web server
     image: nginx:latest
     keep_alive_cmd: nginx -g 'daemon off;'
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \               Nginx Quick Reference                        ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F310 Nginx Info:\n   nginx -v                                      #\
-      \ Version\n   nginx -t                                      # Test configuration\n\
-      \   nginx -T                                      # Test and dump config\n\n\
-      \U0001F4C1 Important Paths:\n   Config: /etc/nginx/nginx.conf\n   Sites: /etc/nginx/conf.d/\n\
-      \   HTML: /usr/share/nginx/html/\n   Logs: /var/log/nginx/\n\n\U0001F527 Basic\
-      \ Commands:\n   nginx -s reload                               # Reload config\n\
-      \   nginx -s stop                                 # Stop nginx\n   nginx -s\
-      \ quit                                 # Graceful shutdown\n\n\U0001F4DD Simple\
-      \ Site Setup:\n   echo '<h1>Hello from Nginx!</h1>' > /shared/index.html\n \
-      \  \n   cat > /etc/nginx/conf.d/mysite.conf <<'EOF'\n   server {\n       listen\
-      \ 80;\n       server_name localhost;\n       root /shared;\n       index index.html;\n\
-      \       location / {\n           try_files $uri $uri/ =404;\n       }\n   }\n\
-      \   EOF\n   \n   nginx -s reload\n\n\U0001F4CA Check Status:\n   ps aux | grep\
-      \ nginx                           # Check processes\n   curl localhost     \
-      \                           # Test locally\n\n\U0001F50D View Logs:\n   tail\
-      \ -f /var/log/nginx/access.log             # Access log\n   tail -f /var/log/nginx/error.log\
-      \              # Error log\n"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Nginx Quick Reference                        ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Nginx Info:
+         nginx -v                                      # Version
+         nginx -t                                      # Test configuration
+         nginx -T                                      # Test and dump config
+
+      📁 Important Paths:
+         Config: /etc/nginx/nginx.conf
+         Sites: /etc/nginx/conf.d/
+         HTML: /usr/share/nginx/html/
+         Logs: /var/log/nginx/
+
+      🔧 Basic Commands:
+         nginx -s reload                               # Reload config
+         nginx -s stop                                 # Stop nginx
+         nginx -s quit                                 # Graceful shutdown
+
+      📝 Simple Site Setup:
+         echo '<h1>Hello from Nginx!</h1>' > /shared/index.html
+         
+         cat > /etc/nginx/conf.d/mysite.conf <<'EOF'
+         server {
+             listen 80;
+             server_name localhost;
+             root /shared;
+             index index.html;
+             location / {
+                 try_files $uri $uri/ =404;
+             }
+         }
+         EOF
+         
+         nginx -s reload
+
+      📊 Check Status:
+         ps aux | grep nginx                           # Check processes
+         curl localhost                                # Test locally
+
+      🔍 View Logs:
+         tail -f /var/log/nginx/access.log             # Access log
+         tail -f /var/log/nginx/error.log              # Error log
     ports:
     - 8080:80
     shell: /bin/bash

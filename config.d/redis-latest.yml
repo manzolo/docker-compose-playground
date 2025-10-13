@@ -1,12 +1,12 @@
 images:
-  redis-7:
+  redis-latest:
     category: database
-    description: Redis 7 (Latest) - In-memory cache
-    image: redis:7
+    description: Redis (Latest) - In-memory cache
+    image: redis:latest
     keep_alive_cmd: redis-server
     motd: |-
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   Redis 7 Quick Reference                     ║
+      ║                   Redis latest Quick Reference                     ║
       ╚══════════════════════════════════════════════════════════════╝
 
       🔐 Connection Info:

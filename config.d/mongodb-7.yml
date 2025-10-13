@@ -4,23 +4,40 @@ images:
     description: MongoDB 7 (Latest)
     image: mongo:7
     keep_alive_cmd: mongod
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \               MongoDB 7 Quick Reference                    ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F510 Connection Info:\n   Host: localhost / Container IP\n   Port: 27017\n\
-      \   No authentication required (default)\n\n\U0001F4CA Basic Commands:\n   mongosh\
-      \                                       # Connect to MongoDB\n   show dbs  \
-      \                                    # List databases\n   use mydb         \
-      \                             # Switch/create database\n   show collections\
-      \                              # List collections\n   db.collection.find() \
-      \                         # Show all documents\n\n\U0001F4BE Backup & Restore:\n\
-      \   mongodump --db playground --out /shared/backup\n   mongorestore --db playground\
-      \ /shared/backup/playground\n   mongoexport --db playground --collection users\
-      \ --out /shared/users.json\n   mongoimport --db playground --collection users\
-      \ --file /shared/users.json\n\n\U0001F50D CRUD Operations:\n   db.users.insertOne({name:\
-      \ \"John\", age: 30})\n   db.users.find({name: \"John\"})\n   db.users.updateOne({name:\
-      \ \"John\"}, {$set: {age: 31}})\n   db.users.deleteOne({name: \"John\"})\n\n\
-      \U0001F4C8 Aggregation:\n   db.users.aggregate([\n     {$match: {age: {$gte:\
-      \ 18}}},\n     {$group: {_id: \"$city\", count: {$sum: 1}}}\n   ])\n"
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  MongoDB 7 Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 27017
+         No authentication required (default)
+
+      📊 Basic Commands:
+         mongosh                                       # Connect to MongoDB
+         show dbs                                      # List databases
+         use mydb                                      # Switch/create database
+         show collections                              # List collections
+         db.collection.find()                          # Show all documents
+
+      💾 Backup & Restore:
+         mongodump --db playground --out /shared/backup
+         mongorestore --db playground /shared/backup/playground
+         mongoexport --db playground --collection users --out /shared/users.json
+         mongoimport --db playground --collection users --file /shared/users.json
+
+      🔍 CRUD Operations:
+         db.users.insertOne({name: "John", age: 30})
+         db.users.find({name: "John"})
+         db.users.updateOne({name: "John"}, {$set: {age: 31}})
+         db.users.deleteOne({name: "John"})
+
+      📈 Aggregation:
+         db.users.aggregate([
+           {$match: {age: {$gte: 18}}},
+           {$group: {_id: "$city", count: {$sum: 1}}}
+         ])
     ports:
     - 27017:27017
     shell: /bin/bash

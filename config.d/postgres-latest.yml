@@ -1,16 +1,16 @@
 images:
-  postgres-16:
+  postgres-latest:
     category: database
-    description: PostgreSQL 16
+    description: PostgreSQL 17 (Latest)
     environment:
       POSTGRES_DB: playground
       POSTGRES_PASSWORD: playground
       POSTGRES_USER: playground
-    image: postgres:16
+    image: postgres:17
     keep_alive_cmd: postgres
     motd: |-
       ╔══════════════════════════════════════════════════════════════╗
-      ║                PostgreSQL 16 Quick Reference                  ║
+      ║                PostgreSQL 17 Quick Reference                 ║
       ╚══════════════════════════════════════════════════════════════╝
 
       🔐 Connection Info:
