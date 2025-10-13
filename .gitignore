@@ -23,3 +23,10 @@ playground-logs-*.txt
 venv/
 venv.log
 **__pycache__**
+
+# User custom configurations
+custom.d/*.yml
+custom.d/
+
+# Keep the directory structure
+!custom.d/.gitkeep

@@ -34,6 +34,7 @@ docker_client = docker.from_env()
 
 # Path alla directory config.d e al file config.yml
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config.d"
+CUSTOM_CONFIG_DIR = Path(__file__).parent.parent.parent / "custom.d"
 CONFIG_FILE = Path(__file__).parent.parent.parent / "config.yml"
 SCRIPTS_DIR = Path(__file__).parent.parent.parent / "scripts"
 SHARED_DIR = Path(__file__).parent.parent.parent / "shared-volumes"
@@ -58,6 +59,8 @@ ensure_network()
 # Config loading from config.yml and config.d
 def load_config():
     images = {}
+    
+    # 1. Load from config.yml (base configuration from Git)
     if CONFIG_FILE.exists():
         try:
             with CONFIG_FILE.open("r") as f:
@@ -69,6 +72,7 @@ def load_config():
             logger.error("Failed to parse config.yml: %s", str(e))
             raise HTTPException(500, f"Failed to parse config.yml: {str(e)}")
     
+    # 2. Load from config.d (additional configurations from Git)
     if CONFIG_DIR.exists():
         config_files = glob.glob(str(CONFIG_DIR / "*.yml"))
         for config_file in config_files:
@@ -78,6 +82,20 @@ def load_config():
                     if config and isinstance(config, dict) and "images" in config:
                         images.update(config["images"])
                         logger.info("Loaded images from %s", config_file)
+            except yaml.YAMLError as e:
+                logger.error("Failed to parse %s: %s", config_file, str(e))
+                continue
+    
+    # 3. Load from custom.d (user-created configurations, not in Git)
+    if CUSTOM_CONFIG_DIR.exists():
+        custom_files = glob.glob(str(CUSTOM_CONFIG_DIR / "*.yml"))
+        for config_file in custom_files:
+            try:
+                with open(config_file, "r") as f:
+                    config = yaml.safe_load(f)
+                    if config and isinstance(config, dict) and "images" in config:
+                        images.update(config["images"])
+                        logger.info("Loaded custom images from %s", config_file)
             except yaml.YAMLError as e:
                 logger.error("Failed to parse %s: %s", config_file, str(e))
                 continue
@@ -943,3 +961,190 @@ async def websocket_console(websocket: WebSocket, container: str):
         except:
             pass
         logger.info("Console session closed for %s", container)
+
+# Aggiungi questi endpoint al file app.py esistente
+
+@app.get("/add-container", response_class=HTMLResponse)
+async def add_container_page(request: Request):
+    """Page to add new container configuration"""
+    try:
+        config = load_config()
+        # Get unique categories for dropdown
+        categories = sorted(set(img_data.get('category', 'other') for img_data in config.values()))
+        
+        return templates.TemplateResponse("add_container.html", {
+            "request": request,
+            "existing_categories": categories
+        })
+    except Exception as e:
+        logger.error("Error loading add container page: %s", str(e))
+        raise HTTPException(500, str(e))
+
+# Path alla directory config.d, custom.d e al file config.yml
+CONFIG_DIR = Path(__file__).parent.parent.parent / "config.d"
+CUSTOM_CONFIG_DIR = Path(__file__).parent.parent.parent / "custom.d"
+CONFIG_FILE = Path(__file__).parent.parent.parent / "config.yml"
+
+# Ensure custom.d directory exists
+CUSTOM_CONFIG_DIR.mkdir(exist_ok=True)
+
+@app.post("/api/add-container")
+async def add_container_config(request: Request):
+    """Add a new container configuration to custom.d directory"""
+    try:
+        data = await request.json()
+        
+        # Validate required fields
+        required_fields = ['name', 'image', 'category', 'description']
+        for field in required_fields:
+            if not data.get(field):
+                raise HTTPException(400, f"Missing required field: {field}")
+        
+        # Check if name already exists in any config
+        existing_config = load_config()
+        if data['name'] in existing_config:
+            raise HTTPException(400, f"Container name '{data['name']}' already exists")
+        
+        # Build new container config
+        new_config = {
+            "images": {
+                data['name']: {
+                    "image": data['image'],
+                    "category": data['category'],
+                    "description": data['description'],
+                    "keep_alive_cmd": data.get('keep_alive_cmd', 'tail -f /dev/null'),
+                    "shell": data.get('shell', '/bin/bash'),
+                    "ports": data.get('ports', []),
+                    "environment": {}
+                }
+            }
+        }
+        
+        # Add environment variables if provided
+        if data.get('environment'):
+            env_lines = data['environment'].strip().split('\n')
+            for line in env_lines:
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    new_config['images'][data['name']]['environment'][key.strip()] = value.strip()
+        
+        # Add MOTD if provided
+        if data.get('motd'):
+            new_config['images'][data['name']]['motd'] = data['motd']
+        
+        # Create filename: sanitize container name
+        safe_name = data['name'].replace('_', '-').lower()
+        config_file_path = CUSTOM_CONFIG_DIR / f"{safe_name}.yml"
+        
+        # Check if file already exists
+        if config_file_path.exists():
+            raise HTTPException(400, f"Configuration file for '{data['name']}' already exists")
+        
+        # Write to individual file in custom.d with proper formatting
+        yaml_content = yaml.dump(
+            new_config,
+            Dumper=CustomDumper,
+            allow_unicode=True,
+            sort_keys=False,
+            default_flow_style=False,
+            indent=2
+        )
+        
+        with config_file_path.open("w") as f:
+            f.write(yaml_content)
+        
+        logger.info("Added new container config: %s to %s", data['name'], config_file_path)
+        
+        return {
+            "status": "success",
+            "message": f"Container '{data['name']}' added successfully to custom.d/{safe_name}.yml",
+            "name": data['name'],
+            "file": f"custom.d/{safe_name}.yml"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error adding container: %s", str(e))
+        raise HTTPException(500, f"Failed to add container: {str(e)}")
+
+@app.post("/api/validate-image")
+async def validate_image(request: Request):
+    """Validate if a Docker image exists and get its info"""
+    try:
+        data = await request.json()
+        image_name = data.get('image')
+        
+        if not image_name:
+            raise HTTPException(400, "Image name is required")
+        
+        try:
+            # Try to pull/inspect the image
+            image = docker_client.images.pull(image_name)
+            
+            # Get image info
+            info = {
+                "exists": True,
+                "id": image.id[:12],
+                "tags": image.tags,
+                "size": f"{image.attrs['Size'] / (1024*1024):.2f} MB",
+                "created": image.attrs['Created'][:10]
+            }
+            
+            logger.info("Validated image: %s", image_name)
+            return info
+            
+        except docker.errors.ImageNotFound:
+            return {"exists": False, "error": "Image not found in Docker Hub"}
+        except docker.errors.APIError as e:
+            return {"exists": False, "error": str(e)}
+            
+    except Exception as e:
+        logger.error("Error validating image: %s", str(e))
+        raise HTTPException(500, str(e))
+
+@app.post("/api/detect-shell")
+async def detect_shell(request: Request):
+    """Detect available shell in an image"""
+    try:
+        data = await request.json()
+        image_name = data.get('image')
+        
+        if not image_name:
+            raise HTTPException(400, "Image name is required")
+        
+        # Try common shells in order of preference
+        shells = ['/bin/bash', '/bin/sh', '/bin/ash', '/usr/bin/bash']
+        
+        try:
+            # Create temporary container to test
+            container = docker_client.containers.run(
+                image_name,
+                command='sleep 5',
+                detach=True,
+                remove=True
+            )
+            
+            detected_shell = '/bin/sh'  # default fallback
+            
+            for shell in shells:
+                try:
+                    exit_code, output = container.exec_run(f'test -f {shell}')
+                    if exit_code == 0:
+                        detected_shell = shell
+                        break
+                except:
+                    continue
+            
+            container.stop()
+            
+            logger.info("Detected shell %s for image %s", detected_shell, image_name)
+            return {"shell": detected_shell}
+            
+        except Exception as e:
+            logger.warning("Could not detect shell for %s: %s", image_name, str(e))
+            return {"shell": "/bin/sh"}  # Safe default
+            
+    except Exception as e:
+        logger.error("Error detecting shell: %s", str(e))
+        return {"shell": "/bin/sh"}

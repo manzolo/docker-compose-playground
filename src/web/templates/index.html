@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <title>🐳 Docker Playground Dashboard</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
@@ -28,8 +28,9 @@
             <h1>🐳 Docker Playground</h1>
             <p class="subtitle">Manage your containerized development environments</p>
             <nav class="header-nav">
-                <a href="/" class="nav-link active">Dashboard</a>
+                <a href="/" class="nav-link">Dashboard</a>
                 <a href="/manage" class="nav-link">Advanced Manager</a>
+                <a href="/add-container" class="nav-link">Add Container</a>
             </nav>
         </div>
     </header>
@@ -158,7 +159,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="confirmModal" class="modal"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>

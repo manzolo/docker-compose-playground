@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>➕ Add Container - Docker Playground</title>
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/modal.css">
+    <link rel="stylesheet" href="/static/css/add-container.css">
+</head>
+
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Loader Overlay -->
+    <div id="global-loader" class="loader-overlay hidden">
+        <div class="loader-spinner"></div>
+        <p id="loader-message" class="loader-message">Please wait...</p>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <h1>➕ Add New Container</h1>
+            <p class="subtitle">Create a new container configuration</p>
+            <nav class="header-nav">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/manage" class="nav-link">Advanced Manager</a>
+                <a href="/add-container" class="nav-link active">Add Container</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Add Container Form -->
+        <div class="form-container">
+            <form id="addContainerForm">
+                
+                <!-- Step Indicator -->
+                <div class="step-indicator">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Basic Info</div>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Configuration</div>
+                    </div>
+                    <div class="step" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Advanced</div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Basic Info -->
+                <div class="form-step active" data-step="1">
+                    <h2>📦 Basic Information</h2>
+                    
+                    <div class="form-group">
+                        <label for="imageName">
+                            Docker Image <span class="required">*</span>
+                            <span class="field-hint">e.g., nginx:latest, postgres:15, python:3.11</span>
+                        </label>
+                        <div class="input-with-button">
+                            <input type="text" id="imageName" name="image" required 
+                                   placeholder="nginx:latest" autocomplete="off">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="validateImage()">
+                                🔍 Validate
+                            </button>
+                        </div>
+                        <div id="imageValidation" class="validation-result"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="containerName">
+                            Container Name <span class="required">*</span>
+                            <span class="field-hint">Unique identifier (lowercase, no spaces)</span>
+                        </label>
+                        <input type="text" id="containerName" name="name" required 
+                               placeholder="my-nginx" pattern="[a-z0-9\-]+" autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">
+                            Description <span class="required">*</span>
+                            <span class="field-hint">Brief description of the container purpose</span>
+                        </label>
+                        <textarea id="description" name="description" required rows="3" 
+                                  placeholder="A lightweight web server for serving static content"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="nextStep()">
+                            Next Step →
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Configuration -->
+                <div class="form-step" data-step="2">
+                    <h2>⚙️ Configuration</h2>
+
+                    <div class="form-group">
+                        <label for="category">
+                            Category <span class="required">*</span>
+                            <span class="field-hint">Select or create a new category</span>
+                        </label>
+                        <div class="category-input-group">
+                            <select id="categorySelect" onchange="handleCategoryChange()">
+                                <option value="">-- Select Category --</option>
+                                {% for cat in existing_categories %}
+                                <option value="{{ cat }}">{{ cat|title }}</option>
+                                {% endfor %}
+                                <option value="__new__">➕ Create New Category</option>
+                            </select>
+                            <input type="text" id="categoryNew" name="category" 
+                                   placeholder="Enter new category name" 
+                                   style="display: none;" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ports">
+                            Port Mappings
+                            <span class="field-hint">Format: host:container (one per line)</span>
+                        </label>
+                        <textarea id="ports" name="ports" rows="3" 
+                                  placeholder="8080:80&#x0a;8443:443"></textarea>
+                        <div class="input-example">
+                            💡 Example: 8080:80 maps container port 80 to host port 8080
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="environment">
+                            Environment Variables
+                            <span class="field-hint">Format: KEY=value (one per line)</span>
+                        </label>
+                        <textarea id="environment" name="environment" rows="4" 
+                                  placeholder="POSTGRES_PASSWORD=secret&#x0a;POSTGRES_DB=mydb"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="previousStep()">
+                            ← Previous
+                        </button>
+                        <button type="button" class="btn btn-primary btn-lg" onclick="nextStep()">
+                            Next Step →
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Advanced -->
+                <div class="form-step" data-step="3">
+                    <h2>🔧 Advanced Settings</h2>
+
+                    <div class="form-group">
+                        <label for="shell">
+                            Shell <span class="required">*</span>
+                            <span class="field-hint">Shell to use for console access</span>
+                        </label>
+                        <div class="input-with-button">
+                            <select id="shell" name="shell" required>
+                                <option value="/bin/bash">/bin/bash (default)</option>
+                                <option value="/bin/sh">/bin/sh</option>
+                                <option value="/bin/ash">/bin/ash (Alpine)</option>
+                                <option value="/usr/bin/bash">/usr/bin/bash</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="detectShell()">
+                                🔍 Auto-detect
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="keepAliveCmd">
+                            Keep Alive Command
+                            <span class="field-hint">Command to keep container running</span>
+                        </label>
+                        <input type="text" id="keepAliveCmd" name="keep_alive_cmd" 
+                               value="tail -f /dev/null" autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="motd">
+                            MOTD (Message of the Day)
+                            <span class="field-hint">Optional welcome message shown in console</span>
+                        </label>
+                        <textarea id="motd" name="motd" rows="6" 
+                                  placeholder="Welcome to My Container!&#x0a;&#x0a;Installed tools:&#x0a;- Tool 1&#x0a;- Tool 2"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="previousStep()">
+                            ← Previous
+                        </button>
+                        <button type="button" class="btn btn-primary btn-lg" onclick="previewConfig()">
+                            👁 Preview Config
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            ✓ Add Container
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Preview Panel (Initially Hidden) -->
+        <div id="previewPanel" class="preview-panel" style="display: none;">
+            <h2>📄 Configuration Preview</h2>
+            <pre id="previewContent" class="config-preview"></pre>
+            <button class="btn btn-secondary btn-sm" onclick="closePreview()">Close Preview</button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal"></div>
+
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/add-container.js"></script>
+</body>
+
+</html>
