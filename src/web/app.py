@@ -330,7 +330,7 @@ async def stop_container(container: str):
         
         # Stop and remove container
         cont = docker_client.containers.get(container)
-        cont.stop()
+        cont.stop(timeout=60)  # Aumentato a 60 secondi
         cont.remove()
         logger.info("Container stopped: %s", container)
         
@@ -340,7 +340,7 @@ async def stop_container(container: str):
     except Exception as e:
         logger.error("Error stopping %s: %s", container, str(e))
         raise HTTPException(500, str(e))
-
+    
 @app.get("/logs/{container}")
 async def get_logs(container: str):
     try:
@@ -444,7 +444,7 @@ async def stop_all():
         
         for container in containers:
             try:
-                container.stop(timeout=10)
+                container.stop(timeout=30)
                 container.remove()
                 stopped.append(container.name)
                 logger.info("Stopped %s", container.name)

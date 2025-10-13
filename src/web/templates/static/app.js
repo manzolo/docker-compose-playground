@@ -110,13 +110,64 @@ async function stopAllRunning() {
 
         if (response.ok) {
             showToast(`Stopped ${data.stopped} containers`, 'success');
-            setTimeout(() => location.reload(), 2000);
+            pollAllStopped(data.containers);
         } else {
             showToast('Failed to stop all containers', 'error');
         }
     } catch (e) {
         showToast(`Error: ${e.message}`, 'error');
     }
+}
+
+async function pollAllStopped(containers) {
+    let attempts = 0;
+    const maxAttempts = 30;  // ~15 secondi (500ms * 30)
+
+    const poll = async () => {
+        try {
+            const response = await fetch('/');
+            const text = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+
+            // Controlla se tutti i container specificati sono "Stopped"
+            let allStopped = true;
+            for (const containerName of containers) {
+                const imageName = containerName.replace("playground-", "");
+                const newCard = doc.querySelector(`[data-name="${imageName}"]`);
+                if (newCard) {
+                    const statusText = newCard.querySelector('.status-text').textContent.toLowerCase();
+                    if (statusText !== 'stopped') {
+                        allStopped = false;
+                        break;
+                    }
+                } else {
+                    // Se la card non esiste più, assumi stopped
+                }
+            }
+
+            if (allStopped) {
+                showToast('All containers confirmed stopped!', 'success');
+                location.reload();
+                return;
+            }
+
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 500);  // Polling ogni 500ms
+            } else {
+                showToast('Some containers may still be stopping - refresh manually', 'warning');
+            }
+        } catch (e) {
+            console.error('Poll error:', e);
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 500);
+            }
+        }
+    };
+
+    poll();
 }
 
 // Update card UI after state change
@@ -253,9 +304,9 @@ async function stopContainer(imageName, containerName) {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 35000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000);  // Aumentato a 60 secondi
 
-        const response = await fetch(`/stop/${containerName}`, {
+        const response = await fetch(`/stop/${containerName}`, { 
             method: 'POST',
             signal: controller.signal
         });
@@ -287,28 +338,34 @@ async function stopContainer(imageName, containerName) {
 // Poll container status after stop
 async function pollContainerStopStatus(imageName, containerName, btn) {
     let attempts = 0;
-    const maxAttempts = 20;
-
+    const maxAttempts = 60;  // Aumentato a 60 (~1 minuto con 1s interval)
+    
     const poll = async () => {
         try {
-            const response = await fetch('/');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);  // Timeout per singolo fetch
+            
+            const response = await fetch('/', { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
             const text = await response.text();
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             const newCard = doc.querySelector(`[data-name="${imageName}"]`);
-
+            
             if (newCard) {
-                const statusText = newCard.querySelector('.status-text').textContent;
-                if (statusText === 'Stopped') {
+                const statusText = newCard.querySelector('.status-text').textContent.toLowerCase();
+                if (statusText === 'stopped') {
                     showToast(`Container ${containerName} stopped successfully`, 'success');
                     location.reload();
                     return;
                 }
             }
-
+            
             attempts++;
             if (attempts < maxAttempts) {
-                setTimeout(poll, 500);
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));  // 1-1.5s con jitter
+                poll();
             } else {
                 showToast(`Container may still be stopping - refresh page to check`, 'warning');
                 btn.disabled = false;
@@ -316,13 +373,19 @@ async function pollContainerStopStatus(imageName, containerName, btn) {
             }
         } catch (e) {
             console.error('Poll error:', e);
+            if (e.name === 'AbortError') {
+                showToast('Polling timeout - retrying...', 'warning');
+            }
             attempts++;
             if (attempts < maxAttempts) {
-                setTimeout(poll, 500);
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
+                poll();
+            } else {
+                showToast('Polling failed - refresh manually', 'error');
             }
         }
     };
-
+    
     poll();
 }
 
