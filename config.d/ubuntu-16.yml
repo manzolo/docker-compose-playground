@@ -1,0 +1,7 @@
+images:
+  ubuntu-16:
+    category: linux
+    description: Ubuntu 16.04 LTS (Xenial Xerus)
+    image: ubuntu:16.04
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

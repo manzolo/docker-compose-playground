@@ -1,0 +1,7 @@
+images:
+  node-16:
+    category: programming
+    description: Node.js 16 LTS
+    image: node:16
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

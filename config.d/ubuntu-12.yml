@@ -1,0 +1,7 @@
+images:
+  ubuntu-12:
+    category: linux
+    description: Ubuntu 12.04 LTS (Precise Pangolin)
+    image: ubuntu:12.04
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

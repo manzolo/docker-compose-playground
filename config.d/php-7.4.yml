@@ -1,0 +1,7 @@
+images:
+  php-7.4:
+    category: programming
+    description: PHP 7.4
+    image: php:7.4
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

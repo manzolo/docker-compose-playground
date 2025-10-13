@@ -1,0 +1,7 @@
+images:
+  ubuntu-14:
+    category: linux
+    description: Ubuntu 14.04 LTS (Trusty Tahr)
+    image: ubuntu:14.04
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
