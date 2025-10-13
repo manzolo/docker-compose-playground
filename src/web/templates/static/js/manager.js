@@ -47,17 +47,24 @@ async function pollOperationStatus(operationId, operationType, maxAttempts = 180
     
     const config = operationLabels[operationType] || operationLabels['stop'];
     
+    // Variable to track total
+    let totalContainers = '?';
+    
     const poll = async () => {
         try {
             const response = await fetch(`/api/operation-status/${operationId}`);
             const statusData = await response.json();
 
-            // Update loader with current progress
-            const total = statusData.total || '?';
-            const completed = statusData[config.field] || 0;
-            const remaining = total - completed;
+            // Update total when available
+            if (statusData.total !== undefined) {
+                totalContainers = statusData.total;
+            }
             
-            showLoader(`${config.verb} containers: ${completed} of ${total} completed (${remaining} remaining)`);
+            const completed = statusData[config.field] || 0;
+            const remaining = totalContainers !== '?' ? totalContainers - completed : '?';
+            
+            // Always show progress, even if 0 of X
+            showLoader(`${config.verb} containers: ${completed} of ${totalContainers} completed (${remaining} remaining)`);
 
             if (statusData.status === 'completed') {
                 showToast(`${config.emoji} Successfully ${operationType === 'stop' ? 'stopped' : operationType === 'restart' ? 'restarted' : 'cleaned up'} ${completed} containers! Reloading page...`, 'success');
@@ -96,6 +103,9 @@ async function pollOperationStatus(operationId, operationType, maxAttempts = 180
         }
     };
 
+    // Show loader immediately with initial state
+    showLoader(`${config.verb} containers: 0 of ${totalContainers} completed...`);
+    
     // Start the polling
     poll();
 }
@@ -197,7 +207,6 @@ async function stopAll() {
         }
 
         pauseSystemInfoUpdates();
-        showLoader('Initiating stop all operation...');
         showToast('Initiating stop all operation...', 'info');
 
         const controller = new AbortController();
@@ -215,7 +224,7 @@ async function stopAll() {
             const data = await response.json();
 
             if (response.ok) {
-                showToast(`Stop operation started. ID: ${data.operation_id}`, 'info'); 
+                // pollOperationStatus will handle the loader
                 pollOperationStatus(data.operation_id, 'stop');
             } else {
                 showToast(`Failed to start stop operation: ${data.error || response.statusText}`, 'error');
@@ -250,7 +259,6 @@ async function restartAll() {
         if (!confirmed) return;
 
         pauseSystemInfoUpdates();
-        showLoader('Initiating restart all operation...');
         showToast('Initiating restart all operation...', 'info');
 
         const controller = new AbortController();
@@ -266,7 +274,7 @@ async function restartAll() {
             const data = await response.json();
 
             if (response.ok) {
-                showToast(`Restart operation started. ID: ${data.operation_id}`, 'info'); 
+                // pollOperationStatus will handle the loader
                 pollOperationStatus(data.operation_id, 'restart');
             } else {
                 showToast(`Failed to start restart operation: ${data.error || response.statusText}`, 'error');
@@ -310,7 +318,6 @@ async function cleanupAll() {
         if (!doubleCheck) return;
 
         pauseSystemInfoUpdates();
-        showLoader('Initiating cleanup all operation...');
         showToast('Initiating cleanup all operation...', 'warning');
 
         const controller = new AbortController();
@@ -326,7 +333,7 @@ async function cleanupAll() {
             const data = await response.json();
 
             if (response.ok) {
-                showToast(`Cleanup operation started. ID: ${data.operation_id}`, 'info'); 
+                // pollOperationStatus will handle the loader
                 pollOperationStatus(data.operation_id, 'cleanup');
             } else {
                 showToast(`Failed to start cleanup operation: ${data.error || response.statusText}`, 'error');
