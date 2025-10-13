@@ -30,25 +30,40 @@ function showToast(message, type = 'info') {
     }, 4000);
 }
 
-async function pollStopAllStatus(operationId) {
-    const maxAttempts = 60;
+/**
+ * Generic polling function for operation status
+ * @param {string} operationId - Operation ID to poll
+ * @param {string} operationType - Type of operation (stop, restart, cleanup)
+ * @param {number} maxAttempts - Maximum polling attempts
+ */
+async function pollOperationStatus(operationId, operationType, maxAttempts = 180) {
     let attempts = 0;
-
-    showLoader('Stopping containers: Awaiting progress...');
+    
+    const operationLabels = {
+        'stop': { verb: 'Stopping', field: 'stopped', emoji: '⏹' },
+        'restart': { verb: 'Restarting', field: 'restarted', emoji: '🔄' },
+        'cleanup': { verb: 'Cleaning up', field: 'removed', emoji: '🧹' }
+    };
+    
+    const config = operationLabels[operationType] || operationLabels['stop'];
     
     const poll = async () => {
         try {
             const response = await fetch(`/api/operation-status/${operationId}`);
             const statusData = await response.json();
 
+            // Update loader with current progress
             const total = statusData.total || '?';
-            const stopped = statusData.stopped || 0;
-            showLoader(`Stopping containers: ${stopped} of ${total} | Status: ${statusData.status}`);
+            const completed = statusData[config.field] || 0;
+            const remaining = total - completed;
+            
+            showLoader(`${config.verb} containers: ${completed} of ${total} completed (${remaining} remaining)`);
 
             if (statusData.status === 'completed') {
-                showToast(`✅ Successfully stopped ${stopped} containers! Reloading page...`, 'success');
+                showToast(`${config.emoji} Successfully ${operationType === 'stop' ? 'stopped' : operationType === 'restart' ? 'restarted' : 'cleaned up'} ${completed} containers! Reloading page...`, 'success');
                 hideLoader();
                 
+                // Wait for user to see toast, then reload
                 setTimeout(() => {
                     location.reload(); 
                 }, 2500);
@@ -56,17 +71,19 @@ async function pollStopAllStatus(operationId) {
             }
 
             if (statusData.status === 'error') {
-                showToast(`❌ Stop operation failed: ${statusData.error}`, 'error');
+                showToast(`❌ ${config.verb} operation failed: ${statusData.error}`, 'error');
                 hideLoader();
                 resumeSystemInfoUpdates();
                 return;
             }
             
+            // Continue polling
             attempts++;
             if (attempts < maxAttempts) {
+                // Poll every 1 second
                 setTimeout(poll, 1000); 
             } else {
-                showToast(`⏰ Operation timed out after ${maxAttempts} seconds`, 'warning');
+                showToast(`⏰ Operation timed out after ${maxAttempts} seconds. Please check the page or refresh manually.`, 'warning');
                 hideLoader();
                 resumeSystemInfoUpdates();
             }
@@ -79,6 +96,7 @@ async function pollStopAllStatus(operationId) {
         }
     };
 
+    // Start the polling
     poll();
 }
 
@@ -110,7 +128,6 @@ async function showBackups() {
             let html = '<table class="backups-table"><thead><tr><th>Category</th><th>File</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead><tbody>';
             data.backups.forEach(backup => {
                 const date = new Date(backup.modified * 1000).toLocaleString();
-                // Converti la dimensione in formato leggibile
                 let size;
                 if (backup.size >= 1024 * 1024) {
                     size = (backup.size / (1024 * 1024)).toFixed(2) + ' MB';
@@ -150,29 +167,24 @@ function downloadBackup(category, filename) {
     showToast(`Downloading ${filename}...`, 'info');
 }
 
-// Pausa e riprendi interval
+// Pause and resume interval
 function pauseSystemInfoUpdates() {
-    //console.log('pauseSystemInfoUpdates: Pausing system info updates');
     operationInProgress = true;
     if (systemInfoInterval) {
         clearInterval(systemInfoInterval);
         systemInfoInterval = null;
-        //console.log('pauseSystemInfoUpdates: Interval cleared');
     }
 }
 
 function resumeSystemInfoUpdates() {
-    //console.log('resumeSystemInfoUpdates: Resuming system info updates');
     operationInProgress = false;
     if (!systemInfoInterval) {
         systemInfoInterval = setInterval(loadSystemInfo, 30000);
-        //console.log('resumeSystemInfoUpdates: Interval restarted');
     }
-    // Refresh immediato
     loadSystemInfo();
 }
 
-// Stop all containers
+// Stop all containers - UNIFIED VERSION
 async function stopAll() {
     try {
         const confirmed = await showConfirmModal(
@@ -180,7 +192,9 @@ async function stopAll() {
             'Are you sure you want to stop ALL running containers? This will gracefully stop all running playground containers.',
             'danger'
         );
-        if (!confirmed) return;
+        if (!confirmed) {
+            return;
+        }
 
         pauseSystemInfoUpdates();
         showLoader('Initiating stop all operation...');
@@ -202,7 +216,7 @@ async function stopAll() {
 
             if (response.ok) {
                 showToast(`Stop operation started. ID: ${data.operation_id}`, 'info'); 
-                pollStopAllStatus(data.operation_id); // ← USA LA NUOVA FUNZIONE
+                pollOperationStatus(data.operation_id, 'stop');
             } else {
                 showToast(`Failed to start stop operation: ${data.error || response.statusText}`, 'error');
                 hideLoader();
@@ -225,63 +239,60 @@ async function stopAll() {
     }
 }
 
-// Restart all containers
+// Restart all containers - UNIFIED VERSION
 async function restartAll() {
     try {
         const confirmed = await showConfirmModal(
             'Restart All Containers',
-            'Are you sure you want to restart ALL running containers?',
+            'Are you sure you want to restart ALL running containers? This will restart all containers one by one.',
             'warning'
         );
         if (!confirmed) return;
 
         pauseSystemInfoUpdates();
-        showLoader('Restarting all containers... This may take a while.');
-        showToast('Restarting all containers...', 'info');
+        showLoader('Initiating restart all operation...');
+        showToast('Initiating restart all operation...', 'info');
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000);
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
 
         try {
             const response = await fetch('/api/restart-all', { 
                 method: 'POST',
-                signal: controller.signal,
-                keepalive: false
+                signal: controller.signal
             });
             clearTimeout(timeoutId);
 
             const data = await response.json();
 
             if (response.ok) {
-                showToast(`Successfully restarted ${data.restarted} containers`, 'success');
-                hideLoader();
-                setTimeout(() => location.reload(), 3000);
+                showToast(`Restart operation started. ID: ${data.operation_id}`, 'info'); 
+                pollOperationStatus(data.operation_id, 'restart');
             } else {
-                showToast('Failed to restart containers', 'error');
+                showToast(`Failed to start restart operation: ${data.error || response.statusText}`, 'error');
                 hideLoader();
                 resumeSystemInfoUpdates();
             }
+
         } catch (fetchError) {
             clearTimeout(timeoutId);
             
             if (fetchError.name === 'AbortError') {
-                showToast('Operation timeout - please wait and refresh manually', 'warning');
-                hideLoader();
-                setTimeout(() => location.reload(), 5000);
+                showToast('⏰ Operation request timed out - please check server status', 'warning');
             } else {
-                showToast(`Error: ${fetchError.message}`, 'error');
-                hideLoader();
-                resumeSystemInfoUpdates();
+                showToast(`❌ Error: ${fetchError.message}`, 'error');
             }
+            hideLoader();
+            resumeSystemInfoUpdates();
         }
     } catch (e) {
-        showToast(`Error: ${e.message}`, 'error');
+        showToast(`❌ Error: ${e.message}`, 'error');
         hideLoader();
         resumeSystemInfoUpdates();
     }
 }
 
-// Cleanup all
+// Cleanup all - UNIFIED VERSION
 async function cleanupAll() {
     try {
         const confirmed = await showConfirmModal(
@@ -299,46 +310,43 @@ async function cleanupAll() {
         if (!doubleCheck) return;
 
         pauseSystemInfoUpdates();
-        showLoader('Cleaning up all containers... This may take a while.');
-        showToast('Cleaning up all containers...', 'warning');
+        showLoader('Initiating cleanup all operation...');
+        showToast('Initiating cleanup all operation...', 'warning');
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000);
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
 
         try {
             const response = await fetch('/api/cleanup-all', { 
                 method: 'POST',
-                signal: controller.signal,
-                keepalive: false
+                signal: controller.signal
             });
             clearTimeout(timeoutId);
 
             const data = await response.json();
 
             if (response.ok) {
-                showToast(`Successfully cleaned up ${data.removed} containers`, 'success');
-                hideLoader();
-                setTimeout(() => location.reload(), 2000);
+                showToast(`Cleanup operation started. ID: ${data.operation_id}`, 'info'); 
+                pollOperationStatus(data.operation_id, 'cleanup');
             } else {
-                showToast('Cleanup failed', 'error');
+                showToast(`Failed to start cleanup operation: ${data.error || response.statusText}`, 'error');
                 hideLoader();
                 resumeSystemInfoUpdates();
             }
+
         } catch (fetchError) {
             clearTimeout(timeoutId);
             
             if (fetchError.name === 'AbortError') {
-                showToast('Operation timeout - please wait and refresh manually', 'warning');
-                hideLoader();
-                setTimeout(() => location.reload(), 5000);
+                showToast('⏰ Operation request timed out - please check server status', 'warning');
             } else {
-                showToast(`Error: ${fetchError.message}`, 'error');
-                hideLoader();
-                resumeSystemInfoUpdates();
+                showToast(`❌ Error: ${fetchError.message}`, 'error');
             }
+            hideLoader();
+            resumeSystemInfoUpdates();
         }
     } catch (e) {
-        showToast(`Error: ${e.message}`, 'error');
+        showToast(`❌ Error: ${e.message}`, 'error');
         hideLoader();
         resumeSystemInfoUpdates();
     }
@@ -487,7 +495,7 @@ async function exportConfig() {
     }
 }
 
-// Load system info - CON DEBOUNCING
+// Load system info - WITH DEBOUNCING
 let loadSystemInfoDebounceTimer = null;
 async function loadSystemInfo() {
     // Debounce
@@ -555,11 +563,9 @@ let isInitialized = false;
 
 function initializeSystemInfo() {
     if (isInitialized) {
-        //console.log('initializeSystemInfo: Already initialized');
         return;
     }
     
-    //console.log('initializeSystemInfo: First initialization');
     isInitialized = true;
     
     loadSystemInfo();
@@ -568,7 +574,6 @@ function initializeSystemInfo() {
         clearInterval(systemInfoInterval);
     }
     
-    //console.log('initializeSystemInfo: Starting interval every 30s');
     systemInfoInterval = setInterval(loadSystemInfo, 30000);
 }
 
@@ -581,7 +586,6 @@ if (document.readyState === 'loading') {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
-    //console.log('beforeunload: Cleaning up');
     if (systemInfoInterval) {
         clearInterval(systemInfoInterval);
         systemInfoInterval = null;

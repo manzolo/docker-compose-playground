@@ -6,9 +6,8 @@ function showLoader(message) {
         if (loaderMessage) {
             loaderMessage.textContent = message;
         }
-        // Usa la classe 'active' invece di rimuovere 'hidden'
+        // USA 'active' INVECE DI RIMUOVERE 'hidden'
         loader.classList.add('active');
-        loader.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     } else {
         console.error('Loader element not found!');
@@ -19,8 +18,8 @@ function showLoader(message) {
 function hideLoader() {
     const loader = document.getElementById('global-loader');
     if (loader) {
+        // RIMUOVI 'active' INVECE DI AGGIUNGERE 'hidden'
         loader.classList.remove('active');
-        loader.classList.add('hidden');
         document.body.style.overflow = '';
     } else {
         console.error('Loader element not found!');

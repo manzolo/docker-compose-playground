@@ -461,7 +461,8 @@ async def stop_all():
             "status": "running",
             "started_at": datetime.now().isoformat(),
             "total": len(containers),
-            "stopped": 0
+            "stopped": 0,
+            "operation": "stop"
         }
 
         asyncio.create_task(stop_all_background(operation_id, containers))
@@ -518,6 +519,147 @@ async def stop_all_background(operation_id: str, containers):
             "error": str(e)
         })
 
+@app.post("/api/restart-all")
+async def restart_all():
+    """Restart all containers (async with operation tracking)"""
+    try:
+        containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
+        operation_id = str(uuid.uuid4())
+
+        active_operations[operation_id] = {
+            "status": "running",
+            "started_at": datetime.now().isoformat(),
+            "total": len(containers),
+            "restarted": 0,
+            "operation": "restart"
+        }
+
+        asyncio.create_task(restart_all_background(operation_id, containers))
+        return {"operation_id": operation_id, "status": "started"}
+    except Exception as e:
+        logger.error("Error starting restart_all: %s", str(e))
+        raise HTTPException(500, str(e))
+
+async def restart_all_background(operation_id: str, containers):
+    """Background task to restart all containers"""
+    restarted = []
+    
+    def restart_container(container):
+        try:
+            logger.info("Restarting container: %s", container.name)
+            container.restart(timeout=30)
+            logger.info("Restarted: %s", container.name)
+            return container.name
+        except Exception as e:
+            logger.error("Failed to restart %s: %s", container.name, str(e))
+            return None
+    
+    try:
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+            futures = [
+                loop.run_in_executor(executor, restart_container, cont) 
+                for cont in containers
+            ]
+            
+            results = await asyncio.gather(*futures, return_exceptions=True)
+            
+            for result in results:
+                if result and not isinstance(result, Exception):
+                    restarted.append(result)
+                    # Aggiorna lo stato
+                    active_operations[operation_id]["restarted"] = len(restarted)
+        
+        logger.info("Restarted %d containers successfully", len(restarted))
+        
+        # Aggiorna lo stato finale
+        active_operations[operation_id].update({
+            "status": "completed",
+            "restarted": len(restarted),
+            "containers": restarted,
+            "completed_at": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error("Error in restart_all_background: %s", str(e))
+        active_operations[operation_id].update({
+            "status": "error",
+            "error": str(e)
+        })
+
+@app.post("/api/cleanup-all")
+async def cleanup_all():
+    """Cleanup all containers (async with operation tracking)"""
+    try:
+        containers = docker_client.containers.list(
+            all=True, 
+            filters={"label": "playground.managed=true"}
+        )
+        operation_id = str(uuid.uuid4())
+
+        active_operations[operation_id] = {
+            "status": "running",
+            "started_at": datetime.now().isoformat(),
+            "total": len(containers),
+            "removed": 0,
+            "operation": "cleanup"
+        }
+
+        asyncio.create_task(cleanup_all_background(operation_id, containers))
+        return {"operation_id": operation_id, "status": "started"}
+    except Exception as e:
+        logger.error("Error starting cleanup_all: %s", str(e))
+        raise HTTPException(500, str(e))
+
+async def cleanup_all_background(operation_id: str, containers):
+    """Background task to cleanup all containers"""
+    removed = []
+    
+    def cleanup_container(container):
+        try:
+            logger.info("Cleaning up container: %s", container.name)
+            if container.status == "running":
+                container.stop(timeout=30)
+            container.remove()
+            logger.info("Removed: %s", container.name)
+            return container.name
+        except Exception as e:
+            logger.error("Failed to cleanup %s: %s", container.name, str(e))
+            return None
+    
+    try:
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+            futures = [
+                loop.run_in_executor(executor, cleanup_container, cont) 
+                for cont in containers
+            ]
+            
+            results = await asyncio.gather(*futures, return_exceptions=True)
+            
+            for result in results:
+                if result and not isinstance(result, Exception):
+                    removed.append(result)
+                    # Aggiorna lo stato
+                    active_operations[operation_id]["removed"] = len(removed)
+        
+        logger.info("Cleaned up %d containers successfully", len(removed))
+        
+        # Aggiorna lo stato finale
+        active_operations[operation_id].update({
+            "status": "completed",
+            "removed": len(removed),
+            "containers": removed,
+            "completed_at": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error("Error in cleanup_all_background: %s", str(e))
+        active_operations[operation_id].update({
+            "status": "error",
+            "error": str(e)
+        })
+
 @app.get("/api/operation-status/{operation_id}")
 async def get_operation_status(operation_id: str):
     """Get status of a background operation"""
@@ -525,51 +667,6 @@ async def get_operation_status(operation_id: str):
         raise HTTPException(404, "Operation not found")
     
     return active_operations[operation_id]
-            
-@app.post("/api/restart-all")
-async def restart_all():
-    """Restart all running playground containers"""
-    try:
-        containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
-        restarted = []
-        
-        for container in containers:
-            try:
-                container.restart(timeout=10)
-                restarted.append(container.name)
-                logger.info("Restarted %s", container.name)
-            except Exception as e:
-                logger.error("Failed to restart %s: %s", container.name, str(e))
-        
-        return {"status": "ok", "restarted": len(restarted), "containers": restarted}
-    except Exception as e:
-        logger.error("Error restarting all: %s", str(e))
-        raise HTTPException(500, str(e))
-
-@app.post("/api/cleanup-all")
-async def cleanup_all():
-    """Stop and remove ALL playground containers"""
-    try:
-        containers = docker_client.containers.list(
-            all=True, 
-            filters={"label": "playground.managed=true"}
-        )
-        removed = []
-        
-        for container in containers:
-            try:
-                if container.status == "running":
-                    container.stop(timeout=10)
-                container.remove()
-                removed.append(container.name)
-                logger.info("Removed %s", container.name)
-            except Exception as e:
-                logger.error("Failed to remove %s: %s", container.name, str(e))
-        
-        return {"status": "ok", "removed": len(removed), "containers": removed}
-    except Exception as e:
-        logger.error("Error cleaning up: %s", str(e))
-        raise HTTPException(500, str(e))
 
 @app.get("/api/system-info")
 async def system_info():

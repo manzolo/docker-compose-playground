@@ -930,17 +930,11 @@ header .subtitle {
     align-items: center;
     flex-direction: column;
     gap: 16px;
-    /* RIMUOVI display: none; e usa invece: */
-    display: none;
+    display: none; /* Nascosto di default */
 }
 
-.loader-overlay:not(.hidden) {
-    display: flex !important;
-}
-
-/* Oppure alternativamente: */
 .loader-overlay.active {
-    display: flex !important;
+    display: flex !important; /* Mostrato quando active */
 }
 
 .loader-spinner {
