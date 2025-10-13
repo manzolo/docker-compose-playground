@@ -1,15 +1,15 @@
 images:
-  postgres-16:
+  postgres:
     category: database
-    description: PostgreSQL 16
+    description: PostgreSQL 17 (Latest)
     environment:
       POSTGRES_DB: playground
       POSTGRES_PASSWORD: playground
       POSTGRES_USER: playground
-    image: postgres:16
+    image: postgres:17
     keep_alive_cmd: postgres
     motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \             PostgreSQL 16 Quick Reference                  ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \             PostgreSQL 17 Quick Reference                 ║\n╚══════════════════════════════════════════════════════════════╝\n\
       \n\U0001F510 Connection Info:\n   Host: localhost / Container IP\n   Port: 5432\n\
       \   User: playground\n   Password: playground\n   Database: playground\n\n\U0001F4CA\
       \ Basic Commands:\n   psql -U playground                            # Connect\

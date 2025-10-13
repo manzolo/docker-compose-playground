@@ -1,0 +1,14 @@
+images:
+  alpine-3.22:
+    category: linux
+    description: Alpine Linux 3.22 (Lightweight - 5MB)
+    image: alpine:3.22
+    keep_alive_cmd: tail -f /dev/null
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \              Alpine Linux Quick Reference                  ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F4E6 Package Management (apk):\n   apk update                      \
+      \              # Update package index\n   apk add package_name             \
+      \             # Install package\n   apk del package_name                   \
+      \       # Remove package\n   apk search package_name                       #\
+      \ Search package\n\n⚠️  Note: Alpine uses musl libc, not glibc\n"
+    shell: /bin/sh
