@@ -255,7 +255,7 @@ async function stopContainer(imageName, containerName) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 35000);
 
-        const response = await fetch(`/stop/${containerName}`, { 
+        const response = await fetch(`/stop/${containerName}`, {
             method: 'POST',
             signal: controller.signal
         });
@@ -288,7 +288,7 @@ async function stopContainer(imageName, containerName) {
 async function pollContainerStopStatus(imageName, containerName, btn) {
     let attempts = 0;
     const maxAttempts = 20;
-    
+
     const poll = async () => {
         try {
             const response = await fetch('/');
@@ -296,7 +296,7 @@ async function pollContainerStopStatus(imageName, containerName, btn) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             const newCard = doc.querySelector(`[data-name="${imageName}"]`);
-            
+
             if (newCard) {
                 const statusText = newCard.querySelector('.status-text').textContent;
                 if (statusText === 'Stopped') {
@@ -305,7 +305,7 @@ async function pollContainerStopStatus(imageName, containerName, btn) {
                     return;
                 }
             }
-            
+
             attempts++;
             if (attempts < maxAttempts) {
                 setTimeout(poll, 500);
@@ -322,7 +322,7 @@ async function pollContainerStopStatus(imageName, containerName, btn) {
             }
         }
     };
-    
+
     poll();
 }
 
@@ -388,6 +388,7 @@ function openConsole(container, imageName) {
 
     term.open(document.getElementById('terminal'));
     fitAddon.fit();
+    term.focus();
 
     window.addEventListener('resize', () => {
         if (fitAddon) fitAddon.fit();
