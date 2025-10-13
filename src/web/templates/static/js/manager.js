@@ -1,6 +1,17 @@
 let operationInProgress = false;
 let systemInfoInterval = null;
 
+// Modal Management
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('modal-open');
+    document.body.style.overflow = '';
+}
+
 // Toast system
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -19,7 +30,75 @@ function showToast(message, type = 'info') {
     }, 4000);
 }
 
-// NUOVA: Pausa e riprendi interval
+// Show Server Logs in Modal
+async function showServerLogs() {
+    try {
+        showLoader('Loading server logs...');
+        const response = await fetch('/api/logs');
+        const logs = await response.text();
+        document.getElementById('logContent').textContent = logs || 'No logs available';
+        openModal('logModal');
+    } catch (e) {
+        showToast(`Error loading logs: ${e.message}`, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// Show Backups in Modal
+async function showBackups() {
+    try {
+        showLoader('Loading backups...');
+        const response = await fetch('/api/backups');
+        const data = await response.json();
+        const list = document.getElementById('backupsList');
+        if (data.backups.length === 0) {
+            list.innerHTML = '<p style="color: #64748b;">No backups found</p>';
+        } else {
+            let html = '<table class="backups-table"><thead><tr><th>Category</th><th>File</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead><tbody>';
+            data.backups.forEach(backup => {
+                const date = new Date(backup.modified * 1000).toLocaleString();
+                // Converti la dimensione in formato leggibile
+                let size;
+                if (backup.size >= 1024 * 1024) {
+                    size = (backup.size / (1024 * 1024)).toFixed(2) + ' MB';
+                } else if (backup.size >= 1024) {
+                    size = (backup.size / 1024).toFixed(2) + ' KB';
+                } else {
+                    size = backup.size + ' bytes';
+                }
+                html += `<tr>
+                    <td>${backup.category}</td>
+                    <td>${backup.file}</td>
+                    <td>${size}</td>
+                    <td>${date}</td>
+                    <td><button class="btn btn-primary btn-sm" onclick="downloadBackup('${backup.category}', '${backup.file}')">Download</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            list.innerHTML = html;
+        }
+        openModal('backupsModal');
+    } catch (e) {
+        showToast(`Error loading backups: ${e.message}`, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// Download Backup
+function downloadBackup(category, filename) {
+    const url = `/api/download-backup/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Downloading ${filename}...`, 'info');
+}
+
+// Pausa e riprendi interval
 function pauseSystemInfoUpdates() {
     //console.log('pauseSystemInfoUpdates: Pausing system info updates');
     operationInProgress = true;
@@ -399,16 +478,6 @@ async function exportConfig() {
     }
 }
 
-// View logs
-async function viewLogs() {
-    window.open('/api/logs', '_blank');
-}
-
-// Export backups
-function exportBackups() {
-    window.location.href = '/api/backups';
-}
-
 // Load system info - CON DEBOUNCING
 let loadSystemInfoDebounceTimer = null;
 async function loadSystemInfo() {
@@ -483,7 +552,6 @@ async function loadSystemInfo() {
     }
 }
 
-// Inizializzazione - SOLO UNA VOLTA
 let isInitialized = false;
 
 function initializeSystemInfo() {

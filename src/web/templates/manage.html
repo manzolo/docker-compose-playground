@@ -7,12 +7,13 @@
     <title>🛠️ Advanced Manager - Docker Playground</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/modal.css">
+    <link rel="stylesheet" href="/static/css/manager.css">
 </head>
 
 <body>
     <!-- Toast Container -->
     <div id="toast-container"></div>
-    
+
     <!-- Loader Overlay -->
     <div id="globalLoader" class="loader-overlay">
         <div class="loader-spinner"></div>
@@ -146,22 +147,58 @@
                     <p>Download current configuration as YAML</p>
                 </button>
 
-                <button class="action-card action-info" onclick="viewLogs()">
+                <button class="action-card action-info" onclick="showServerLogs()">
                     <span class="action-icon">📋</span>
                     <h3>View Server Logs</h3>
                     <p>Check application logs</p>
                 </button>
 
-                <button class="action-card action-info" onclick="exportBackups()">
+                <button class="action-card action-info" onclick="showBackups()">
                     <span class="action-icon">💾</span>
                     <h3>Manage Backups</h3>
                     <p>View and manage container backups</p>
                 </button>
+
             </div>
         </div>
     </div>
 
+    <!-- Modal confirm -->
     <div id="confirmModal" class="modal"></div>
+
+    <!-- Modal for Server Logs -->
+    <div id="logModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('logModal')"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📋 Server Logs</h2>
+                <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="logContent" class="log-content"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('logModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Backups -->
+    <div id="backupsModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('backupsModal')"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>💾 Manage Backups</h2>
+                <button class="modal-close" onclick="closeModal('backupsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="backupsList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('backupsModal')">Close</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/utils.js"></script>
     <script src="/static/js/manager.js"></script>

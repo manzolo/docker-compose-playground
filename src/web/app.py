@@ -2,19 +2,21 @@ from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import docker
+from fastapi.responses import PlainTextResponse
 from pathlib import Path
+from datetime import datetime, timedelta
+from typing import Dict
+import docker
 import yaml
+import tempfile
 import logging
 import glob
 import asyncio
 import subprocess
 import os
 import json
-from datetime import datetime
 import concurrent.futures
 import asyncio
-from typing import Dict
 
 # Configura logging
 logging.basicConfig(
@@ -52,7 +54,7 @@ def ensure_network():
 # Call on startup
 ensure_network()
 
-# Carica configurazioni da config.yml e config.d
+# Config loading from config.yml and config.d
 def load_config():
     images = {}
     if CONFIG_FILE.exists():
@@ -675,65 +677,125 @@ async def system_info():
         logger.error("Error getting system info: %s", str(e))
         raise HTTPException(500, str(e))
 
+# Dumper personalizzato per gestire stringhe multilinea
+class CustomDumper(yaml.SafeDumper):
+    def represent_str(self, data):
+        # Forza lo stile letterale (|) per stringhe multilinea
+        if "\n" in data:
+            return self.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+        return self.represent_scalar('tag:yaml.org,2002:str', data)
+
+# Registra il rappresentatore per le stringhe
+CustomDumper.add_representer(str, CustomDumper.represent_str)
+
 @app.get("/api/export-config")
 async def export_config():
-    """Export merged configuration"""
-    from fastapi.responses import FileResponse
-    import tempfile
-    
+    """Export the configuration as a formatted YAML file"""
     try:
-        config = load_config()
-        
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.yml') as f:
-            yaml.dump({"images": config}, f, default_flow_style=False)
-            temp_path = f.name
-        
+        # Carica la configurazione
+        images = load_config()
+
+        # Struttura il dizionario per il file YAML
+        config = {"images": images}
+
+        # Serializza il file YAML con opzioni per leggibilità
+        yaml_content = yaml.dump(
+            config,
+            Dumper=CustomDumper,  # Usa il dumper personalizzato
+            allow_unicode=True,   # Preserva i caratteri Unicode (es. emoji)
+            sort_keys=False,      # Mantiene l'ordine originale delle chiavi
+            default_flow_style=False,  # Usa il formato a blocchi per chiarezza
+            indent=2              # Indentazione standard di 2 spazi
+        )
+
+        # Crea un file temporaneo usando tempfile
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=".yml",
+            delete=False,
+            dir=tempfile.gettempdir()
+        ) as temp_file:
+            temp_file.write(yaml_content)
+            temp_file_path = temp_file.name  # Salva il percorso del file temporaneo
+
+        # Restituisci il file come FileResponse
         return FileResponse(
-            temp_path,
-            media_type='application/x-yaml',
-            filename=f'playground-config-{datetime.now().strftime("%Y%m%d")}.yml'
+            path=temp_file_path,
+            filename=f"playground-config-{datetime.now().strftime('%Y%m%d_%H%M%S')}.yml",
+            media_type="application/x-yaml",
+            headers={
+                "Content-Disposition": f"attachment; filename=playground-config-{datetime.now().strftime('%Y%m%d_%H%M%S')}.yml"
+            }
         )
     except Exception as e:
         logger.error("Error exporting config: %s", str(e))
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, f"Error exporting config: {str(e)}")
+    finally:
+        # Nota: Non eliminiamo il file temporaneo qui per evitare FileNotFoundError
+        pass
+    
+def cleanup_temp_files(age_hours=1):
+    temp_dir = tempfile.gettempdir()
+    cutoff = datetime.now() - timedelta(hours=age_hours)
+    for temp_file in glob.glob(f"{temp_dir}/*.yml"):
+        if os.path.getmtime(temp_file) < cutoff.timestamp():
+            try:
+                os.unlink(temp_file)
+                logger.info("Deleted old temp file: %s", temp_file)
+            except Exception as e:
+                logger.warning("Error deleting temp file %s: %s", temp_file, str(e))
+
+@app.on_event("startup")
+async def startup_event():
+    cleanup_temp_files()
 
 @app.get("/api/logs")
 async def get_server_logs():
-    """Get server logs"""
-    try:
-        if Path("venv/web.log").exists():
-            with open("venv/web.log", "r") as f:
-                logs = f.read()
-            return HTMLResponse(f"<pre>{logs}</pre>")
-        else:
-            return HTMLResponse("<pre>No logs found</pre>")
-    except Exception as e:
-        return HTMLResponse(f"<pre>Error reading logs: {str(e)}</pre>")
+    log_path = Path("venv/web.log")
+    if log_path.exists():
+        with log_path.open("r") as f:
+            logs = f.read()
+        return PlainTextResponse(logs)
+    else:
+        return PlainTextResponse("No logs found")
+
+@app.get("/api/download-backup/{category}/{filename}")
+async def download_backup(category: str, filename: str):
+    backup_path = SHARED_DIR / "backups" / category / filename
+    if not backup_path.exists():
+        raise HTTPException(404, "Backup not found")
+    return FileResponse(str(backup_path), filename=filename, media_type="application/octet-stream")
 
 @app.get("/api/backups")
-async def list_backups():
-    """List backup files"""
+async def get_backups():
+    """Get list of backup files with their details"""
     try:
+        backups = []
         backup_dir = SHARED_DIR / "backups"
         if not backup_dir.exists():
+            logger.warning("Backup directory does not exist: %s", backup_dir)
             return {"backups": []}
-        
-        backups = []
-        for item in backup_dir.iterdir():
-            if item.is_dir():
-                for backup in item.iterdir():
-                    backups.append({
-                        "category": item.name,
-                        "file": backup.name,
-                        "size": backup.stat().st_size,
-                        "modified": backup.stat().st_mtime
-                    })
-        
-        return {"backups": sorted(backups, key=lambda x: x['modified'], reverse=True)}
+
+        for category_dir in backup_dir.iterdir():
+            if category_dir.is_dir():
+                for file_path in category_dir.iterdir():
+                    if file_path.is_file():
+                        try:
+                            stat = file_path.stat()
+                            backups.append({
+                                "category": category_dir.name,
+                                "file": file_path.name,
+                                "size": stat.st_size,  # Dimensione in byte
+                                "modified": stat.st_mtime
+                            })
+                        except Exception as e:
+                            logger.error("Error reading file %s: %s", file_path, str(e))
+                            continue  # Salta file problematici
+        return {"backups": backups}
     except Exception as e:
         logger.error("Error listing backups: %s", str(e))
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, f"Error listing backups: {str(e)}")
 
 @app.websocket("/ws/console/{container}")
 async def websocket_console(websocket: WebSocket, container: str):
