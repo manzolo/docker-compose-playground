@@ -333,7 +333,12 @@ make test              # CLI tests
 
 ## 📄 License
 
-MIT License - see LICENSE file
+This project is licensed under the **MIT License** - see the [LICENSE](https://opensource.org/licenses/MIT) file for details.
+
+**Attribution Requirement:** If you use this project, please include:
+- A link to the original repository
+- Credit to the original author ([Il Tuo Nome])
+- Mention of the MIT License
 
 ---
 
