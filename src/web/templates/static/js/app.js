@@ -1,12 +1,19 @@
 let ws = null;
 let term = null;
 let fitAddon = null;
-let webglAddon = null; // Added to track WebGL addon
+let webglAddon = null;
 
-// Toast Notification System
+// =========================================================
+// Helper Functions (Toast, Loader, Confirm Modal)
+// =========================================================
+
 // Toast Notification System
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
+    if (!container) {
+        console.warn('Toast container is missing. Message:', message);
+        return;
+    }
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     const icons = {
@@ -26,6 +33,72 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 4000);
 }
+
+// =========================================================
+// Polling Logic for Stop All Containers (CORRECTED)
+// =========================================================
+
+/**
+ * Polls the operation status endpoint until the 'stop all' task is complete.
+ * @param {string} operationId The ID of the background operation.
+ */
+async function pollStopAllStatus(operationId) {
+    const maxAttempts = 60; // Max 60 seconds of polling
+    let attempts = 0;
+
+    showLoader('Stopping containers: Awaiting progress...');
+
+    const poll = async () => {
+        try {
+            const response = await fetch(`/api/operation-status/${operationId}`);
+            const statusData = await response.json();
+
+            // Update loader with current progress
+            const total = statusData.total || '?';
+            const stopped = statusData.stopped || 0;
+            showLoader(`Stopping containers: ${stopped} of ${total} | Status: ${statusData.status}`);
+
+            if (statusData.status === 'completed') {
+                showToast(`Stopped ${stopped} containers successfully!`, 'success');
+                hideLoader();
+
+                // Aspetta che l'utente veda il toast, POI ricarica
+                setTimeout(() => {
+                    location.reload();
+                }, 2500); // 2.5 secondi per vedere il toast
+                return;
+            }
+
+            if (statusData.status === 'error') {
+                showToast(`Stop operation failed: ${statusData.error}`, 'error');
+                hideLoader();
+                return;
+            }
+
+            // Continue polling
+            attempts++;
+            if (attempts < maxAttempts) {
+                // Poll every 1000ms (1 second)
+                setTimeout(poll, 1000);
+            } else {
+                showToast(`Operation timed out after ${maxAttempts} attempts. Please check the 'Manage' page or refresh manually.`, 'warning');
+                hideLoader();
+            }
+
+        } catch (e) {
+            console.error('Polling error:', e);
+            showToast('An error occurred during status check.', 'error');
+            hideLoader();
+        }
+    };
+
+    // Start the polling
+    poll();
+}
+
+// =========================================================
+// Main Functions
+// =========================================================
 
 // Filter Management
 const filterInput = document.getElementById('filter');
@@ -95,71 +168,54 @@ function filterByCategory(category) {
     applyFilters();
 }
 
-// Stop all running containers
+// Stop all running containers (FINAL CORRECTED LOGIC)
 async function stopAllRunning() {
-    //console.log('stopAllRunning: Started at', new Date().toISOString());
     try {
         const confirmed = await showConfirmModal(
             'Stop All Containers',
-            'Are you sure you want to stop ALL running containers?',
+            'Are you sure you want to stop ALL running containers? This will gracefully stop all running playground containers.',
             'danger'
         );
-        //console.log('stopAllRunning: Confirmation:', confirmed);
         if (!confirmed) {
-            //console.log('stopAllRunning: Cancelled by user');
             return;
         }
 
-        showLoader('Stopping all containers...');
-        showToast('Stopping all containers...', 'info');
-        //console.log('stopAllRunning: Sending POST to /api/stop-all');
+        showLoader('Initiating stop all operation...');
+        showToast('Initiating stop all operation...', 'info');
 
         const controller = new AbortController();
-        const startTime = Date.now();
         const timeoutId = setTimeout(() => {
-            //console.log('stopAllRunning: Timeout after 120s, elapsed:', (Date.now() - startTime) / 1000 + 's');
             controller.abort();
-        }, 120000);
+        }, 120000); // 120s timeout for initial request
 
         try {
             const response = await fetch('/api/stop-all', {
                 method: 'POST',
                 signal: controller.signal
             });
-            const responseTime = (Date.now() - startTime) / 1000;
-            //console.log('stopAllRunning: Response received after', responseTime + 's', { status: response.status });
             clearTimeout(timeoutId);
 
             const data = await response.json();
-            //console.log('stopAllRunning: Response data:', JSON.stringify(data, null, 2));
 
             if (response.ok) {
-                showToast(`Successfully stopped ${data.stopped} containers`, 'success');
-                //console.log('stopAllRunning: Success, reloading in 2s');
-                setTimeout(() => {
-                    //console.log('stopAllRunning: Reloading page');
-                    location.reload();
-                }, 2000);
+                // *** FIX IS HERE: CALL THE POLLING FUNCTION ***
+                showToast(`Stop operation started. ID: ${data.operation_id}`, 'info');
+                pollStopAllStatus(data.operation_id);
             } else {
-                showToast('Failed to stop all containers', 'error');
-                //console.log('stopAllRunning: Failed, status:', response.status, { error: data });
+                showToast(`Failed to start stop operation: ${data.error || response.statusText}`, 'error');
                 hideLoader();
             }
         } catch (fetchError) {
-            //console.log('stopAllRunning: Fetch error:', fetchError, { elapsed: (Date.now() - startTime) / 1000 + 's' });
             clearTimeout(timeoutId);
             if (fetchError.name === 'AbortError') {
-                showToast('Operation timeout - please wait and refresh manually', 'warning');
-                //console.log('stopAllRunning: Timeout error (AbortError)');
+                showToast('Operation request timed out - please check server status', 'warning');
             } else {
                 showToast(`Error: ${fetchError.message}`, 'error');
-                //console.log('stopAllRunning: Other error:', fetchError.message);
             }
             hideLoader();
         }
     } catch (e) {
         showToast(`Error: ${e.message}`, 'error');
-        //console.log('stopAllRunning: General error:', e);
         hideLoader();
     }
 }
@@ -297,24 +353,25 @@ async function stopContainer(imageName, containerName) {
     try {
         const confirmed = await showConfirmModal(
             'Stop Container',
-            `Are you sure you want to stop container ${containerName}?`
+            `Are you sure you want to stop container <strong>${containerName}</strong>? Any unsaved data might be lost.`,
+            'warning'
         );
         if (!confirmed) return;
 
         const card = document.querySelector(`[data-name="${imageName}"]`);
         const btn = card.querySelector('.btn-danger');
-        const originalHTML = btn.innerHTML; // SALVA SUBITO
-        
+        const originalHTML = btn.innerHTML;
+
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Stopping...';
 
         showLoader(`Stopping container ${containerName}...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minuti
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
 
         try {
-            const response = await fetch(`/stop/${containerName}`, { 
+            const response = await fetch(`/stop/${containerName}`, {
                 method: 'POST',
                 signal: controller.signal
             });
@@ -332,14 +389,12 @@ async function stopContainer(imageName, containerName) {
             }
         } catch (fetchError) {
             clearTimeout(timeoutId);
-            
+
             if (fetchError.name === 'AbortError') {
                 showToast(`Timeout stopping ${containerName} - container may still be stopping`, 'warning');
-                // Mostra messaggio per l'utente
                 btn.innerHTML = '<span class="spinner"></span> Stopping...';
                 btn.disabled = true;
-                
-                // Aspetta un po' e poi ricarica
+
                 setTimeout(() => {
                     showToast('Reloading to check status...', 'info');
                     location.reload();
@@ -352,7 +407,6 @@ async function stopContainer(imageName, containerName) {
         }
     } catch (e) {
         showToast(`Error: ${e.message}`, 'error');
-        // Trova il bottone di nuovo in caso di errore generale
         const card = document.querySelector(`[data-name="${imageName}"]`);
         if (card) {
             const btn = card.querySelector('.btn-danger');
@@ -370,51 +424,37 @@ async function stopContainer(imageName, containerName) {
 async function pollContainerStopStatus(imageName, containerName, btn) {
     let attempts = 0;
     const maxAttempts = 60;
-    
-    //console.log('pollContainerStopStatus: Starting for', { containerName, imageName, startTime: new Date().toISOString() });
-    
+
     const poll = async () => {
-        //console.log('pollContainerStopStatus: Attempt', attempts + 1, 'of', maxAttempts, 'for', containerName);
         try {
             const controller = new AbortController();
-            const startTime = Date.now();
-            //console.log('pollContainerStopStatus: Fetching / for status check');
             const timeoutId = setTimeout(() => {
-                //console.log('pollContainerStopStatus: Timeout for attempt', attempts + 1, 'after 10s');
                 controller.abort();
             }, 10000);
-            
+
             const response = await fetch('/', { signal: controller.signal });
-            //console.log('pollContainerStopStatus: Fetch / response:', response.status, 'after', (Date.now() - startTime) / 1000 + 's');
             clearTimeout(timeoutId);
-            
+
             const text = await response.text();
-            //console.log('pollContainerStopStatus: Received response, text length:', text.length);
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             const newCard = doc.querySelector(`[data-name="${imageName}"]`);
-            
+
             if (newCard) {
                 const statusText = newCard.querySelector('.status-text').textContent.toLowerCase();
-                //console.log('pollContainerStopStatus: Status for', imageName, ':', statusText);
                 if (statusText === 'stopped') {
                     showToast(`Container ${containerName} stopped successfully`, 'success');
-                    //console.log('pollContainerStopStatus: Stop confirmed, reloading');
                     location.reload();
                     return;
                 }
-            } else {
-                //console.log('pollContainerStopStatus: Card not found for', imageName);
             }
-            
+
             attempts++;
             if (attempts < maxAttempts) {
-                //console.log('pollContainerStopStatus: Scheduling next poll in 1-1.5s');
                 await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
                 poll();
             } else {
                 showToast(`Container may still be stopping - refresh page to check`, 'warning');
-                //console.log('pollContainerStopStatus: Max attempts reached', maxAttempts);
                 btn.disabled = false;
                 btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
             }
@@ -422,20 +462,17 @@ async function pollContainerStopStatus(imageName, containerName, btn) {
             console.error('pollContainerStopStatus: Error in attempt', attempts + 1, ':', e);
             if (e.name === 'AbortError') {
                 showToast('Polling timeout - retrying...', 'warning');
-                //console.log('pollContainerStopStatus: Polling timeout for', containerName);
             }
             attempts++;
             if (attempts < maxAttempts) {
-                //console.log('pollContainerStopStatus: Retrying after error in 1-1.5s');
                 await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
                 poll();
             } else {
                 showToast('Polling failed - refresh manually', 'error');
-                //console.log('pollContainerStopStatus: Polling failed after', maxAttempts, 'attempts');
             }
         }
     };
-    
+
     poll();
 }
 
@@ -455,13 +492,19 @@ async function showLogs(container) {
 
 // Modal Management
 function openModal(modalId) {
-    document.getElementById(modalId).classList.add('modal-open');
-    document.body.style.overflow = 'hidden';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('modal-open');
-    document.body.style.overflow = '';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('modal-open');
+        document.body.style.overflow = '';
+    }
 }
 
 // Console Management
@@ -493,7 +536,7 @@ function openConsole(container, imageName) {
     term.loadAddon(fitAddon);
 
     try {
-        webglAddon = new WebglAddon.WebglAddon(); // Store reference to WebGL addon
+        webglAddon = new WebglAddon.WebglAddon();
         term.loadAddon(webglAddon);
     } catch (e) {
         console.warn('WebGL addon not available, using canvas renderer');
@@ -511,7 +554,6 @@ function openConsole(container, imageName) {
     ws = new WebSocket(`${protocol}//${window.location.host}/ws/console/${container}`);
 
     ws.onopen = () => {
-        //console.log('WebSocket connected');
         document.getElementById('consoleStatus').textContent = '● Connected';
         document.getElementById('consoleStatus').className = 'console-status console-connected';
         term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
@@ -530,11 +572,9 @@ function openConsole(container, imageName) {
     };
 
     ws.onclose = () => {
-        //console.log('WebSocket closed');
         document.getElementById('consoleStatus').textContent = '● Disconnected';
         document.getElementById('consoleStatus').className = 'console-status console-disconnected';
 
-        // Only write to terminal if it still exists
         if (term) {
             term.write('\r\n\x1b[33m⚠ Console disconnected\x1b[0m\r\n');
         }
@@ -548,15 +588,13 @@ function openConsole(container, imageName) {
 }
 
 function closeConsole() {
-    // Close WebSocket first, before disposing terminal
     if (ws) {
-        ws.onclose = null; // Remove the onclose handler to prevent it from trying to write to disposed terminal
+        ws.onclose = null;
         ws.close();
         ws = null;
     }
 
     if (term) {
-        // Dispose WebGL addon first, if it exists
         if (webglAddon) {
             try {
                 webglAddon.dispose();
@@ -574,19 +612,20 @@ function closeConsole() {
 }
 
 // Event Listeners
-filterInput.addEventListener('input', applyFilters);
-categoryFilter.addEventListener('change', () => applyFilters());
+if (filterInput) filterInput.addEventListener('input', applyFilters);
+if (categoryFilter) categoryFilter.addEventListener('change', () => applyFilters());
 document.addEventListener('keydown', (e) => {
+    // Optional chaining to prevent errors if elements are null
     if (e.key === 'Escape') {
-        if (document.getElementById('consoleModal').classList.contains('modal-open')) {
+        if (document.getElementById('consoleModal')?.classList.contains('modal-open')) {
             closeConsole();
-        } else if (document.getElementById('logModal').classList.contains('modal-open')) {
+        } else if (document.getElementById('logModal')?.classList.contains('modal-open')) {
             closeModal('logModal');
         }
     }
     if (e.ctrlKey && e.key === 'k') {
         e.preventDefault();
-        filterInput.focus();
+        if (filterInput) filterInput.focus();
     }
 });
 

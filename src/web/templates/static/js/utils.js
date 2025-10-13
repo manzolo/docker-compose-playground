@@ -1,47 +1,53 @@
-function showLoader(message = 'Please wait...') {
-    const loader = document.getElementById('globalLoader');
-    const loaderMessage = loader.querySelector('.loader-message');
-    if (loader && loaderMessage) {
-        loaderMessage.textContent = message;
+function showLoader(message) {
+    const loader = document.getElementById('global-loader');
+    const loaderMessage = document.getElementById('loader-message');
+    
+    if (loader) {
+        if (loaderMessage) {
+            loaderMessage.textContent = message;
+        }
+        // Usa la classe 'active' invece di rimuovere 'hidden'
         loader.classList.add('active');
+        loader.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+    } else {
+        console.error('Loader element not found!');
+        showToast(`Operation in progress: ${message}`, 'info'); 
     }
 }
 
 function hideLoader() {
-    const loader = document.getElementById('globalLoader');
+    const loader = document.getElementById('global-loader');
     if (loader) {
         loader.classList.remove('active');
+        loader.classList.add('hidden');
         document.body.style.overflow = '';
+    } else {
+        console.error('Loader element not found!');
     }
 }
 
-// Funzione per mostrare il modal di conferma
-function showConfirmModal(title, message, type = 'danger') {
-    return new Promise((resolve) => {
+// FIXED: Modal di conferma HTML personalizzata invece di window.confirm()
+async function showConfirmModal(title, message, type = 'info') {
+    return new Promise(resolve => {
         const modal = document.getElementById('confirmModal');
         if (!modal) {
-            console.error('Confirm modal not found in DOM');
-            resolve(false);
+            console.error('confirmModal not found, falling back to window.confirm');
+            resolve(window.confirm(`${title}\n\n${message}`));
             return;
         }
 
-        // Pulisci il contenuto precedente
-        modal.innerHTML = '';
-
-        // Determina icona e classe in base al tipo
-        const icons = {
-            danger: '⚠️',
-            warning: '⚡',
-            info: 'ℹ️',
-            success: '✓',
-            question: '❓'
-        };
-        const icon = icons[type] || icons.danger;
+        // Determina il tipo di pulsante e icona
+        let btnClass = 'btn-confirm-primary';
+        let icon = 'ℹ';
         
-        const buttonClass = type === 'danger' ? 'btn-confirm-danger' : 
-                           type === 'success' ? 'btn-confirm-success' : 
-                           'btn-confirm-primary';
+        if (type === 'danger' || type === 'warning') {
+            btnClass = 'btn-confirm-danger';
+            icon = '⚠';
+        } else if (type === 'success') {
+            btnClass = 'btn-confirm-success';
+            icon = '✓';
+        }
 
         // Crea contenuto modal
         modal.innerHTML = `
@@ -61,7 +67,7 @@ function showConfirmModal(title, message, type = 'danger') {
                         <span class="btn-icon-confirm">✕</span>
                         Cancel
                     </button>
-                    <button class="btn ${buttonClass}" id="confirmModalConfirm">
+                    <button class="btn ${btnClass}" id="confirmModalConfirm">
                         <span class="btn-icon-confirm">✓</span>
                         Confirm
                     </button>
@@ -101,7 +107,8 @@ function showConfirmModal(title, message, type = 'danger') {
         const onKeyDown = (e) => {
             if (e.key === 'Escape') {
                 onCancel();
-            } else if (e.key === 'Enter' && e.ctrlKey) {
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
                 onConfirm();
             }
         };
@@ -113,7 +120,7 @@ function showConfirmModal(title, message, type = 'danger') {
     });
 }
 
-// Funzione per input di categoria
+// Funzione per input di categoria (già corretta)
 function showInputModal(title, message, placeholder = 'Enter value...', defaultValue = '') {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');

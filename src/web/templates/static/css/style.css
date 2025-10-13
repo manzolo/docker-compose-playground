@@ -917,24 +917,30 @@ header .subtitle {
     box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
 }
 
-/* Loader Overlay */
+/* Loader Overlay - CORREZIONE */
 .loader-overlay {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
-    z-index: 9998; /* Sotto il toast-container ma sopra il modal */
+    z-index: 9998;
     justify-content: center;
     align-items: center;
     flex-direction: column;
     gap: 16px;
+    /* RIMUOVI display: none; e usa invece: */
+    display: none;
 }
 
+.loader-overlay:not(.hidden) {
+    display: flex !important;
+}
+
+/* Oppure alternativamente: */
 .loader-overlay.active {
-    display: flex;
+    display: flex !important;
 }
 
 .loader-spinner {
@@ -954,4 +960,8 @@ header .subtitle {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+.hidden {
+    display: none !important;
 }

@@ -17,6 +17,7 @@ import os
 import json
 import concurrent.futures
 import asyncio
+import uuid
 
 # Configura logging
 logging.basicConfig(
@@ -451,67 +452,24 @@ async def start_category(category: str):
 
 @app.post("/api/stop-all")
 async def stop_all():
-    """Stop all running playground containers"""
+    """Stop all containers (non-blocking)"""
     try:
         containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
-        stopped = []
-        
-        logger.info("Stopping %d containers in parallel", len(containers))
-        
-        # Carica config per gli script
-        config = load_config()
-        
-        def stop_and_remove_container(container):
-            try:
-                logger.info("Stopping container: %s", container.name)
-                
-                # Get image name from container name
-                image_name = container.name.replace("playground-", "", 1)
-                
-                # Execute pre-stop script if exists
-                if image_name in config:
-                    scripts = config[image_name].get('scripts', {})
-                    if 'pre_stop' in scripts:
-                        logger.info("Running pre-stop script for %s", image_name)
-                        try:
-                            execute_script(scripts['pre_stop'], container.name, image_name)
-                            logger.info("Pre-stop script completed for %s", image_name)
-                        except Exception as script_error:
-                            logger.error("Pre-stop script failed for %s: %s", image_name, str(script_error))
-                
-                # Now stop and remove
-                container.stop(timeout=60)
-                container.remove()
-                logger.info("Stopped and removed: %s", container.name)
-                return container.name
-            except Exception as e:
-                logger.error("Failed to stop %s: %s", container.name, str(e))
-                return None
-        
-        # Esegui in parallelo e ASPETTA il completamento
-        loop = asyncio.get_event_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
-            # Converti le futures in awaitable coroutines
-            futures = [
-                loop.run_in_executor(executor, stop_and_remove_container, cont) 
-                for cont in containers
-            ]
-            
-            # ASPETTA che TUTTE le operazioni finiscano
-            results = await asyncio.gather(*futures, return_exceptions=True)
-            
-            # Processa i risultati
-            for result in results:
-                if result and not isinstance(result, Exception):
-                    stopped.append(result)
-        
-        logger.info("Stopped %d containers successfully", len(stopped))
-        return {"status": "ok", "stopped": len(stopped), "containers": stopped}
-    
+        operation_id = str(uuid.uuid4())
+
+        active_operations[operation_id] = {
+            "status": "running",
+            "started_at": datetime.now().isoformat(),
+            "total": len(containers),
+            "stopped": 0
+        }
+
+        asyncio.create_task(stop_all_background(operation_id, containers))
+        return {"operation_id": operation_id, "status": "started"}
     except Exception as e:
-        logger.error("Error stopping all: %s", str(e))
+        logger.error("Error starting stop_all: %s", str(e))
         raise HTTPException(500, str(e))
-    
+   
 async def stop_all_background(operation_id: str, containers):
     """Background task to stop all containers"""
     stopped = []
@@ -734,7 +692,7 @@ async def export_config():
     finally:
         # Nota: Non eliminiamo il file temporaneo qui per evitare FileNotFoundError
         pass
-    
+
 def cleanup_temp_files(age_hours=1):
     temp_dir = tempfile.gettempdir()
     cutoff = datetime.now() - timedelta(hours=age_hours)

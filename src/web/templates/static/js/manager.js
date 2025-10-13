@@ -30,6 +30,58 @@ function showToast(message, type = 'info') {
     }, 4000);
 }
 
+async function pollStopAllStatus(operationId) {
+    const maxAttempts = 60;
+    let attempts = 0;
+
+    showLoader('Stopping containers: Awaiting progress...');
+    
+    const poll = async () => {
+        try {
+            const response = await fetch(`/api/operation-status/${operationId}`);
+            const statusData = await response.json();
+
+            const total = statusData.total || '?';
+            const stopped = statusData.stopped || 0;
+            showLoader(`Stopping containers: ${stopped} of ${total} | Status: ${statusData.status}`);
+
+            if (statusData.status === 'completed') {
+                showToast(`✅ Successfully stopped ${stopped} containers! Reloading page...`, 'success');
+                hideLoader();
+                
+                setTimeout(() => {
+                    location.reload(); 
+                }, 2500);
+                return;
+            }
+
+            if (statusData.status === 'error') {
+                showToast(`❌ Stop operation failed: ${statusData.error}`, 'error');
+                hideLoader();
+                resumeSystemInfoUpdates();
+                return;
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000); 
+            } else {
+                showToast(`⏰ Operation timed out after ${maxAttempts} seconds`, 'warning');
+                hideLoader();
+                resumeSystemInfoUpdates();
+            }
+
+        } catch (e) {
+            console.error('Polling error:', e);
+            showToast('❌ An error occurred during status check.', 'error');
+            hideLoader();
+            resumeSystemInfoUpdates();
+        }
+    };
+
+    poll();
+}
+
 // Show Server Logs in Modal
 async function showServerLogs() {
     try {
@@ -122,97 +174,54 @@ function resumeSystemInfoUpdates() {
 
 // Stop all containers
 async function stopAll() {
-    //console.log('stopAll: Started at', new Date().toISOString());
     try {
         const confirmed = await showConfirmModal(
             'Stop All Containers',
-            'Are you sure you want to stop ALL running containers?',
+            'Are you sure you want to stop ALL running containers? This will gracefully stop all running playground containers.',
             'danger'
         );
-        //console.log('stopAll: User confirmation:', confirmed);
-        if (!confirmed) {
-            //console.log('stopAll: Cancelled by user');
-            return;
-        }
+        if (!confirmed) return;
 
         pauseSystemInfoUpdates();
-        showLoader('Stopping all containers... This may take several minutes.');
-        showToast('Stopping all containers...', 'info');
-        //console.log('stopAll: Sending POST to /api/stop-all');
+        showLoader('Initiating stop all operation...');
+        showToast('Initiating stop all operation...', 'info');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, 120000); // 120s timeout for initial request
 
         try {
-            // Usa XMLHttpRequest con timeout MOLTO lungo
-            const result = await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                
-                // 10 MINUTI di timeout - per Ubuntu che installa pacchetti
-                xhr.timeout = 600000;
-                
-                xhr.ontimeout = () => {
-                    //console.log('stopAll: XHR timeout after 10 minutes');
-                    reject(new Error('Request timeout after 10 minutes'));
-                };
-                
-                xhr.onerror = () => {
-                    //console.log('stopAll: XHR network error');
-                    reject(new Error('Network error'));
-                };
-                
-                xhr.onload = () => {
-                    //console.log('stopAll: XHR response received, status:', xhr.status);
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const data = JSON.parse(xhr.responseText);
-                            //console.log('stopAll: Response data:', data);
-                            resolve(data);
-                        } catch (parseError) {
-                            console.error('stopAll: JSON parse error:', parseError);
-                            reject(new Error('Invalid response format'));
-                        }
-                    } else {
-                        //console.log('stopAll: HTTP error status:', xhr.status);
-                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-                    }
-                };
-                
-                xhr.open('POST', '/api/stop-all', true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.send();
-                //console.log('stopAll: XHR request sent');
+            const response = await fetch('/api/stop-all', {
+                method: 'POST',
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
 
-            //console.log('stopAll: Success, stopped', result.stopped, 'containers');
-            showToast(`Successfully stopped ${result.stopped} containers`, 'success');
-            hideLoader();
-            
-            setTimeout(() => {
-                //console.log('stopAll: Reloading page');
-                location.reload();
-            }, 2000);
+            const data = await response.json();
 
-        } catch (fetchError) {
-            console.error('stopAll: Request failed:', fetchError);
-            showToast(`Error: ${fetchError.message}`, 'error');
-            hideLoader();
-            
-            // Mostra un messaggio più utile
-            if (fetchError.message.includes('timeout')) {
-                showToast('Containers may still be stopping... Reloading in 5s', 'warning');
+            if (response.ok) {
+                showToast(`Stop operation started. ID: ${data.operation_id}`, 'info'); 
+                pollStopAllStatus(data.operation_id); // ← USA LA NUOVA FUNZIONE
+            } else {
+                showToast(`Failed to start stop operation: ${data.error || response.statusText}`, 'error');
+                hideLoader();
+                resumeSystemInfoUpdates();
             }
-            
-            // Prova a ricaricare comunque dopo un po' per vedere lo stato
-            setTimeout(() => {
-                showToast('Reloading to check status...', 'info');
-                location.reload();
-            }, 5000);
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+                showToast('Operation request timed out - please check server status', 'warning');
+            } else {
+                showToast(`Error: ${fetchError.message}`, 'error');
+            }
+            hideLoader();
+            resumeSystemInfoUpdates();
         }
     } catch (e) {
         showToast(`Error: ${e.message}`, 'error');
-        console.error('stopAll: General error:', e);
         hideLoader();
         resumeSystemInfoUpdates();
-    } finally {
-        hideLoader();
     }
 }
 
@@ -483,7 +492,6 @@ let loadSystemInfoDebounceTimer = null;
 async function loadSystemInfo() {
     // Debounce
     if (loadSystemInfoDebounceTimer) {
-        //console.log('loadSystemInfo: Debounced, skipping');
         return;
     }
     
@@ -491,14 +499,9 @@ async function loadSystemInfo() {
         loadSystemInfoDebounceTimer = null;
     }, 2000);
     
-    //console.log('loadSystemInfo: Attempting refresh at', new Date().toISOString());
-    
     if (operationInProgress) {
-        //console.log('loadSystemInfo: Skipped - operation in progress');
         return;
     }
-    
-    //console.log('loadSystemInfo: Starting fetch to /api/system-info');
     
     try {
         const startTime = Date.now();
@@ -507,9 +510,6 @@ async function loadSystemInfo() {
         
         const response = await fetch('/api/system-info', { signal: controller.signal });
         clearTimeout(timeoutId);
-        
-        const responseTime = (Date.now() - startTime) / 1000;
-        //console.log('loadSystemInfo: Response received after', responseTime + 's');
         
         const data = await response.json();
         
@@ -542,7 +542,6 @@ async function loadSystemInfo() {
                 </div>`
             ).join('');
         }
-        //console.log('loadSystemInfo: UI updated successfully');
     } catch (e) {
         if (e.name === 'AbortError') {
             console.error('loadSystemInfo: Timeout after 5s');
