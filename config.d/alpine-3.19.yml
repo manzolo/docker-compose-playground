@@ -1,14 +1,14 @@
 images:
-  alpine-3.19:
-    image: alpine:3.19
+  alpine-3.22:
+    image: alpine:3.22
     shell: /bin/sh
     keep_alive_cmd: tail -f /dev/null
-    description: "Alpine Linux 3.19 (Lightweight - 5MB)"
+    description: "Alpine Linux 3.22 (Lightweight - 5MB)"
     category: linux
     
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                 Alpine Linux 3.19 Quick Reference             ║
+      ║                 Alpine Linux 3.22 Quick Reference            ║
       ╚══════════════════════════════════════════════════════════════╝
       
       📦 Package Management (apk):
@@ -46,7 +46,7 @@ images:
         inline: |
           #!/bin/sh
           CONTAINER_NAME="$1"
-          echo "🏔️  Initializing Alpine Linux 3.19 for $CONTAINER_NAME..."
+          echo "🏔️  Initializing Alpine Linux 3.22 for $CONTAINER_NAME..."
           
           # Update package index
           docker exec "$CONTAINER_NAME" apk update 2>/dev/null
@@ -55,7 +55,7 @@ images:
           docker exec "$CONTAINER_NAME" apk add --no-cache \
             vim curl wget git bash 2>/dev/null
           
-          echo "✓ Alpine Linux 3.19 initialized with essential tools"
+          echo "✓ Alpine Linux 3.22 initialized with essential tools"
       
       pre_stop:
         inline: |
@@ -63,7 +63,7 @@ images:
           CONTAINER_NAME="$1"
           echo "💾 Backing up Alpine configuration for $CONTAINER_NAME..."
           
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/alpine-3.19"
+          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/alpine-3.22"
           mkdir -p "$BACKUP_DIR"
           
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -76,4 +76,4 @@ images:
           docker exec "$CONTAINER_NAME" cat /etc/apk/repositories > \
             "$BACKUP_DIR/repositories_${TIMESTAMP}.txt" 2>/dev/null || true
           
-          echo "✓ Backup saved to: backups/alpine-3.19/"
+          echo "✓ Backup saved to: backups/alpine-3.22/"

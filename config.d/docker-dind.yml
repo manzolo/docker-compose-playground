@@ -9,7 +9,7 @@ images:
     
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║            Docker in Docker (DinD) Quick Reference            ║
+      ║            Docker in Docker (DinD) Quick Reference           ║
       ╚══════════════════════════════════════════════════════════════╝
       
       ⚠️  This is Docker in Docker - you can run Docker inside!
