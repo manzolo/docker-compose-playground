@@ -6,7 +6,6 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 ![Shell Script](https://img.shields.io/badge/shell-bash-green.svg)
 ![Docker](https://img.shields.io/badge/docker-required-blue.svg)
 ![Python](https://img.shields.io/badge/python-required-blue.svg)
-![Version](https://img.shields.io/badge/version-3.0-orange.svg)
 
 <a href="https://www.buymeacoffee.com/manzolo">
   <img src=".github/blue-button.png" alt="Buy Me A Coffee" width="200">
@@ -16,87 +15,81 @@ A professional, modular, feature-rich interactive tool for managing multiple Doc
 
 ### Core Features
 - 🎯 **Interactive TUI** - Beautiful terminal user interface using whiptail
-- 🌐 **Web UI (NEW!)** - Modern web interface for managing containers with real-time console, logs, and smart filtering
+- 🌐 **Web UI** - Modern web interface for managing containers with real-time console, logs, and smart filtering
 - 📦 **100+ Pre-configured Images** - Linux distros, programming languages, databases, and more
 - 🔄 **Smart Management** - Start, stop, enter, and monitor containers with ease
 - 📁 **Shared Volumes** - Automatically mounted shared directory across all containers
 - 🌐 **Network Isolation** - Containers communicate through a dedicated Docker network
 - 🏷️ **Docker Labels** - Container tracking without filesystem dependencies
 
-### 🎉 New in v3.0 - Major Architecture Overhaul!
+### Enhanced Features
+- 🏗️ **Modular Architecture** - Organized into separate modules (`lib/`) for clean code, easy maintenance, and extensibility
+- 📂 **Modular Configuration System** - Organized with `config.d/` directory, auto-merged on startup, easy to extend
+- 📝 **Inline MOTD System** - YAML-based MOTDs in `config.yml` or `config.d/*.yml`, with legacy file-based support
+- 🔧 **Inline Pre/Post Script System** - Define scripts in YAML or reference external scripts in `scripts/`
+- 🔍 **Debug Mode** - Built-in configuration debugging tool
+- 📈 **Real-time Statistics** - Monitor CPU, memory, network I/O with auto-refresh
+- 🎨 **Improved UI** - Color-coded sections, cleaner layout, better organization
+- 🔄 **Restart Containers** - Easily restart containers without manual stop/start
+- 📤 **Export Logs** - Timestamped log exports for debugging and auditing
+- 🔎 **Smart Filtering** - Filter containers by name, category, or status in TUI and Web UI
 
-#### 🏗️ Modular Architecture
-- **Clean code structure** - Organized into separate modules (`lib/`)
-- **Easy maintenance** - Each module handles specific functionality
-- **Extensible design** - Add new features without touching core code
-- **Professional organization** - Follows best practices for large bash projects
-
-#### 📂 Modular Configuration System
-- **Split configuration files** - Keep your config organized with `config.d/` directory
-- **Auto-merge on startup** - Base `config.yml` + all `config.d/*.yml` files merged automatically
-- **Easy to extend** - Add new containers without touching the main config file
-- **Validate independently** - Each config file can be validated separately
-- **Share configurations** - Team members can add their own config files to `config.d/`
-
-#### 📝 Inline MOTD System
-- **YAML-based MOTDs** - Define help text directly in `config.yml` or `config.d/*.yml`
-- **File-based MOTDs** - Support for external `.txt` files in `motd/` (legacy)
-- **Context-aware** - Automatic detection and display when entering containers
-- **Always visible** - MOTD stays on screen like real system login messages
-- **10+ pre-built guides** - MySQL, PostgreSQL, MongoDB, Redis, Python, Node.js, Go, Rust, Nginx, Docker-in-Docker
-
-#### 🔧 Inline Pre/Post Script System
-- **Inline scripts** - Define scripts directly in YAML configuration
-- **File-based scripts** - Support for external scripts in `scripts/` directory
-- **post_start scripts** - Execute custom scripts after container starts
-- **pre_stop scripts** - Run cleanup or backup before stopping containers
-- **Auto-discovery** - Scripts defined inline or referenced from `scripts/`
-- **Built-in examples** - MySQL/PostgreSQL initialization, Python/Node package installation, automatic backups
-- **Easy to extend** - Add your own custom scripts inline or as files
-
-#### 🌐 Web UI (NEW!)
+### Web UI Features
 - **Dashboard** - Visual overview of containers with status, category, and actions
-- **Smart Filtering** - Filter containers by name, category, or status (Running/Stopped)
+- **Smart Filtering** - Filter by name, category, or status (Running/Stopped)
 - **Real-time Console** - Interactive terminal access via WebSocket using xterm.js
 - **Log Viewer** - View and export container logs directly from the browser
 - **Responsive Design** - Mobile-friendly interface for on-the-go management
 - **Toast Notifications** - Real-time feedback for actions (start, stop, errors)
 - **Stop All** - Quickly stop all running containers with one click
 
-#### 📊 Enhanced Features
-- 🔍 **Debug mode** - Built-in configuration debugging tool to troubleshoot issues
-- 📈 **Better statistics** - Real-time container resource monitoring with auto-refresh
-- 🎨 **Improved UI** - Color-coded sections, cleaner layout, better organization
-- 🔄 **Restart containers** - Easily restart running containers without manual stop/start
-- 📤 **Export logs** - Timestamped log exports for debugging and auditing
-- 🔎 **Smart filtering** - Only show relevant containers in TUI; advanced filtering in Web UI
-
 ## 📋 Requirements
 
 ### For TUI
-- **Docker** (version 20.10 or higher)
-- **Docker Compose** (version 2.0 or higher)
-- **yq** (YAML processor - auto-installed via snap if missing)
-- **whiptail** (usually pre-installed on most Linux distributions)
-- **Bash** (version 4.0 or higher)
+- **Docker** - Installed and running, following the [official Docker installation guide for Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- **Docker Compose** - Required for managing multi-container setups
+- **yq** - YAML processor, auto-installed via snap if missing
+- **whiptail** - Usually pre-installed on most Linux distributions
+- **Bash** - Required for running scripts
+
 <img width="788" height="484" alt="image" src="https://github.com/user-attachments/assets/d341037f-d006-4d08-b432-0e91aad22dcf" />
 <img width="940" height="476" alt="image" src="https://github.com/user-attachments/assets/2c28f6ee-5ea8-4d91-9a9c-d61ecdff92bb" />
 
 ### For Web UI
-- **Python 3.8+** (with `pip` for installing dependencies)
-- **Flask** (auto-installed via `requirements.txt`)
-- **Docker Python SDK** (auto-installed via `requirements.txt`)
-- **Modern web browser** (Chrome, Firefox, Safari, Edge)
+- **Python 3** - With `pip` and `python3-venv` for creating a virtual environment
+- **Flask** - Auto-installed via `requirements.txt`
+- **Docker Python SDK** - Auto-installed via `requirements.txt`
+- **Modern web browser** - Chrome, Firefox, Safari, Edge
 
 <img width="1883" height="592" alt="image" src="https://github.com/user-attachments/assets/712a5e7a-ad92-4c30-b6dd-e9a472c819bb" />
 <img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/a7e31b44-3fbb-4a0c-8069-2f5ca47ef886" />
 <img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/6af387f7-4f5e-462a-b907-8bf0ded13eb9" />
 
+> **Note**: Ensure Docker is installed, running, and properly configured by following the [official Docker installation guide for Ubuntu](https://docs.docker.com/engine/install/ubuntu/). Additionally, `python3-venv` must be installed for the Web UI. On Ubuntu, install it with:
+> ```bash
+> sudo apt-get update
+> sudo apt-get install python3-venv
+> ```
 
 ## 🚀 Quick Start
 
-### Installation
+### Prerequisites
+1. **Verify Docker Installation**:
+   Ensure Docker is installed and running:
+   ```bash
+   docker --version
+   sudo systemctl status docker
+   ```
+   If Docker is not installed, follow the [official Docker installation guide for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
 
+2. **Install Python Virtual Environment**:
+   Ensure `python3-venv` is installed for the Web UI:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install python3-venv
+   ```
+
+### Installation
 ```bash
 # Clone the repository
 git clone https://github.com/manzolo/docker-compose-playground.git
@@ -105,15 +98,18 @@ cd docker-compose-playground
 # Make the scripts executable
 chmod +x playground.sh start-webui.sh
 
+# Set up the Python virtual environment for Web UI
+python3 -m venv venv
+source venv/bin/activate
+pip install -r venv/requirements.txt
 ```
 
 ### Using the TUI
-
 1. Run the playground:
    ```bash
    ./playground.sh
    ```
-2. The script checks for dependencies and offers to install missing ones.
+2. The script checks for dependencies and offers to install missing ones (e.g., `yq`).
 3. Navigate the menu using arrow keys.
 4. Select "Start containers" or "Start by category".
 5. Choose one or more images (SPACE to select, ENTER to confirm).
@@ -121,18 +117,17 @@ chmod +x playground.sh start-webui.sh
 7. Post-start scripts initialize your environment automatically.
 
 ### Using the Web UI
-
 1. Start the web server:
    ```bash
    ./start-webui.sh
    ```
 2. Open your browser and navigate to `http://localhost:8000`.
 3. Use the dashboard to:
-   - Start/stop containers with one click.
-   - Filter containers by name, category, or status (All, Running, Stopped).
-   - Access real-time console for running containers.
-   - View container logs in a modal window.
-   - Stop all running containers with the "Stop All" button.
+   - Start/stop containers with one click
+   - Filter containers by name, category, or status (All, Running, Stopped)
+   - Access real-time console for running containers
+   - View container logs in a modal window
+   - Stop all running containers with the "Stop All" button
 4. Use the search bar (Ctrl+K) for quick filtering.
 5. Check `venv/web.log` for Web UI logs if issues arise.
 
@@ -146,33 +141,33 @@ chmod +x playground.sh start-webui.sh
 ```
 docker-playground/
 ├── playground.sh              # Main entry point for TUI
-├── start-webui.sh            # 🆕 Script to start Web UI server
-├── app.py                    # 🆕 Flask backend for Web UI
-├── index.html                # 🆕 Web UI dashboard
-├── style.css                 # 🆕 Styling for Web UI
-├── manager.js                # 🆕 JavaScript for Web UI logic
+├── start-webui.sh            # Script to start Web UI server
+├── app.py                    # Flask backend for Web UI
+├── index.html                # Web UI dashboard
+├── style.css                 # Styling for Web UI
+├── manager.js                # JavaScript for Web UI logic
 ├── config.yml                # Base configuration (100+ images)
-├── config.d/                 # 🆕 Modular configuration directory
-│   ├── ubuntu-24.yml        # Example: Ubuntu 24.04 with inline MOTD & scripts
-│   ├── postgres-16.yml      # Example: PostgreSQL 16 with inline scripts
-│   ├── mysql-8.yml          # Example: MySQL 8 with initialization
-│   ├── python-3.13.yml      # Example: Python with auto-pip install
+├── config.d/                 # Modular configuration directory
+│   ├── ubuntu.yml           # Example: Ubuntu with inline MOTD & scripts
+│   ├── postgres.yml         # Example: PostgreSQL with inline scripts
+│   ├── mysql.yml            # Example: MySQL with initialization
+│   ├── python.yml           # Example: Python with auto-pip install
 │   └── custom.yml           # Add your own custom containers here!
 ├── create_scripts.sh         # Helper to generate example scripts
 ├── lib/                      # Modular library files for TUI
 │   ├── config.sh            # Configuration management (yq parsing)
-│   ├── config_loader.sh     # 🆕 Config merging and validation
+│   ├── config_loader.sh     # Config merging and validation
 │   ├── docker.sh            # Docker operations (start/stop/enter)
 │   ├── logging.sh           # Logging utilities with colors
 │   ├── motd.sh              # MOTD management (inline + file-based)
 │   ├── ui.sh                # User interface (whiptail menus)
 │   └── utils.sh             # Utility functions (dependencies, init)
 ├── scripts/                  # Pre/Post execution scripts (optional)
-│   ├── mysql_init.sh        # MySQL initialization (legacy)
-│   ├── postgres_init.sh     # PostgreSQL setup (legacy)
-│   ├── postgres_backup.sh   # PostgreSQL automatic backup (legacy)
-│   ├── python_init.sh       # Python packages (legacy)
-│   ├── node_init.sh         # Node.js packages (legacy)
+│   ├── mysql_init.sh        # MySQL initialization
+│   ├── postgres_init.sh     # PostgreSQL setup
+│   ├── postgres_backup.sh   # PostgreSQL automatic backup
+│   ├── python_init.sh       # Python packages
+│   ├── node_init.sh         # Node.js packages
 │   └── generic_backup.sh    # Generic backup script
 ├── motd/                     # Message of the Day files (legacy support)
 │   ├── mysql.txt
@@ -183,7 +178,7 @@ docker-playground/
 │   ├── backups/             # Auto-created by backup scripts
 │   └── README.txt           # Instructions for shared volume
 ├── playground.log            # Activity log for TUI with timestamps
-└── venv/                     # 🆕 Virtual environment for Web UI
+└── venv/                     # Virtual environment for Web UI
     ├── web.log              # Web UI logs
     └── requirements.txt      # Python dependencies for Web UI
 ```
@@ -218,7 +213,6 @@ docker-playground/
 - **Exit** - Close the playground manager
 
 ### Web UI Usage
-
 1. **Access the Dashboard**:
    - Navigate to `http://localhost:8000` after running `./start-webui.sh`.
    - View all configured containers as cards with name, category, status, and actions.
@@ -243,9 +237,7 @@ docker-playground/
    - Check `venv/web.log` for detailed error logs if issues occur.
 
 ### Shared Volume
-
 All containers have access to a shared directory:
-
 - **Host path**: `./shared-volumes`
 - **Container path**: `/shared`
 
@@ -258,41 +250,36 @@ Use this to:
 
 ## 📚 MOTD (Message of the Day) System
 
-When entering containers via TUI, you'll see helpful quick reference guides that **stay visible** on your terminal. For the Web UI, MOTDs are not displayed in the console but are defined in `config.yml` or `config.d/*.yml` for reference.
+When entering containers via TUI, you'll see helpful quick reference guides that **stay visible** on your terminal. For the Web UI, MOTDs are defined in `config.yml` or `config.d/*.yml` for reference.
 
 ### Supported Containers with Inline MOTD
-
-- **MySQL 8.0** - Connection info, backup/restore, common queries
-- **PostgreSQL 16** - psql commands, pg_dump/restore, useful queries
-- **MongoDB 7** - mongosh basics, backup/restore, CRUD operations
-- **Redis 7** - redis-cli commands, data types, persistence
-- **Python 3.13** - pip usage, quick testing, web servers
-- **Node.js 22** - npm commands, Express setup, package management
-- **Go 1.22** - go commands, module management, building
-- **Rust 1.75** - cargo commands, building, testing
+- **MySQL** - Connection info, backup/restore, common queries
+- **PostgreSQL** - psql commands, pg_dump/restore, useful queries
+- **MongoDB** - mongosh basics, backup/restore, CRUD operations
+- **Redis** - redis-cli commands, data types, persistence
+- **Python** - pip usage, quick testing, web servers
+- **Node.js** - npm commands, Express setup, package management
+- **Go** - go commands, module management, building
+- **Rust** - cargo commands, building, testing
 - **Docker-in-Docker** - Docker commands, image building
 - **Nginx** - Configuration, site setup, log viewing
-- **Ubuntu 24.04** - apt commands, system info utilities
-- **Alpine Linux 3.19** - apk package manager, musl libc notes
+- **Ubuntu** - apt commands, system info utilities
+- **Alpine Linux** - apk package manager, musl libc notes
 
 ## ⚙️ Configuration
 
-### 🆕 Modular Configuration System
-
-The v3.0 introduces a powerful modular configuration system for both TUI and Web UI:
-
+### Modular Configuration System
 ```
 docker-playground/
 ├── config.yml              # Base configuration (required)
 └── config.d/               # Additional configurations (optional)
-    ├── ubuntu-24.yml       # Example: Custom Ubuntu config
-    ├── postgres-16.yml     # Example: PostgreSQL with inline scripts
-    ├── mysql-8.yml         # Example: MySQL configuration
-    └── my-custom.yml       # Your custom containers
+    ├── ubuntu.yml         # Example: Custom Ubuntu config
+    ├── postgres.yml       # Example: PostgreSQL with inline scripts
+    ├── mysql.yml          # Example: MySQL configuration
+    └── my-custom.yml      # Your custom containers
 ```
 
 #### How It Works
-
 1. **Base Config**: `config.yml` contains 100+ pre-configured images.
 2. **Modular Configs**: Files in `config.d/*.yml` are automatically merged on startup.
 3. **Override Behavior**: Files in `config.d/` can override base configuration.
@@ -300,7 +287,6 @@ docker-playground/
 5. **Web UI Integration**: The Web UI reads the merged configuration to display containers.
 
 #### Benefits
-
 ✅ **Organization** - Keep related containers together in separate files  
 ✅ **Team Collaboration** - Team members can add their own config files  
 ✅ **Easy Updates** - Update base config without touching custom configs  
@@ -308,9 +294,7 @@ docker-playground/
 ✅ **Web UI Support** - Seamlessly displays all configured containers  
 
 ### Basic Configuration
-
 Create a new file in `config.d/` directory:
-
 ```yaml
 # config.d/my-custom-image.yml
 images:
@@ -327,8 +311,7 @@ images:
     privileged: false
 ```
 
-### 🆕 Advanced Configuration with Inline MOTD and Scripts
-
+### Advanced Configuration with Inline MOTD and Scripts
 ```yaml
 # config.d/my-advanced-container.yml
 images:
@@ -392,13 +375,12 @@ images:
 ```
 
 ### Configuration Options Reference
-
 | Option | Required | Type | Description | Example |
 |--------|----------|------|-------------|---------|
-| `image` | ✅ | string | Docker image name and tag | `ubuntu:24.04` |
+| `image` | ✅ | string | Docker image name and tag | `ubuntu:latest` |
 | `shell` | ✅ | string | Shell to use when entering | `/bin/bash` or `/bin/sh` |
 | `keep_alive_cmd` | ✅ | string | Command to keep container running | `sleep infinity` |
-| `description` | ✅ | string | Human-readable description | `"Ubuntu 24.04 LTS"` |
+| `description` | ✅ | string | Human-readable description | `"Ubuntu LTS"` |
 | `category` | ✅ | string | Category for organization | `linux`, `programming`, `database` |
 | `motd` | ❌ | multiline | Inline MOTD text (YAML block, TUI only) | See examples above |
 | `scripts.post_start` | ❌ | string or object | Script file or inline script | `python_init.sh` or `{inline: "#!/bin/bash..."}` |
@@ -410,27 +392,24 @@ images:
 ## 🔍 Examples
 
 ### Example 1: Using Web UI to Manage Containers
-
 1. Start the Web UI:
    ```bash
    ./start-webui.sh
    ```
 2. Open `http://localhost:8000` in your browser.
 3. Filter containers by category (e.g., "database") and status (e.g., "Running").
-4. Start a container (e.g., `postgres-16`) and open its console.
+4. Start a container (e.g., `postgres`) and open its console.
 5. View logs or stop the container from the dashboard.
 
 ### Example 2: Creating a Custom Container with Inline Config
-
 Create `config.d/my-python-ml.yml`:
-
 ```yaml
 images:
   python-ml-custom:
-    image: python:3.13
+    image: python:latest
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
-    description: "Python 3.13 with ML Libraries"
+    description: "Python with ML Libraries"
     category: programming
     
     motd: |
@@ -464,13 +443,11 @@ images:
 Run `./playground.sh` (TUI) or `./start-webui.sh` (Web UI) and select `python-ml-custom`.
 
 ### Example 3: Team Collaboration
-
 Create `config.d/john-dev-env.yml`:
-
 ```yaml
 images:
   john-workspace:
-    image: ubuntu:24.04
+    image: ubuntu:latest
     shell: /bin/bash
     keep_alive_cmd: sleep infinity
     description: "John's Development Workspace"
@@ -491,35 +468,61 @@ images:
 ```
 
 ## 📝 Logging
-
 - **TUI**: Logs are saved to `playground.log` with timestamps.
 - **Web UI**: Logs are saved to `venv/web.log` for server-side actions and errors.
 
 ### Log Format (TUI)
-
 ```
-[2025-10-12 11:01:14] [INFO] Docker Playground Manager v3.0 starting...
-[2025-10-12 11:01:14] [SUCCESS] Merged base config + 12 files = 103 total images
+[2025-10-13 12:01:14] [INFO] Docker Playground Manager starting...
+[2025-10-13 12:01:14] [SUCCESS] Merged base config + 12 files = 103 total images
 ```
 
 ### Log Format (Web UI)
-
 ```
-2025-10-12 11:01:14,123 - INFO - Starting Flask server on port 8000
-2025-10-12 11:01:15,456 - INFO - Loaded 103 images from configuration
-2025-10-12 11:01:16,789 - ERROR - Failed to start container: myimage (Image not found)
+2025-10-13 12:01:14,123 - INFO - Starting Flask server on port 8000
+2025-10-13 12:01:15,456 - INFO - Loaded 103 images from configuration
+2025-10-13 12:01:16,789 - ERROR - Failed to start container: myimage (Image not found)
 ```
 
 ## 🛟 Troubleshooting
 
-### Web UI Issues
+### Docker Issues
+- **Docker not running**:
+  Verify Docker is installed and running:
+  ```bash
+  docker --version
+  sudo systemctl status docker
+  ```
+  If Docker is not installed, follow the [official Docker installation guide for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
 
+- **Permission issues**:
+  Ensure your user is added to the Docker group:
+  ```bash
+  sudo usermod -aG docker $USER
+  newgrp docker
+  ```
+
+### Python Virtual Environment Issues
+- **Missing python3-venv**:
+  If the virtual environment setup fails, ensure `python3-venv` is installed:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install python3-venv
+  ```
+  Then recreate the virtual environment:
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -r venv/requirements.txt
+  ```
+
+### Web UI Issues
 - **Server not starting**:
   ```bash
   # Check logs
   cat venv/web.log
   # Ensure dependencies are installed
-  pip install -r requirements.txt
+  pip install -r venv/requirements.txt
   # Verify Python version
   python3 --version
   ```
@@ -534,11 +537,10 @@ images:
   - Ensure container status is correctly reported in `index.html` cards.
 
 ### TUI Issues
-
 - **Config file not merging**:
   ```bash
   ls -la config.d/
-  yq eval '.' config.d/ubuntu-24.yml
+  yq eval '.' config.d/ubuntu.yml
   ./playground.sh → "Debug config"
   ```
 
@@ -554,7 +556,6 @@ images:
   ```
 
 ## 🎯 Best Practices
-
 ### Web UI Usage
 1. **Use Filters** - Combine name, category, and status filters for quick navigation.
 2. **Monitor Logs** - Regularly check `venv/web.log` for errors.
@@ -570,9 +571,7 @@ images:
 5. **Version control** - Commit `config.d/*.yml` files for team collaboration.
 
 ## 🤝 Contributing
-
 Contributions are welcome! Areas for contribution include:
-
 - 📝 **More inline configs** - Add container configs in `config.d/`.
 - 🔧 **Web UI enhancements** - Improve `index.html`, `style.css`, or `app.py`.
 - 🐛 **Bug fixes** - Fix issues in TUI or Web UI.
@@ -583,7 +582,6 @@ Contributions are welcome! Areas for contribution include:
 - 🌍 **Internationalization** - Translate MOTDs and UI.
 
 ### How to Contribute a Web UI Feature
-
 1. Modify `app.py`, `index.html`, `style.css`, or `manager.js`.
 2. Test with:
    ```bash
@@ -593,10 +591,9 @@ Contributions are welcome! Areas for contribution include:
 3. Submit a pull request with your changes.
 
 ### How to Contribute a Container Configuration
-
 1. Create a new file in `config.d/`:
    ```bash
-   cp config.d/ubuntu-24.yml config.d/my-new-container.yml
+   cp config.d/ubuntu.yml config.d/my-new-container.yml
    ```
 2. Edit with your configuration.
 3. Test with TUI (`./playground.sh`) or Web UI (`./start-webui.sh`).

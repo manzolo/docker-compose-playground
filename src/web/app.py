@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import docker
@@ -10,7 +10,11 @@ import glob
 import asyncio
 import subprocess
 import os
+import json
 from datetime import datetime
+import concurrent.futures
+import asyncio
+from typing import Dict
 
 # Configura logging
 logging.basicConfig(
@@ -31,6 +35,8 @@ CONFIG_FILE = Path(__file__).parent.parent.parent / "config.yml"
 SCRIPTS_DIR = Path(__file__).parent.parent.parent / "scripts"
 SHARED_DIR = Path(__file__).parent.parent.parent / "shared-volumes"
 NETWORK_NAME = "playground-network"
+
+active_operations: Dict[str, dict] = {}
 
 # Create playground network if not exists
 def ensure_network():
@@ -317,30 +323,36 @@ async def run_script_async(script_config, container_name, image_name):
 async def stop_container(container: str):
     logger.info("Stopping container: %s", container)
     try:
+        # Get container object FIRST
+        cont = docker_client.containers.get(container)
+        
         # Get image name from container name
         image_name = container.replace("playground-", "", 1)
         config = load_config()
         
-        # Execute pre-stop script
+        # Execute pre-stop script WHILE container is still running
         if image_name in config:
             scripts = config[image_name].get('scripts', {})
             if 'pre_stop' in scripts:
                 logger.info("Running pre-stop script for %s", image_name)
-                execute_script(scripts['pre_stop'], container, image_name)
+                # Esegui in modo SINCRONO per assicurarsi che finisca prima dello stop
+                await asyncio.to_thread(execute_script, scripts['pre_stop'], container, image_name)
+                logger.info("Pre-stop script completed for %s", image_name)
         
-        # Stop and remove container
-        cont = docker_client.containers.get(container)
-        cont.stop(timeout=60)  # Aumentato a 60 secondi
-        cont.remove()
-        logger.info("Container stopped: %s", container)
+        # NOW stop and remove container
+        logger.info("Stopping container %s with 90s timeout", container)
+        await asyncio.to_thread(cont.stop, timeout=90)
+        await asyncio.to_thread(cont.remove)
+        logger.info("Container stopped and removed: %s", container)
         
         return {"status": "stopped"}
     except docker.errors.NotFound:
+        logger.error("Container not found: %s", container)
         raise HTTPException(404, "Container not found")
     except Exception as e:
         logger.error("Error stopping %s: %s", container, str(e))
         raise HTTPException(500, str(e))
-    
+        
 @app.get("/logs/{container}")
 async def get_logs(container: str):
     try:
@@ -442,20 +454,118 @@ async def stop_all():
         containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
         stopped = []
         
-        for container in containers:
+        logger.info("Stopping %d containers in parallel", len(containers))
+        
+        # Carica config per gli script
+        config = load_config()
+        
+        def stop_and_remove_container(container):
             try:
-                container.stop(timeout=30)
+                logger.info("Stopping container: %s", container.name)
+                
+                # Get image name from container name
+                image_name = container.name.replace("playground-", "", 1)
+                
+                # Execute pre-stop script if exists
+                if image_name in config:
+                    scripts = config[image_name].get('scripts', {})
+                    if 'pre_stop' in scripts:
+                        logger.info("Running pre-stop script for %s", image_name)
+                        try:
+                            execute_script(scripts['pre_stop'], container.name, image_name)
+                            logger.info("Pre-stop script completed for %s", image_name)
+                        except Exception as script_error:
+                            logger.error("Pre-stop script failed for %s: %s", image_name, str(script_error))
+                
+                # Now stop and remove
+                container.stop(timeout=60)
                 container.remove()
-                stopped.append(container.name)
-                logger.info("Stopped %s", container.name)
+                logger.info("Stopped and removed: %s", container.name)
+                return container.name
             except Exception as e:
                 logger.error("Failed to stop %s: %s", container.name, str(e))
+                return None
         
+        # Esegui in parallelo e ASPETTA il completamento
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+            # Converti le futures in awaitable coroutines
+            futures = [
+                loop.run_in_executor(executor, stop_and_remove_container, cont) 
+                for cont in containers
+            ]
+            
+            # ASPETTA che TUTTE le operazioni finiscano
+            results = await asyncio.gather(*futures, return_exceptions=True)
+            
+            # Processa i risultati
+            for result in results:
+                if result and not isinstance(result, Exception):
+                    stopped.append(result)
+        
+        logger.info("Stopped %d containers successfully", len(stopped))
         return {"status": "ok", "stopped": len(stopped), "containers": stopped}
+    
     except Exception as e:
         logger.error("Error stopping all: %s", str(e))
         raise HTTPException(500, str(e))
+    
+async def stop_all_background(operation_id: str, containers):
+    """Background task to stop all containers"""
+    stopped = []
+    
+    def stop_and_remove_container(container):
+        try:
+            logger.info("Stopping container: %s", container.name)
+            container.stop(timeout=60)
+            container.remove()
+            logger.info("Stopped and removed: %s", container.name)
+            return container.name
+        except Exception as e:
+            logger.error("Failed to stop %s: %s", container.name, str(e))
+            return None
+    
+    try:
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+            futures = [
+                loop.run_in_executor(executor, stop_and_remove_container, cont) 
+                for cont in containers
+            ]
+            
+            results = await asyncio.gather(*futures, return_exceptions=True)
+            
+            for result in results:
+                if result and not isinstance(result, Exception):
+                    stopped.append(result)
+                    # Aggiorna lo stato
+                    active_operations[operation_id]["stopped"] = len(stopped)
+        
+        logger.info("Stopped %d containers successfully", len(stopped))
+        
+        # Aggiorna lo stato finale
+        active_operations[operation_id].update({
+            "status": "completed",
+            "stopped": len(stopped),
+            "containers": stopped,
+            "completed_at": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error("Error in stop_all_background: %s", str(e))
+        active_operations[operation_id].update({
+            "status": "error",
+            "error": str(e)
+        })
 
+@app.get("/api/operation-status/{operation_id}")
+async def get_operation_status(operation_id: str):
+    """Get status of a background operation"""
+    if operation_id not in active_operations:
+        raise HTTPException(404, "Operation not found")
+    
+    return active_operations[operation_id]
+            
 @app.post("/api/restart-all")
 async def restart_all():
     """Restart all running playground containers"""
@@ -537,6 +647,12 @@ async def system_info():
         containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
         active = [{"name": c.name, "status": c.status} for c in containers]
         
+        # Total containers count from config
+        config = load_config()
+        total_containers = len(config)
+        running_count = len(active)
+        stopped_count = total_containers - running_count
+        
         return {
             "docker": {
                 "version": docker_info.get('ServerVersion', 'N/A'),
@@ -548,7 +664,12 @@ async def system_info():
                 "path": str(SHARED_DIR),
                 "size": volume_size
             },
-            "active_containers": active
+            "active_containers": active,
+            "counts": {
+                "total": total_containers,
+                "running": running_count,
+                "stopped": stopped_count
+            }
         }
     except Exception as e:
         logger.error("Error getting system info: %s", str(e))

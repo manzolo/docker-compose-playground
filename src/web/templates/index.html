@@ -1,15 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <title>🐳 Docker Playground Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/modal.css">
 </head>
+
 <body>
     <!-- Toast Notification Container -->
     <div id="toast-container"></div>
+
+    <!-- Loader Overlay -->
+    <div id="globalLoader" class="loader-overlay">
+        <div class="loader-spinner"></div>
+        <p class="loader-message">Please wait...</p>
+    </div>
 
     <!-- Header -->
     <header>
@@ -30,7 +41,7 @@
                 <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
                 <span class="search-count" id="search-count"></span>
             </div>
-            
+
             <div class="filter-buttons">
                 <button class="filter-btn active" data-filter="all" onclick="filterByStatus('all')">
                     <span class="filter-icon">📦</span> All
@@ -67,38 +78,39 @@
     <div class="container">
         <div id="images" class="image-grid">
             {% for name, data in images.items() %}
-            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}" data-container="playground-{{ name }}">
+            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
+                data-container="playground-{{ name }}">
                 <div class="card-header">
                     <h3>{{ name }}</h3>
                     <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
                 </div>
                 <p class="card-description">{{ data.description }}</p>
-                
+
                 <div class="card-status">
                     {% if running.get(name) %}
-                        <span class="status-indicator status-running">●</span>
-                        <span class="status-text">Running</span>
+                    <span class="status-indicator status-running">●</span>
+                    <span class="status-text">Running</span>
                     {% else %}
-                        <span class="status-indicator status-stopped">●</span>
-                        <span class="status-text">Stopped</span>
+                    <span class="status-indicator status-stopped">●</span>
+                    <span class="status-text">Stopped</span>
                     {% endif %}
                 </div>
 
                 <div class="card-actions">
                     {% if running.get(name) %}
-                        <button class="btn btn-danger" onclick="stopContainer('{{ name }}', '{{ running[name].name }}')">
-                            <span class="btn-icon">⏹</span> Stop
-                        </button>
-                        <button class="btn btn-primary" onclick="showLogs('{{ running[name].name }}')">
-                            <span class="btn-icon">📋</span> Logs
-                        </button>
-                        <button class="btn btn-success" onclick="openConsole('{{ running[name].name }}', '{{ name }}')">
-                            <span class="btn-icon">💻</span> Console
-                        </button>
+                    <button class="btn btn-danger" onclick="stopContainer('{{ name }}', '{{ running[name].name }}')">
+                        <span class="btn-icon">⏹</span> Stop
+                    </button>
+                    <button class="btn btn-primary" onclick="showLogs('{{ running[name].name }}')">
+                        <span class="btn-icon">📋</span> Logs
+                    </button>
+                    <button class="btn btn-success" onclick="openConsole('{{ running[name].name }}', '{{ name }}')">
+                        <span class="btn-icon">💻</span> Console
+                    </button>
                     {% else %}
-                        <button class="btn btn-success btn-block" onclick="startContainer('{{ name }}')">
-                            <span class="btn-icon">▶</span> Start Container
-                        </button>
+                    <button class="btn btn-success btn-block" onclick="startContainer('{{ name }}')">
+                        <span class="btn-icon">▶</span> Start Container
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -146,11 +158,15 @@
             </div>
         </div>
     </div>
+    
+    <div id="confirmModal" class="modal"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
-    <script src="/static/app.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/app.js"></script>
 
 </body>
+
 </html>

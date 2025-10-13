@@ -90,8 +90,8 @@ images:
           echo "🟢 Initializing Node.js 22 for $CONTAINER_NAME..."
           
           # Create package.json in /shared if not exists
-          if ! docker exec "playground-$CONTAINER_NAME" test -f /shared/package.json 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" sh -c "
+          if ! docker exec "$CONTAINER_NAME" test -f /shared/package.json 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" sh -c "
               cd /shared
               npm init -y 2>/dev/null
               npm install express axios --save 2>/dev/null
@@ -113,14 +113,14 @@ images:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Backup package.json if exists
-          if docker exec "playground-$CONTAINER_NAME" test -f /shared/package.json 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" cat /shared/package.json > \
+          if docker exec "$CONTAINER_NAME" test -f /shared/package.json 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" cat /shared/package.json > \
               "$BACKUP_DIR/package.json_${TIMESTAMP}" 2>/dev/null
           fi
           
           # Backup package-lock.json if exists
-          if docker exec "playground-$CONTAINER_NAME" test -f /shared/package-lock.json 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" cat /shared/package-lock.json > \
+          if docker exec "$CONTAINER_NAME" test -f /shared/package-lock.json 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" cat /shared/package-lock.json > \
               "$BACKUP_DIR/package-lock.json_${TIMESTAMP}" 2>/dev/null
           fi
           

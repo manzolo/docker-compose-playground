@@ -86,7 +86,7 @@ images:
           sleep 5
           
           # Create a test database and collection
-          docker exec "playground-$CONTAINER_NAME" mongosh --eval "
+          docker exec "$CONTAINER_NAME" mongosh --eval "
             use playground;
             db.playground_info.insertOne({
               created_at: new Date(),
@@ -110,7 +110,7 @@ images:
           BACKUP_PATH="$BACKUP_DIR/mongodb_${TIMESTAMP}"
           
           # Create backup of all databases
-          docker exec "playground-$CONTAINER_NAME" \
+          docker exec "$CONTAINER_NAME" \
             mongodump --out /shared/backups/mongodb-7/mongodb_${TIMESTAMP} 2>/dev/null || true
           
           if [ -d "$BACKUP_PATH" ]; then

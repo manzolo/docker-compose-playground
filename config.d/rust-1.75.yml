@@ -103,12 +103,12 @@ images:
           echo "🦀 Initializing Rust 1.75 for $CONTAINER_NAME..."
           
           # Install common tools
-          docker exec "playground-$CONTAINER_NAME" cargo install cargo-edit 2>/dev/null || true
-          docker exec "playground-$CONTAINER_NAME" cargo install cargo-outdated 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" cargo install cargo-edit 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" cargo install cargo-outdated 2>/dev/null || true
           
           # Create a sample project in /shared if not exists
-          if ! docker exec "playground-$CONTAINER_NAME" test -d /shared/rust_project 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" sh -c "
+          if ! docker exec "$CONTAINER_NAME" test -d /shared/rust_project 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" sh -c "
               cd /shared
               cargo new rust_project --quiet 2>/dev/null || true
             " 2>/dev/null || true
@@ -143,7 +143,7 @@ images:
           done
           
           # List installed cargo packages
-          docker exec "playground-$CONTAINER_NAME" cargo install --list > \
+          docker exec "$CONTAINER_NAME" cargo install --list > \
             "$BACKUP_DIR/installed_packages_${TIMESTAMP}.txt" 2>/dev/null || true
           
           echo "✓ Backup saved to: backups/rust-1.75/"

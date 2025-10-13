@@ -105,10 +105,10 @@ images:
           echo "🐍 Initializing Python 3.13 for $CONTAINER_NAME..."
           
           # Upgrade pip
-          docker exec "playground-$CONTAINER_NAME" pip install --upgrade pip --quiet 2>/dev/null
+          docker exec "$CONTAINER_NAME" pip install --upgrade pip --quiet 2>/dev/null
           
           # Install common packages
-          docker exec "playground-$CONTAINER_NAME" pip install --quiet \
+          docker exec "$CONTAINER_NAME" pip install --quiet \
             requests \
             beautifulsoup4 \
             pandas \
@@ -129,12 +129,12 @@ images:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Backup installed packages list
-          docker exec "playground-$CONTAINER_NAME" pip freeze > \
+          docker exec "$CONTAINER_NAME" pip freeze > \
             "$BACKUP_DIR/requirements_${TIMESTAMP}.txt" 2>/dev/null
           
           # Backup any requirements.txt from /shared
-          if docker exec "playground-$CONTAINER_NAME" test -f /shared/requirements.txt 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" cat /shared/requirements.txt > \
+          if docker exec "$CONTAINER_NAME" test -f /shared/requirements.txt 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" cat /shared/requirements.txt > \
               "$BACKUP_DIR/requirements_shared_${TIMESTAMP}.txt" 2>/dev/null
           fi
           

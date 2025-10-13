@@ -80,11 +80,11 @@ images:
           echo "🔵 Initializing Go 1.22 for $CONTAINER_NAME..."
           
           # Install common Go tools
-          docker exec "playground-$CONTAINER_NAME" go install golang.org/x/tools/gopls@latest 2>/dev/null || true
-          docker exec "playground-$CONTAINER_NAME" go install github.com/go-delve/delve/cmd/dlv@latest 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" go install golang.org/x/tools/gopls@latest 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" go install github.com/go-delve/delve/cmd/dlv@latest 2>/dev/null || true
           
           # Create a sample project in /shared if not exists
-          docker exec "playground-$CONTAINER_NAME" sh -c "
+          docker exec "$CONTAINER_NAME" sh -c "
             if [ ! -f /shared/go.mod ]; then
               cd /shared
               go mod init example.com/myapp 2>/dev/null || true
@@ -105,13 +105,13 @@ images:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Backup go.mod and go.sum if they exist
-          if docker exec "playground-$CONTAINER_NAME" test -f /shared/go.mod 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" cat /shared/go.mod > \
+          if docker exec "$CONTAINER_NAME" test -f /shared/go.mod 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" cat /shared/go.mod > \
               "$BACKUP_DIR/go.mod_${TIMESTAMP}" 2>/dev/null
           fi
           
-          if docker exec "playground-$CONTAINER_NAME" test -f /shared/go.sum 2>/dev/null; then
-            docker exec "playground-$CONTAINER_NAME" cat /shared/go.sum > \
+          if docker exec "$CONTAINER_NAME" test -f /shared/go.sum 2>/dev/null; then
+            docker exec "$CONTAINER_NAME" cat /shared/go.sum > \
               "$BACKUP_DIR/go.sum_${TIMESTAMP}" 2>/dev/null
           fi
           

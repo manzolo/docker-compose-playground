@@ -15,6 +15,8 @@ LOG_FILE="${PROJECT_DIR}/venv/web.log"
 PID_FILE="${PROJECT_DIR}/venv/web.pid"
 PORT=8000
 
+rm -f $LOG_FILE
+
 # Funzioni di logging
 log_info() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] $*" | tee -a "$LOG_FILE"

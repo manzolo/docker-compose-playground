@@ -4,25 +4,22 @@ let fitAddon = null;
 let webglAddon = null; // Added to track WebGL addon
 
 // Toast Notification System
+// Toast Notification System
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-
     const icons = {
         success: '✓',
         error: '✗',
         info: 'ℹ',
         warning: '⚠'
     };
-
     toast.innerHTML = `
         <span class="toast-icon">${icons[type]}</span>
         <span class="toast-message">${message}</span>
     `;
-
     container.appendChild(toast);
-
     setTimeout(() => toast.classList.add('toast-show'), 10);
     setTimeout(() => {
         toast.classList.remove('toast-show');
@@ -100,74 +97,71 @@ function filterByCategory(category) {
 
 // Stop all running containers
 async function stopAllRunning() {
-    if (!confirm('Stop ALL running containers?')) return;
-
-    showToast('Stopping all containers...', 'info');
-
+    //console.log('stopAllRunning: Started at', new Date().toISOString());
     try {
-        const response = await fetch('/api/stop-all', { method: 'POST' });
-        const data = await response.json();
+        const confirmed = await showConfirmModal(
+            'Stop All Containers',
+            'Are you sure you want to stop ALL running containers?',
+            'danger'
+        );
+        //console.log('stopAllRunning: Confirmation:', confirmed);
+        if (!confirmed) {
+            //console.log('stopAllRunning: Cancelled by user');
+            return;
+        }
 
-        if (response.ok) {
-            showToast(`Stopped ${data.stopped} containers`, 'success');
-            pollAllStopped(data.containers);
-        } else {
-            showToast('Failed to stop all containers', 'error');
+        showLoader('Stopping all containers...');
+        showToast('Stopping all containers...', 'info');
+        //console.log('stopAllRunning: Sending POST to /api/stop-all');
+
+        const controller = new AbortController();
+        const startTime = Date.now();
+        const timeoutId = setTimeout(() => {
+            //console.log('stopAllRunning: Timeout after 120s, elapsed:', (Date.now() - startTime) / 1000 + 's');
+            controller.abort();
+        }, 120000);
+
+        try {
+            const response = await fetch('/api/stop-all', {
+                method: 'POST',
+                signal: controller.signal
+            });
+            const responseTime = (Date.now() - startTime) / 1000;
+            //console.log('stopAllRunning: Response received after', responseTime + 's', { status: response.status });
+            clearTimeout(timeoutId);
+
+            const data = await response.json();
+            //console.log('stopAllRunning: Response data:', JSON.stringify(data, null, 2));
+
+            if (response.ok) {
+                showToast(`Successfully stopped ${data.stopped} containers`, 'success');
+                //console.log('stopAllRunning: Success, reloading in 2s');
+                setTimeout(() => {
+                    //console.log('stopAllRunning: Reloading page');
+                    location.reload();
+                }, 2000);
+            } else {
+                showToast('Failed to stop all containers', 'error');
+                //console.log('stopAllRunning: Failed, status:', response.status, { error: data });
+                hideLoader();
+            }
+        } catch (fetchError) {
+            //console.log('stopAllRunning: Fetch error:', fetchError, { elapsed: (Date.now() - startTime) / 1000 + 's' });
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+                showToast('Operation timeout - please wait and refresh manually', 'warning');
+                //console.log('stopAllRunning: Timeout error (AbortError)');
+            } else {
+                showToast(`Error: ${fetchError.message}`, 'error');
+                //console.log('stopAllRunning: Other error:', fetchError.message);
+            }
+            hideLoader();
         }
     } catch (e) {
         showToast(`Error: ${e.message}`, 'error');
+        //console.log('stopAllRunning: General error:', e);
+        hideLoader();
     }
-}
-
-async function pollAllStopped(containers) {
-    let attempts = 0;
-    const maxAttempts = 30;  // ~15 secondi (500ms * 30)
-
-    const poll = async () => {
-        try {
-            const response = await fetch('/');
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-
-            // Controlla se tutti i container specificati sono "Stopped"
-            let allStopped = true;
-            for (const containerName of containers) {
-                const imageName = containerName.replace("playground-", "");
-                const newCard = doc.querySelector(`[data-name="${imageName}"]`);
-                if (newCard) {
-                    const statusText = newCard.querySelector('.status-text').textContent.toLowerCase();
-                    if (statusText !== 'stopped') {
-                        allStopped = false;
-                        break;
-                    }
-                } else {
-                    // Se la card non esiste più, assumi stopped
-                }
-            }
-
-            if (allStopped) {
-                showToast('All containers confirmed stopped!', 'success');
-                location.reload();
-                return;
-            }
-
-            attempts++;
-            if (attempts < maxAttempts) {
-                setTimeout(poll, 500);  // Polling ogni 500ms
-            } else {
-                showToast('Some containers may still be stopping - refresh manually', 'warning');
-            }
-        } catch (e) {
-            console.error('Poll error:', e);
-            attempts++;
-            if (attempts < maxAttempts) {
-                setTimeout(poll, 500);
-            }
-        }
-    };
-
-    poll();
 }
 
 // Update card UI after state change
@@ -217,6 +211,7 @@ async function startContainer(image) {
     btn.innerHTML = '<span class="spinner"></span> Starting...';
 
     try {
+        showLoader(`Starting container ${image}...`);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 35000);
 
@@ -250,6 +245,8 @@ async function startContainer(image) {
             btn.disabled = false;
             btn.innerHTML = originalHTML;
         }
+    } finally {
+        hideLoader();
     }
 }
 
@@ -297,91 +294,144 @@ async function pollContainerStatus(image, btn) {
 
 // Stop Container (AJAX)
 async function stopContainer(imageName, containerName) {
-    const card = document.querySelector(`[data-name="${imageName}"]`);
-    const btn = card.querySelector('.btn-danger');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Stopping...';
-
     try {
+        const confirmed = await showConfirmModal(
+            'Stop Container',
+            `Are you sure you want to stop container ${containerName}?`
+        );
+        if (!confirmed) return;
+
+        const card = document.querySelector(`[data-name="${imageName}"]`);
+        const btn = card.querySelector('.btn-danger');
+        const originalHTML = btn.innerHTML; // SALVA SUBITO
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Stopping...';
+
+        showLoader(`Stopping container ${containerName}...`);
+
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);  // Aumentato a 60 secondi
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minuti
 
-        const response = await fetch(`/stop/${containerName}`, { 
-            method: 'POST',
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+        try {
+            const response = await fetch(`/stop/${containerName}`, { 
+                method: 'POST',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
 
-        if (response.ok) {
-            showToast(`Container ${containerName} stopped`, 'success');
-            updateCardUI(imageName, false, '');
-        } else {
-            const data = await response.json();
-            const errorMsg = data.detail || 'Failed to stop container';
-            showToast(`Error: ${errorMsg}`, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
+            if (response.ok) {
+                showToast(`Container ${containerName} stopped`, 'success');
+                updateCardUI(imageName, false, '');
+            } else {
+                const data = await response.json();
+                const errorMsg = data.detail || 'Failed to stop container';
+                showToast(`Error: ${errorMsg}`, 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            
+            if (fetchError.name === 'AbortError') {
+                showToast(`Timeout stopping ${containerName} - container may still be stopping`, 'warning');
+                // Mostra messaggio per l'utente
+                btn.innerHTML = '<span class="spinner"></span> Stopping...';
+                btn.disabled = true;
+                
+                // Aspetta un po' e poi ricarica
+                setTimeout(() => {
+                    showToast('Reloading to check status...', 'info');
+                    location.reload();
+                }, 3000);
+            } else {
+                showToast(`Error: ${fetchError.message}`, 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
         }
     } catch (e) {
-        if (e.name === 'AbortError') {
-            showToast(`Timeout stopping ${containerName} - container may still be stopping`, 'warning');
-            btn.innerHTML = '<span class="spinner"></span> Please wait...';
-            pollContainerStopStatus(imageName, containerName, btn);
-        } else {
-            showToast(`Error: ${e.message}`, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
+        showToast(`Error: ${e.message}`, 'error');
+        // Trova il bottone di nuovo in caso di errore generale
+        const card = document.querySelector(`[data-name="${imageName}"]`);
+        if (card) {
+            const btn = card.querySelector('.btn-danger');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
+            }
         }
+    } finally {
+        hideLoader();
     }
 }
 
 // Poll container status after stop
 async function pollContainerStopStatus(imageName, containerName, btn) {
     let attempts = 0;
-    const maxAttempts = 60;  // Aumentato a 60 (~1 minuto con 1s interval)
+    const maxAttempts = 60;
+    
+    //console.log('pollContainerStopStatus: Starting for', { containerName, imageName, startTime: new Date().toISOString() });
     
     const poll = async () => {
+        //console.log('pollContainerStopStatus: Attempt', attempts + 1, 'of', maxAttempts, 'for', containerName);
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);  // Timeout per singolo fetch
+            const startTime = Date.now();
+            //console.log('pollContainerStopStatus: Fetching / for status check');
+            const timeoutId = setTimeout(() => {
+                //console.log('pollContainerStopStatus: Timeout for attempt', attempts + 1, 'after 10s');
+                controller.abort();
+            }, 10000);
             
             const response = await fetch('/', { signal: controller.signal });
+            //console.log('pollContainerStopStatus: Fetch / response:', response.status, 'after', (Date.now() - startTime) / 1000 + 's');
             clearTimeout(timeoutId);
             
             const text = await response.text();
+            //console.log('pollContainerStopStatus: Received response, text length:', text.length);
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             const newCard = doc.querySelector(`[data-name="${imageName}"]`);
             
             if (newCard) {
                 const statusText = newCard.querySelector('.status-text').textContent.toLowerCase();
+                //console.log('pollContainerStopStatus: Status for', imageName, ':', statusText);
                 if (statusText === 'stopped') {
                     showToast(`Container ${containerName} stopped successfully`, 'success');
+                    //console.log('pollContainerStopStatus: Stop confirmed, reloading');
                     location.reload();
                     return;
                 }
+            } else {
+                //console.log('pollContainerStopStatus: Card not found for', imageName);
             }
             
             attempts++;
             if (attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));  // 1-1.5s con jitter
+                //console.log('pollContainerStopStatus: Scheduling next poll in 1-1.5s');
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
                 poll();
             } else {
                 showToast(`Container may still be stopping - refresh page to check`, 'warning');
+                //console.log('pollContainerStopStatus: Max attempts reached', maxAttempts);
                 btn.disabled = false;
                 btn.innerHTML = '<span class="btn-icon">⏹</span> Stop';
             }
         } catch (e) {
-            console.error('Poll error:', e);
+            console.error('pollContainerStopStatus: Error in attempt', attempts + 1, ':', e);
             if (e.name === 'AbortError') {
                 showToast('Polling timeout - retrying...', 'warning');
+                //console.log('pollContainerStopStatus: Polling timeout for', containerName);
             }
             attempts++;
             if (attempts < maxAttempts) {
+                //console.log('pollContainerStopStatus: Retrying after error in 1-1.5s');
                 await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
                 poll();
             } else {
                 showToast('Polling failed - refresh manually', 'error');
+                //console.log('pollContainerStopStatus: Polling failed after', maxAttempts, 'attempts');
             }
         }
     };
@@ -461,7 +511,7 @@ function openConsole(container, imageName) {
     ws = new WebSocket(`${protocol}//${window.location.host}/ws/console/${container}`);
 
     ws.onopen = () => {
-        console.log('WebSocket connected');
+        //console.log('WebSocket connected');
         document.getElementById('consoleStatus').textContent = '● Connected';
         document.getElementById('consoleStatus').className = 'console-status console-connected';
         term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
@@ -480,7 +530,7 @@ function openConsole(container, imageName) {
     };
 
     ws.onclose = () => {
-        console.log('WebSocket closed');
+        //console.log('WebSocket closed');
         document.getElementById('consoleStatus').textContent = '● Disconnected';
         document.getElementById('consoleStatus').className = 'console-status console-disconnected';
 

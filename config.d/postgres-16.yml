@@ -66,7 +66,7 @@ images:
           sleep 3
           
           # Create example table
-          docker exec "playground-$CONTAINER_NAME" psql -U playground -d playground -c "
+          docker exec "$CONTAINER_NAME" psql -U playground -d playground -c "
           CREATE TABLE IF NOT EXISTS playground_info (
               id SERIAL PRIMARY KEY,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -92,7 +92,7 @@ images:
           BACKUP_FILE="$BACKUP_DIR/postgres_${TIMESTAMP}.sql"
           
           # Create backup
-          docker exec "playground-$CONTAINER_NAME" pg_dump -U playground playground > "$BACKUP_FILE" 2>/dev/null
+          docker exec "$CONTAINER_NAME" pg_dump -U playground playground > "$BACKUP_FILE" 2>/dev/null
           
           if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
               echo "✓ Backup saved to: backups/postgres-16/postgres_${TIMESTAMP}.sql"

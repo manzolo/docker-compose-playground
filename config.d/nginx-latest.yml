@@ -149,7 +149,7 @@ images:
           fi
           
           # Test nginx configuration
-          docker exec "playground-$CONTAINER_NAME" nginx -t 2>&1 | grep "successful" > /dev/null
+          docker exec "$CONTAINER_NAME" nginx -t 2>&1 | grep "successful" > /dev/null
           
           if [ $? -eq 0 ]; then
             echo "✓ Nginx initialized successfully"
@@ -170,19 +170,19 @@ images:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Backup main configuration
-          docker exec "playground-$CONTAINER_NAME" cat /etc/nginx/nginx.conf > \
+          docker exec "$CONTAINER_NAME" cat /etc/nginx/nginx.conf > \
             "$BACKUP_DIR/nginx.conf_${TIMESTAMP}" 2>/dev/null || true
           
           # Backup site configs directory
-          docker exec "playground-$CONTAINER_NAME" sh -c 'cd /etc/nginx && tar czf - conf.d/' 2>/dev/null > \
+          docker exec "$CONTAINER_NAME" sh -c 'cd /etc/nginx && tar czf - conf.d/' 2>/dev/null > \
             "$BACKUP_DIR/conf.d_${TIMESTAMP}.tar.gz" || true
           
           # Backup last 1000 lines of access log
-          docker exec "playground-$CONTAINER_NAME" sh -c 'tail -1000 /var/log/nginx/access.log 2>/dev/null || echo "No access log"' > \
+          docker exec "$CONTAINER_NAME" sh -c 'tail -1000 /var/log/nginx/access.log 2>/dev/null || echo "No access log"' > \
             "$BACKUP_DIR/access.log_${TIMESTAMP}" 2>/dev/null || true
           
           # Backup last 1000 lines of error log
-          docker exec "playground-$CONTAINER_NAME" sh -c 'tail -1000 /var/log/nginx/error.log 2>/dev/null || echo "No error log"' > \
+          docker exec "$CONTAINER_NAME" sh -c 'tail -1000 /var/log/nginx/error.log 2>/dev/null || echo "No error log"' > \
             "$BACKUP_DIR/error.log_${TIMESTAMP}" 2>/dev/null || true
           
           echo "✓ Backup saved to: backups/nginx-latest/"

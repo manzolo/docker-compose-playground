@@ -94,10 +94,10 @@ images:
           sleep 3
           
           # Test Redis connection and add initial data
-          docker exec "playground-$CONTAINER_NAME" redis-cli SET playground:initialized "Redis initialized by playground manager" 2>/dev/null || true
-          docker exec "playground-$CONTAINER_NAME" redis-cli SET playground:version "7.0" 2>/dev/null || true
-          docker exec "playground-$CONTAINER_NAME" redis-cli SET playground:timestamp "$(date +%s)" 2>/dev/null || true
-          docker exec "playground-$CONTAINER_NAME" redis-cli SAVE 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" redis-cli SET playground:initialized "Redis initialized by playground manager" 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" redis-cli SET playground:version "7.0" 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" redis-cli SET playground:timestamp "$(date +%s)" 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" redis-cli SAVE 2>/dev/null || true
           
           echo "✓ Redis 7 initialized"
       
@@ -113,21 +113,21 @@ images:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Force a save before backup
-          docker exec "playground-$CONTAINER_NAME" redis-cli SAVE 2>/dev/null || true
+          docker exec "$CONTAINER_NAME" redis-cli SAVE 2>/dev/null || true
           
           # Wait a moment for save to complete
           sleep 2
           
           # Copy the RDB file
-          docker exec "playground-$CONTAINER_NAME" cat /data/dump.rdb > \
+          docker exec "$CONTAINER_NAME" cat /data/dump.rdb > \
             "$BACKUP_DIR/dump_${TIMESTAMP}.rdb" 2>/dev/null || true
           
           # Also backup as latest
-          docker exec "playground-$CONTAINER_NAME" cat /data/dump.rdb > \
+          docker exec "$CONTAINER_NAME" cat /data/dump.rdb > \
             "$BACKUP_DIR/dump_latest.rdb" 2>/dev/null || true
           
           # Export some keys info
-          docker exec "playground-$CONTAINER_NAME" redis-cli INFO keyspace > \
+          docker exec "$CONTAINER_NAME" redis-cli INFO keyspace > \
             "$BACKUP_DIR/keyspace_${TIMESTAMP}.txt" 2>/dev/null || true
           
           if [ -f "$BACKUP_DIR/dump_${TIMESTAMP}.rdb" ]; then

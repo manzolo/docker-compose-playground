@@ -1,14 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛠️ Advanced Manager - Docker Playground</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/modal.css">
 </head>
+
 <body>
     <!-- Toast Container -->
     <div id="toast-container"></div>
+    
+    <!-- Loader Overlay -->
+    <div id="globalLoader" class="loader-overlay">
+        <div class="loader-spinner"></div>
+        <p class="loader-message">Please wait...</p>
+    </div>
 
     <!-- Header -->
     <header>
@@ -118,7 +127,8 @@
                         <span class="category-name">{{ category|title }}</span>
                         <span class="category-count">{{ count }} containers</span>
                     </div>
-                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); startCategory('{{ category }}')">
+                    <button class="btn btn-sm btn-success"
+                        onclick="event.stopPropagation(); startCategory('{{ category }}')">
                         Start All
                     </button>
                 </div>
@@ -151,6 +161,10 @@
         </div>
     </div>
 
-    <script src="/static/manager.js"></script>
+    <div id="confirmModal" class="modal"></div>
+
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/manager.js"></script>
 </body>
+
 </html>
