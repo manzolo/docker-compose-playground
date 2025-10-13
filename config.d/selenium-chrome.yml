@@ -1,0 +1,9 @@
+images:
+  selenium-chrome:
+    category: utility
+    description: Selenium with Chrome - Browser automation
+    image: selenium/standalone-chrome:latest
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    ports:
+    - 4444:4444
+    shell: /bin/bash

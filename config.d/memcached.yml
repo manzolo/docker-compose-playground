@@ -1,0 +1,9 @@
+images:
+  memcached:
+    category: database
+    description: Memcached - Distributed memory cache
+    image: memcached:latest
+    keep_alive_cmd: memcached -u memcache
+    ports:
+    - 11211:11211
+    shell: /bin/sh

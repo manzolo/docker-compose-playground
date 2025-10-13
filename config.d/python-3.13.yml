@@ -1,141 +1,26 @@
 images:
   python-3.13:
-    image: python:3.13
-    shell: /bin/bash
-    keep_alive_cmd: sleep infinity
-    description: "Python 3.13 (Latest)"
     category: programming
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                 Python 3.13 Quick Reference                   ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🐍 Python Environment:
-         python --version                              # Check version
-         python3 --version                             # Alternative
-         pip --version                                 # Check pip version
-         pip list                                      # List installed packages
-      
-      📦 Package Management:
-         pip install requests                          # Install package
-         pip install -r requirements.txt               # Install from file
-         pip freeze > /shared/requirements.txt         # Export packages
-         pip uninstall package_name                    # Uninstall package
-         pip show package_name                         # Show package info
-         pip search package_name                       # Search PyPI
-      
-      🧪 Quick Test:
-         python -c "print('Hello from Python 3.13!')"
-         python /shared/your_script.py
-         
-         # Interactive Python
-         python
-         >>> import sys
-         >>> print(sys.version)
-         >>> exit()
-      
-      🌐 Quick Web Server:
-         # Static files
-         cd /shared && python -m http.server 8000
-         
-         # Flask app
-         pip install flask
-         cat > /shared/app.py <<'EOF'
-         from flask import Flask, jsonify
-         app = Flask(__name__)
-         
-         @app.route('/')
-         def hello():
-             return jsonify({
-                 'message': 'Hello from Python Flask!',
-                 'version': '3.13'
-             })
-         
-         @app.route('/api/data')
-         def data():
-             return jsonify([1, 2, 3, 4, 5])
-         
-         if __name__ == '__main__':
-             app.run(host='0.0.0.0', port=5000, debug=True)
-         EOF
-         
-         python /shared/app.py
-      
-      📊 Data Science Quick Start:
-         pip install numpy pandas matplotlib
-         
-         python <<'EOF'
-         import numpy as np
-         import pandas as pd
-         
-         # Create sample data
-         data = pd.DataFrame({
-             'name': ['Alice', 'Bob', 'Charlie'],
-             'age': [25, 30, 35],
-             'score': np.random.randint(60, 100, 3)
-         })
-         print(data)
-         data.to_csv('/shared/data.csv', index=False)
-         print('\nSaved to /shared/data.csv')
-         EOF
-      
-      📝 Virtual Environment (if needed):
-         python -m venv /shared/venv
-         source /shared/venv/bin/activate
-         pip install <packages>
-         deactivate
-      
-      🔧 Common Packages (auto-installed):
-         - requests: HTTP library
-         - beautifulsoup4: Web scraping
-         - pandas: Data analysis
-         - numpy: Numerical computing
-      
-      💡 Tips:
-         - Use /shared for your scripts
-         - Requirements will be saved to /shared
-         - Virtual envs can be created in /shared
-    
+    description: Python 3.13 (Latest)
+    image: python:3.13
+    keep_alive_cmd: sleep infinity
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \              Python 3.13 Quick Reference                   ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F40D Python Environment:\n   python --version                      \
+      \        # Check version\n   pip --version                                 #\
+      \ Check pip version\n   pip list                                      # List\
+      \ installed packages\n\n\U0001F4E6 Package Management:\n   pip install requests\
+      \                          # Install package\n   pip install -r requirements.txt\
+      \               # Install from file\n   pip freeze > /shared/requirements.txt\
+      \         # Export packages\n   pip uninstall package_name                 \
+      \   # Uninstall package\n\n\U0001F9EA Quick Test:\n   python -c \"print('Hello\
+      \ from Python 3.13!')\"\n   python /shared/your_script.py\n\n\U0001F310 Quick\
+      \ Web Server:\n   cd /shared && python -m http.server 8000\n\n\U0001F4CA Quick\
+      \ Flask App:\n   pip install flask\n   Create /shared/app.py with Flask code\n\
+      \   python /shared/app.py\n\n\U0001F4DD Virtual Environment (if needed):\n \
+      \  python -m venv /shared/venv\n   source /shared/venv/bin/activate\n   pip\
+      \ install <packages>\n\n\U0001F527 Common Packages (auto-installed):\n   requests,\
+      \ beautifulsoup4, pandas, numpy\n"
     scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "🐍 Initializing Python 3.13 for $CONTAINER_NAME..."
-          
-          # Upgrade pip
-          docker exec "$CONTAINER_NAME" pip install --upgrade pip --quiet 2>/dev/null
-          
-          # Install common packages
-          docker exec "$CONTAINER_NAME" pip install --quiet \
-            requests \
-            beautifulsoup4 \
-            pandas \
-            numpy 2>/dev/null
-          
-          echo "✓ Python 3.13 initialized"
-          echo "✓ Common packages installed: requests, beautifulsoup4, pandas, numpy"
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up Python environment for $CONTAINER_NAME..."
-          
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/python-3.13"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
-          # Backup installed packages list
-          docker exec "$CONTAINER_NAME" pip freeze > \
-            "$BACKUP_DIR/requirements_${TIMESTAMP}.txt" 2>/dev/null
-          
-          # Backup any requirements.txt from /shared
-          if docker exec "$CONTAINER_NAME" test -f /shared/requirements.txt 2>/dev/null; then
-            docker exec "$CONTAINER_NAME" cat /shared/requirements.txt > \
-              "$BACKUP_DIR/requirements_shared_${TIMESTAMP}.txt" 2>/dev/null
-          fi
-          
-          echo "✓ Backup saved to: backups/python-3.13/"
+      post_start: python_init.sh
+    shell: /bin/bash

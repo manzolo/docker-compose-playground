@@ -1,0 +1,7 @@
+images:
+  terraform:
+    category: devops
+    description: Terraform - Infrastructure as Code
+    image: hashicorp/terraform:latest
+    keep_alive_cmd: tail -f /dev/null
+    shell: /bin/sh

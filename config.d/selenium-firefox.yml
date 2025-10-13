@@ -1,0 +1,9 @@
+images:
+  selenium-firefox:
+    category: utility
+    description: Selenium with Firefox - Browser automation
+    image: selenium/standalone-firefox:latest
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    ports:
+    - 4445:4444
+    shell: /bin/bash

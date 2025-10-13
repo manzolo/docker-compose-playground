@@ -1,0 +1,9 @@
+images:
+  mongodb-6:
+    category: database
+    description: MongoDB 6
+    image: mongo:6
+    keep_alive_cmd: mongod
+    ports:
+    - 27018:27017
+    shell: /bin/bash

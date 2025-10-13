@@ -1,127 +1,27 @@
 images:
   node-22:
-    image: node:22
-    shell: /bin/bash
-    keep_alive_cmd: sleep infinity
-    description: "Node.js 22 LTS (Latest)"
     category: programming
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                Node.js 22 LTS Quick Reference                 ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🟢 Node.js Environment:
-         node --version                                # Check Node version
-         npm --version                                 # Check npm version
-         npm list -g --depth=0                        # List global packages
-         npx --version                                # Check npx version
-      
-      📦 Package Management:
-         npm init -y                                   # Initialize package.json
-         npm install express                           # Install package
-         npm install --save-dev jest                   # Install dev dependency
-         npm install                                   # Install from package.json
-         npm uninstall package_name                    # Uninstall package
-         npm update                                    # Update packages
-         npm outdated                                  # Check outdated packages
-      
-      🚀 Quick Express Server:
-         # 1. Initialize and install
-         cd /shared
-         npm init -y
-         npm install express
-         
-         # 2. Create server.js
-         cat > /shared/server.js <<'EOF'
-         const express = require('express');
-         const app = express();
-         
-         app.use(express.json());
-         
-         app.get('/', (req, res) => {
-             res.json({ 
-                 message: 'Hello from Node.js 22!',
-                 timestamp: new Date().toISOString()
-             });
-         });
-         
-         app.get('/api/users', (req, res) => {
-             res.json([
-                 { id: 1, name: 'Alice' },
-                 { id: 2, name: 'Bob' }
-             ]);
-         });
-         
-         const PORT = 3000;
-         app.listen(PORT, () => {
-             console.log(\`Server running on port \${PORT}\`);
-         });
-         EOF
-         
-         # 3. Run server
-         node /shared/server.js
-      
-      🧪 Quick Script Test:
-         node -e "console.log('Hello from Node.js 22!')"
-         node /shared/your_script.js
-      
-      🔧 Useful npm Commands:
-         npm run script_name                           # Run npm script
-         npm audit                                     # Security audit
-         npm audit fix                                 # Fix vulnerabilities
-         npm cache clean --force                       # Clear cache
-         npm ci                                        # Clean install
-      
-      📊 Common Packages (auto-installed):
-         - express: Web framework
-         - axios: HTTP client
-      
-      💡 Tips:
-         - Use /shared for your projects
-         - package.json will be created in /shared
-         - node_modules will be in /shared
-    
+    description: Node.js 22 LTS (Latest)
+    image: node:22
+    keep_alive_cmd: sleep infinity
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \             Node.js 22 LTS Quick Reference                 ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F7E2 Node.js Environment:\n   node --version                       \
+      \         # Check Node version\n   npm --version                           \
+      \      # Check npm version\n   npm list -g --depth=0                       \
+      \ # List global packages\n\n\U0001F4E6 Package Management:\n   npm init -y \
+      \                                  # Initialize package.json\n   npm install\
+      \ express                           # Install package\n   npm install --save-dev\
+      \ jest                   # Install dev dependency\n   npm install          \
+      \                         # Install from package.json\n\n\U0001F680 Quick Express\
+      \ Server:\n   cd /shared && npm init -y && npm install express\n   Create server.js\
+      \ and run: node server.js\n\n\U0001F9EA Quick Script Test:\n   node -e \"console.log('Hello\
+      \ from Node.js 22!')\"\n   node /shared/your_script.js\n\n\U0001F527 Useful\
+      \ Commands:\n   npm run script_name                           # Run npm script\n\
+      \   npm outdated                                  # Check outdated packages\n\
+      \   npm update                                    # Update packages\n   npm\
+      \ audit                                     # Security audit\n\n\U0001F4DD Common\
+      \ Packages (auto-installed):\n   express, axios\n"
     scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "🟢 Initializing Node.js 22 for $CONTAINER_NAME..."
-          
-          # Create package.json in /shared if not exists
-          if ! docker exec "$CONTAINER_NAME" test -f /shared/package.json 2>/dev/null; then
-            docker exec "$CONTAINER_NAME" sh -c "
-              cd /shared
-              npm init -y 2>/dev/null
-              npm install express axios --save 2>/dev/null
-            " || true
-          fi
-          
-          echo "✓ Node.js 22 initialized"
-          echo "✓ Common packages installed: express, axios"
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up Node.js project for $CONTAINER_NAME..."
-          
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/node-22"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
-          # Backup package.json if exists
-          if docker exec "$CONTAINER_NAME" test -f /shared/package.json 2>/dev/null; then
-            docker exec "$CONTAINER_NAME" cat /shared/package.json > \
-              "$BACKUP_DIR/package.json_${TIMESTAMP}" 2>/dev/null
-          fi
-          
-          # Backup package-lock.json if exists
-          if docker exec "$CONTAINER_NAME" test -f /shared/package-lock.json 2>/dev/null; then
-            docker exec "$CONTAINER_NAME" cat /shared/package-lock.json > \
-              "$BACKUP_DIR/package-lock.json_${TIMESTAMP}" 2>/dev/null
-          fi
-          
-          echo "✓ Backup saved to: backups/node-22/"
+      post_start: node_init.sh
+    shell: /bin/bash

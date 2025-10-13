@@ -1,0 +1,11 @@
+images:
+  vault:
+    category: devops
+    description: Vault - Secrets management
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: playground
+    image: hashicorp/vault:latest
+    keep_alive_cmd: vault server -dev
+    ports:
+    - 8200:8200
+    shell: /bin/sh

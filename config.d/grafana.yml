@@ -1,0 +1,11 @@
+images:
+  grafana:
+    category: monitoring
+    description: Grafana - Observability platform
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: playground
+    image: grafana/grafana:latest
+    keep_alive_cmd: /run.sh
+    ports:
+    - 3000:3000
+    shell: /bin/bash

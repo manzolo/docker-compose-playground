@@ -1,0 +1,7 @@
+images:
+  kotlin:
+    category: programming
+    description: Kotlin - Modern JVM language
+    image: zenika/kotlin:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

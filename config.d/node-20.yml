@@ -1,0 +1,9 @@
+images:
+  node-20:
+    category: programming
+    description: Node.js 20 LTS
+    image: node:20
+    keep_alive_cmd: sleep infinity
+    scripts:
+      post_start: node_init.sh
+    shell: /bin/bash

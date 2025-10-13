@@ -1,0 +1,7 @@
+images:
+  packer:
+    category: devops
+    description: Packer - Image automation
+    image: hashicorp/packer:latest
+    keep_alive_cmd: tail -f /dev/null
+    shell: /bin/sh

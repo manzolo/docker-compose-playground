@@ -1,0 +1,7 @@
+images:
+  deno:
+    category: programming
+    description: Deno - Secure TypeScript runtime
+    image: denoland/deno:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

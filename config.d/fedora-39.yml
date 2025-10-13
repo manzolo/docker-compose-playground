@@ -1,0 +1,7 @@
+images:
+  fedora-39:
+    category: linux
+    description: Fedora 39 - Cutting edge packages
+    image: fedora:39
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

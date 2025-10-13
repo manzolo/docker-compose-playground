@@ -1,0 +1,7 @@
+images:
+  erlang:
+    category: programming
+    description: Erlang - Concurrent functional language
+    image: erlang:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

@@ -1,0 +1,9 @@
+images:
+  consul:
+    category: devops
+    description: Consul - Service mesh & discovery
+    image: hashicorp/consul:latest
+    keep_alive_cmd: consul agent -dev
+    ports:
+    - 8500:8500
+    shell: /bin/sh

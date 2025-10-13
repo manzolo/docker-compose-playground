@@ -1,0 +1,7 @@
+images:
+  gradle:
+    category: programming
+    description: Gradle - Build automation tool
+    image: gradle:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

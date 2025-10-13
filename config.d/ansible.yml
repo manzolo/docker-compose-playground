@@ -1,0 +1,7 @@
+images:
+  ansible:
+    category: devops
+    description: Ansible - Configuration management
+    image: ansible/ansible:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

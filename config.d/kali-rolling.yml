@@ -1,0 +1,7 @@
+images:
+  kali-rolling:
+    category: linux
+    description: Kali Linux - Penetration testing
+    image: kalilinux/kali-rolling
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

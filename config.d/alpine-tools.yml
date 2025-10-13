@@ -1,0 +1,7 @@
+images:
+  alpine-tools:
+    category: utility
+    description: Alpine + common tools (curl, wget, etc)
+    image: alpine:latest
+    keep_alive_cmd: tail -f /dev/null
+    shell: /bin/sh

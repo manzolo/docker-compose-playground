@@ -1,0 +1,7 @@
+images:
+  maven:
+    category: programming
+    description: Maven - Project management tool
+    image: maven:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

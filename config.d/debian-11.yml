@@ -1,0 +1,7 @@
+images:
+  debian-11:
+    category: linux
+    description: Debian 11 (Bullseye)
+    image: debian:11
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

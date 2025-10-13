@@ -1,0 +1,9 @@
+images:
+  apache-alpine:
+    category: webserver
+    description: Apache Alpine (Minimal)
+    image: httpd:alpine
+    keep_alive_cmd: httpd-foreground
+    ports:
+    - 8083:80
+    shell: /bin/sh

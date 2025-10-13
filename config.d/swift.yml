@@ -1,0 +1,7 @@
+images:
+  swift:
+    category: programming
+    description: Swift - Apple's language (Linux)
+    image: swift:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

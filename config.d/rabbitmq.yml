@@ -1,0 +1,10 @@
+images:
+  rabbitmq:
+    category: messaging
+    description: RabbitMQ - Message broker with management UI
+    image: rabbitmq:management
+    keep_alive_cmd: rabbitmq-server
+    ports:
+    - 5672:5672
+    - 15672:15672
+    shell: /bin/bash

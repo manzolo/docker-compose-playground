@@ -1,149 +1,30 @@
 images:
   rust-1.75:
-    image: rust:1.75
-    shell: /bin/bash
-    keep_alive_cmd: sleep infinity
-    description: "Rust 1.75 (Latest stable)"
     category: programming
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                  Rust 1.75 Quick Reference                    ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🦀 Rust Environment:
-         rustc --version                               # Compiler version
-         cargo --version                               # Cargo version
-         rustup --version                              # Rustup version
-         rustup update                                 # Update Rust
-         rustup show                                   # Show toolchain info
-      
-      📦 Cargo Commands:
-         cargo new myapp                               # Create new project
-         cargo init                                    # Initialize in current dir
-         cargo build                                   # Build debug
-         cargo build --release                         # Build optimized
-         cargo run                                     # Build and run
-         cargo test                                    # Run tests
-         cargo check                                   # Check without building
-         cargo clean                                   # Clean build artifacts
-      
-      🚀 Quick Program:
-         # Create a simple program
-         cat > /shared/hello.rs <<'EOF'
-         fn main() {
-             println!("Hello from Rust 1.75!");
-             
-             let numbers = vec![1, 2, 3, 4, 5];
-             let sum: i32 = numbers.iter().sum();
-             println!("Sum: {}", sum);
-             
-             // Pattern matching
-             for num in numbers {
-                 match num {
-                     1 => println!("One!"),
-                     2..=4 => println!("Between 2 and 4: {}", num),
-                     _ => println!("Something else: {}", num),
-                 }
-             }
-         }
-         EOF
-         
-         rustc /shared/hello.rs -o /shared/hello
-         /shared/hello
-      
-      📝 Simple Web Server (Actix):
-         # Create new project
-         cargo new webserver --bin
-         cd webserver
-         
-         # Add to Cargo.toml:
-         # [dependencies]
-         # actix-web = "4"
-         
-         cargo build
-         cargo run
-      
-      🔧 Useful Commands:
-         cargo fmt                                     # Format code
-         cargo clippy                                  # Lint code
-         cargo doc --open                              # Generate & open docs
-         cargo tree                                    # Show dependency tree
-         cargo outdated                                # Check outdated deps
-      
-      📊 Dependencies:
-         cargo add serde                               # Add dependency
-         cargo add serde --features derive             # With features
-         cargo remove serde                            # Remove dependency
-         cargo update                                  # Update dependencies
-      
-      🧪 Testing:
-         cargo test                                    # Run all tests
-         cargo test test_name                          # Run specific test
-         cargo test --release                          # Test optimized build
-         cargo bench                                   # Run benchmarks
-      
-      🔨 Build Profiles:
-         cargo build                                   # Debug (fast compile)
-         cargo build --release                         # Release (optimized)
-         cargo run --release                           # Run optimized
-      
-      💡 Tips:
-         - Use /shared for your projects
-         - Cargo caches in ~/.cargo
-         - Debug builds are faster to compile
-         - Release builds are faster to run
-         - Use 'cargo clippy' for best practices
-    
-    scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "🦀 Initializing Rust 1.75 for $CONTAINER_NAME..."
-          
-          # Install common tools
-          docker exec "$CONTAINER_NAME" cargo install cargo-edit 2>/dev/null || true
-          docker exec "$CONTAINER_NAME" cargo install cargo-outdated 2>/dev/null || true
-          
-          # Create a sample project in /shared if not exists
-          if ! docker exec "$CONTAINER_NAME" test -d /shared/rust_project 2>/dev/null; then
-            docker exec "$CONTAINER_NAME" sh -c "
-              cd /shared
-              cargo new rust_project --quiet 2>/dev/null || true
-            " 2>/dev/null || true
-          fi
-          
-          echo "✓ Rust 1.75 initialized"
-          echo "✓ Sample project created in /shared/rust_project"
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up Rust projects for $CONTAINER_NAME..."
-          
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/rust-1.75"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
-          # Backup Cargo.toml files from /shared
-          find "${SHARED_DIR:-./shared-volumes}" -name "Cargo.toml" -type f 2>/dev/null | while read -r cargo_file; do
-            relative_path=$(echo "$cargo_file" | sed "s|${SHARED_DIR:-./shared-volumes}/||")
-            backup_name=$(echo "$relative_path" | tr '/' '_')
-            cp "$cargo_file" "$BACKUP_DIR/Cargo.toml_${backup_name}_${TIMESTAMP}" 2>/dev/null || true
-          done
-          
-          # Backup Cargo.lock files
-          find "${SHARED_DIR:-./shared-volumes}" -name "Cargo.lock" -type f 2>/dev/null | while read -r lock_file; do
-            relative_path=$(echo "$lock_file" | sed "s|${SHARED_DIR:-./shared-volumes}/||")
-            backup_name=$(echo "$relative_path" | tr '/' '_')
-            cp "$lock_file" "$BACKUP_DIR/Cargo.lock_${backup_name}_${TIMESTAMP}" 2>/dev/null || true
-          done
-          
-          # List installed cargo packages
-          docker exec "$CONTAINER_NAME" cargo install --list > \
-            "$BACKUP_DIR/installed_packages_${TIMESTAMP}.txt" 2>/dev/null || true
-          
-          echo "✓ Backup saved to: backups/rust-1.75/"
+    description: Rust 1.75 (Latest stable)
+    image: rust:1.75
+    keep_alive_cmd: sleep infinity
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \               Rust 1.75 Quick Reference                    ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F980 Rust Environment:\n   rustc --version                         \
+      \      # Compiler version\n   cargo --version                              \
+      \ # Cargo version\n   rustup update                                 # Update\
+      \ Rust\n\n\U0001F4E6 Cargo Commands:\n   cargo new myapp                   \
+      \            # Create new project\n   cargo init                           \
+      \         # Initialize in current dir\n   cargo build                      \
+      \             # Build debug\n   cargo build --release                      \
+      \   # Build optimized\n   cargo run                                     # Build\
+      \ and run\n   cargo test                                    # Run tests\n  \
+      \ cargo check                                   # Check without building\n\n\
+      \U0001F680 Quick Program:\n   Create /shared/hello.rs:\n     fn main() {\n \
+      \        println!(\"Hello from Rust!\");\n         let numbers = vec![1, 2,\
+      \ 3, 4, 5];\n         let sum: i32 = numbers.iter().sum();\n         println!(\"\
+      Sum: {}\", sum);\n     }\n   rustc /shared/hello.rs -o /shared/hello\n   /shared/hello\n\
+      \n\U0001F527 Useful Commands:\n   cargo fmt                                \
+      \     # Format code\n   cargo clippy                                  # Lint\
+      \ code\n   cargo doc --open                              # Generate docs\n \
+      \  cargo clean                                   # Clean build\n\n\U0001F4CA\
+      \ Dependencies:\n   cargo add serde                               # Add dependency\n\
+      \   cargo update                                  # Update dependencies\n  \
+      \ cargo tree                                    # Show dependency tree\n"
+    shell: /bin/bash

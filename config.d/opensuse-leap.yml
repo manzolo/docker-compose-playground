@@ -1,0 +1,7 @@
+images:
+  opensuse-leap:
+    category: linux
+    description: openSUSE Leap - Enterprise stable
+    image: opensuse/leap:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

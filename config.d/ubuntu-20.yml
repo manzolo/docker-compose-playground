@@ -1,0 +1,7 @@
+images:
+  ubuntu-20:
+    category: linux
+    description: Ubuntu 20.04 LTS (Focal Fossa)
+    image: ubuntu:20.04
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

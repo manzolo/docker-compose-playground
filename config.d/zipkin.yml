@@ -1,0 +1,9 @@
+images:
+  zipkin:
+    category: monitoring
+    description: Zipkin - Distributed tracing
+    image: openzipkin/zipkin:latest
+    keep_alive_cmd: start-zipkin
+    ports:
+    - 9411:9411
+    shell: /bin/bash

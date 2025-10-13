@@ -1,0 +1,7 @@
+images:
+  golang-alpine:
+    category: programming
+    description: Go 1.22 on Alpine
+    image: golang:1.22-alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

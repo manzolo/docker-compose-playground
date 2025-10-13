@@ -1,0 +1,9 @@
+images:
+  apache-latest:
+    category: webserver
+    description: Apache HTTP Server (Latest)
+    image: httpd:latest
+    keep_alive_cmd: httpd-foreground
+    ports:
+    - 8082:80
+    shell: /bin/bash

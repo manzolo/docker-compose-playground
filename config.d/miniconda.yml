@@ -1,0 +1,7 @@
+images:
+  miniconda:
+    category: programming
+    description: Miniconda - Minimal conda
+    image: continuumio/miniconda3
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

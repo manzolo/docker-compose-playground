@@ -1,0 +1,7 @@
+images:
+  perl:
+    category: programming
+    description: Perl - Text processing language
+    image: perl:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

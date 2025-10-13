@@ -1,0 +1,7 @@
+images:
+  node-alpine:
+    category: programming
+    description: Node.js 22 on Alpine (Minimal)
+    image: node:22-alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

@@ -1,0 +1,7 @@
+images:
+  gcc:
+    category: programming
+    description: GCC - GNU Compiler Collection (C/C++)
+    image: gcc:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

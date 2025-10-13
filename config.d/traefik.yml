@@ -1,0 +1,10 @@
+images:
+  traefik:
+    category: webserver
+    description: Traefik - Modern reverse proxy
+    image: traefik:latest
+    keep_alive_cmd: /entrypoint.sh traefik
+    ports:
+    - 8085:80
+    - 8086:8080
+    shell: /bin/sh

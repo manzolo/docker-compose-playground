@@ -1,188 +1,28 @@
 images:
   nginx-latest:
-    image: nginx:latest
-    shell: /bin/bash
-    keep_alive_cmd: nginx -g 'daemon off;'
-    description: "Nginx (Latest) - Web server"
     category: webserver
-    
+    description: Nginx (Latest) - Web server
+    image: nginx:latest
+    keep_alive_cmd: nginx -g 'daemon off;'
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \               Nginx Quick Reference                        ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F310 Nginx Info:\n   nginx -v                                      #\
+      \ Version\n   nginx -t                                      # Test configuration\n\
+      \   nginx -T                                      # Test and dump config\n\n\
+      \U0001F4C1 Important Paths:\n   Config: /etc/nginx/nginx.conf\n   Sites: /etc/nginx/conf.d/\n\
+      \   HTML: /usr/share/nginx/html/\n   Logs: /var/log/nginx/\n\n\U0001F527 Basic\
+      \ Commands:\n   nginx -s reload                               # Reload config\n\
+      \   nginx -s stop                                 # Stop nginx\n   nginx -s\
+      \ quit                                 # Graceful shutdown\n\n\U0001F4DD Simple\
+      \ Site Setup:\n   echo '<h1>Hello from Nginx!</h1>' > /shared/index.html\n \
+      \  \n   cat > /etc/nginx/conf.d/mysite.conf <<'EOF'\n   server {\n       listen\
+      \ 80;\n       server_name localhost;\n       root /shared;\n       index index.html;\n\
+      \       location / {\n           try_files $uri $uri/ =404;\n       }\n   }\n\
+      \   EOF\n   \n   nginx -s reload\n\n\U0001F4CA Check Status:\n   ps aux | grep\
+      \ nginx                           # Check processes\n   curl localhost     \
+      \                           # Test locally\n\n\U0001F50D View Logs:\n   tail\
+      \ -f /var/log/nginx/access.log             # Access log\n   tail -f /var/log/nginx/error.log\
+      \              # Error log\n"
     ports:
-      - "8080:80"
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                  Nginx Quick Reference                        ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🌐 Nginx Info:
-         nginx -v                                      # Version
-         nginx -V                                      # Full version with modules
-         nginx -t                                      # Test configuration
-         nginx -T                                      # Test and dump config
-      
-      📁 Important Paths:
-         Main Config: /etc/nginx/nginx.conf
-         Site Configs: /etc/nginx/conf.d/
-         Default HTML: /usr/share/nginx/html/
-         Access Logs: /var/log/nginx/access.log
-         Error Logs: /var/log/nginx/error.log
-      
-      🔧 Basic Commands:
-         nginx -s reload                               # Reload config
-         nginx -s reopen                               # Reopen log files
-         nginx -s stop                                 # Fast shutdown
-         nginx -s quit                                 # Graceful shutdown
-      
-      📝 Simple Static Site Setup:
-         # 1. Create HTML file
-         cat > /shared/index.html <<'EOF'
-         <!DOCTYPE html>
-         <html>
-         <head><title>My Site</title></head>
-         <body>
-             <h1>Hello from Nginx!</h1>
-             <p>This is served from /shared</p>
-         </body>
-         </html>
-         EOF
-         
-         # 2. Create nginx config
-         cat > /etc/nginx/conf.d/mysite.conf <<'EOF'
-         server {
-             listen 80;
-             server_name localhost;
-             root /shared;
-             index index.html;
-             
-             location / {
-                 try_files $uri $uri/ =404;
-             }
-         }
-         EOF
-         
-         # 3. Reload nginx
-         nginx -s reload
-      
-      🔄 Reverse Proxy Example:
-         cat > /etc/nginx/conf.d/proxy.conf <<'EOF'
-         server {
-             listen 80;
-             server_name api.local;
-             
-             location / {
-                 proxy_pass http://backend:3000;
-                 proxy_set_header Host $host;
-                 proxy_set_header X-Real-IP $remote_addr;
-             }
-         }
-         EOF
-      
-      📊 Check Status:
-         ps aux | grep nginx                           # Check processes
-         netstat -tlnp | grep :80                      # Check port
-         curl localhost                                # Test locally
-      
-      🔍 View Logs:
-         tail -f /var/log/nginx/access.log             # Follow access log
-         tail -f /var/log/nginx/error.log              # Follow error log
-         tail -100 /var/log/nginx/access.log           # Last 100 entries
-      
-      💡 Tips:
-         - Default port mapped to 8080 on host
-         - Use /shared for your HTML files
-         - Config files in /etc/nginx/conf.d/
-         - Always test config before reload: nginx -t
-    
-    scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "🌐 Initializing Nginx for $CONTAINER_NAME..."
-          
-          # Create a default welcome page in /shared if not exists
-          if [ ! -f "${SHARED_DIR:-./shared-volumes}/index.html" ]; then
-            cat > "${SHARED_DIR:-./shared-volumes}/index.html" << 'HTMLEOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Nginx Playground</title>
-              <style>
-                  body { 
-                      font-family: Arial, sans-serif; 
-                      max-width: 800px; 
-                      margin: 50px auto; 
-                      padding: 20px;
-                      background: #f0f0f0;
-                  }
-                  .container {
-                      background: white;
-                      padding: 30px;
-                      border-radius: 10px;
-                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                  }
-                  h1 { color: #009639; }
-                  code { 
-                      background: #f5f5f5; 
-                      padding: 2px 5px; 
-                      border-radius: 3px; 
-                  }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h1>🌐 Nginx Playground - Ready!</h1>
-                  <p>Your Nginx server is running successfully.</p>
-                  <h2>Quick Start:</h2>
-                  <ul>
-                      <li>Edit this file: <code>/shared/index.html</code></li>
-                      <li>Add configs: <code>/etc/nginx/conf.d/*.conf</code></li>
-                      <li>Reload: <code>nginx -s reload</code></li>
-                  </ul>
-                  <p><strong>Access:</strong> <a href="http://localhost:8080">http://localhost:8080</a></p>
-              </div>
-          </body>
-          </html>
-          HTMLEOF
-          fi
-          
-          # Test nginx configuration
-          docker exec "$CONTAINER_NAME" nginx -t 2>&1 | grep "successful" > /dev/null
-          
-          if [ $? -eq 0 ]; then
-            echo "✓ Nginx initialized successfully"
-            echo "✓ Access at: http://localhost:8080"
-          else
-            echo "⚠ Nginx configuration may have issues"
-          fi
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up Nginx configuration for $CONTAINER_NAME..."
-          
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/nginx-latest"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
-          # Backup main configuration
-          docker exec "$CONTAINER_NAME" cat /etc/nginx/nginx.conf > \
-            "$BACKUP_DIR/nginx.conf_${TIMESTAMP}" 2>/dev/null || true
-          
-          # Backup site configs directory
-          docker exec "$CONTAINER_NAME" sh -c 'cd /etc/nginx && tar czf - conf.d/' 2>/dev/null > \
-            "$BACKUP_DIR/conf.d_${TIMESTAMP}.tar.gz" || true
-          
-          # Backup last 1000 lines of access log
-          docker exec "$CONTAINER_NAME" sh -c 'tail -1000 /var/log/nginx/access.log 2>/dev/null || echo "No access log"' > \
-            "$BACKUP_DIR/access.log_${TIMESTAMP}" 2>/dev/null || true
-          
-          # Backup last 1000 lines of error log
-          docker exec "$CONTAINER_NAME" sh -c 'tail -1000 /var/log/nginx/error.log 2>/dev/null || echo "No error log"' > \
-            "$BACKUP_DIR/error.log_${TIMESTAMP}" 2>/dev/null || true
-          
-          echo "✓ Backup saved to: backups/nginx-latest/"
+    - 8080:80
+    shell: /bin/bash

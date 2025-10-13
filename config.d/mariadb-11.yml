@@ -1,0 +1,12 @@
+images:
+  mariadb-11:
+    category: database
+    description: MariaDB 11 (Latest)
+    environment:
+      MYSQL_DATABASE: playground
+      MYSQL_ROOT_PASSWORD: playground
+    image: mariadb:11
+    keep_alive_cmd: mariadbd
+    ports:
+    - 3308:3306
+    shell: /bin/bash

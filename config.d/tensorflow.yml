@@ -1,0 +1,7 @@
+images:
+  tensorflow:
+    category: ml
+    description: TensorFlow - ML framework
+    image: tensorflow/tensorflow:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

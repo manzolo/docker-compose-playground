@@ -1,0 +1,7 @@
+images:
+  ruby-3.3:
+    category: programming
+    description: Ruby 3.3 (Latest)
+    image: ruby:3.3
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

@@ -1,0 +1,7 @@
+images:
+  almalinux-9:
+    category: linux
+    description: AlmaLinux 9 (CentOS replacement)
+    image: almalinux:9
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

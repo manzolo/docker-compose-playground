@@ -1,0 +1,7 @@
+images:
+  arch:
+    category: linux
+    description: Arch Linux - Rolling release
+    image: archlinux:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

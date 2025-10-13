@@ -1,0 +1,12 @@
+images:
+  elasticsearch:
+    category: database
+    description: Elasticsearch - Search & analytics
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    keep_alive_cmd: /usr/local/bin/docker-entrypoint.sh
+    ports:
+    - 9200:9200
+    shell: /bin/bash

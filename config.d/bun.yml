@@ -1,0 +1,7 @@
+images:
+  bun:
+    category: programming
+    description: Bun - Fast all-in-one JavaScript runtime
+    image: oven/bun:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

@@ -1,0 +1,12 @@
+images:
+  mariadb-10:
+    category: database
+    description: MariaDB 10
+    environment:
+      MYSQL_DATABASE: playground
+      MYSQL_ROOT_PASSWORD: playground
+    image: mariadb:10
+    keep_alive_cmd: mariadbd
+    ports:
+    - 3309:3306
+    shell: /bin/bash

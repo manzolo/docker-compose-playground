@@ -1,102 +1,36 @@
 images:
   postgres-16:
-    image: postgres:16
-    shell: /bin/bash
-    keep_alive_cmd: postgres
-    description: "PostgreSQL 16 (Latest)"
     category: database
-    
+    description: PostgreSQL 16 (Latest)
     environment:
+      POSTGRES_DB: playground
       POSTGRES_PASSWORD: playground
       POSTGRES_USER: playground
-      POSTGRES_DB: playground
-    
+    image: postgres:16
+    keep_alive_cmd: postgres
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \             PostgreSQL 16 Quick Reference                  ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F510 Connection Info:\n   Host: localhost / Container IP\n   Port: 5432\n\
+      \   User: playground\n   Password: playground\n   Database: playground\n\n\U0001F4CA\
+      \ Basic Commands:\n   psql -U playground                            # Connect\
+      \ to PostgreSQL\n   \\l                                            # List databases\n\
+      \   \\c database_name                              # Connect to database\n \
+      \  \\dt                                           # List tables\n   \\d table_name\
+      \                                 # Describe table\n   \\q                 \
+      \                           # Quit\n\n\U0001F4BE Backup & Restore:\n   pg_dump\
+      \ -U playground playground > /shared/backup.sql\n   pg_dump -U playground -Fc\
+      \ playground > /shared/backup.dump\n   psql -U playground playground < /shared/backup.sql\n\
+      \   pg_restore -U playground -d playground /shared/backup.dump\n\n\U0001F4DD\
+      \ Quick Table Example:\n   CREATE TABLE users (\n     id SERIAL PRIMARY KEY,\n\
+      \     name VARCHAR(100),\n     email VARCHAR(100) UNIQUE,\n     created_at TIMESTAMP\
+      \ DEFAULT CURRENT_TIMESTAMP\n   );\n   INSERT INTO users (name, email) VALUES\
+      \ ('Test', 'test@example.com');\n   SELECT * FROM users;\n\n\U0001F50D Useful\
+      \ Queries:\n   SELECT version();                             # PostgreSQL version\n\
+      \   SELECT current_database();                    # Current database\n   \\\
+      timing on                                    # Enable query timing\n"
     ports:
-      - "5432:5432"
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                PostgreSQL 16 Quick Reference                  ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🔐 Connection Info:
-         Host: localhost / Container IP
-         Port: 5432
-         User: playground
-         Password: playground
-         Database: playground
-      
-      📊 Basic Commands:
-         psql -U playground                            # Connect to PostgreSQL
-         \l                                            # List databases
-         \c database_name                              # Connect to database
-         \dt                                           # List tables
-         \d table_name                                 # Describe table
-         \q                                            # Quit
-      
-      💾 Backup & Restore:
-         pg_dump -U playground playground > /shared/backup.sql
-         pg_dump -U playground -Fc playground > /shared/backup.dump
-         psql -U playground playground < /shared/backup.sql
-         pg_restore -U playground -d playground /shared/backup.dump
-      
-      📝 Quick Table Example:
-         CREATE TABLE users (
-           id SERIAL PRIMARY KEY,
-           name VARCHAR(100),
-           email VARCHAR(100) UNIQUE,
-           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-         );
-         INSERT INTO users (name, email) VALUES ('Test', 'test@example.com');
-         SELECT * FROM users;
-      
-      🔍 Useful Queries:
-         SELECT version();                             # PostgreSQL version
-         SELECT current_database();                    # Current database
-         \timing on                                    # Enable query timing
-    
+    - 5432:5432
     scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "🐘 Initializing PostgreSQL for $CONTAINER_NAME..."
-          
-          # Wait for PostgreSQL to be ready
-          sleep 3
-          
-          # Create example table
-          docker exec "$CONTAINER_NAME" psql -U playground -d playground -c "
-          CREATE TABLE IF NOT EXISTS playground_info (
-              id SERIAL PRIMARY KEY,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              message TEXT
-          );
-          
-          INSERT INTO playground_info (message) VALUES ('PostgreSQL initialized by playground manager');
-          " 2>/dev/null
-          
-          echo "✓ PostgreSQL initialized with test table"
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up PostgreSQL database from $CONTAINER_NAME..."
-          
-          # Create backup directory for this specific container
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/postgres-16"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          BACKUP_FILE="$BACKUP_DIR/postgres_${TIMESTAMP}.sql"
-          
-          # Create backup
-          docker exec "$CONTAINER_NAME" pg_dump -U playground playground > "$BACKUP_FILE" 2>/dev/null
-          
-          if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
-              echo "✓ Backup saved to: backups/postgres-16/postgres_${TIMESTAMP}.sql"
-          else
-              rm -f "$BACKUP_FILE"
-              echo "✗ Backup failed"
-          fi
+      post_start: postgres_init.sh
+      pre_stop: postgres_backup.sh
+    shell: /bin/bash

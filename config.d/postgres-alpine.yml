@@ -1,0 +1,13 @@
+images:
+  postgres-alpine:
+    category: database
+    description: PostgreSQL 16 Alpine (Minimal)
+    environment:
+      POSTGRES_DB: playground
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+    image: postgres:16-alpine
+    keep_alive_cmd: postgres
+    ports:
+    - 5434:5432
+    shell: /bin/sh

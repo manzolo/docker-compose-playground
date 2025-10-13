@@ -1,0 +1,7 @@
+images:
+  ubuntu-22:
+    category: linux
+    description: Ubuntu 22.04 LTS (Jammy Jellyfish)
+    image: ubuntu:22.04
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

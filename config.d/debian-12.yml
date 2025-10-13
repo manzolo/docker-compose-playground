@@ -1,0 +1,7 @@
+images:
+  debian-12:
+    category: linux
+    description: Debian 12 (Bookworm) - Stable
+    image: debian:12
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

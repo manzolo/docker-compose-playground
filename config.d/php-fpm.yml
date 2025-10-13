@@ -1,0 +1,7 @@
+images:
+  php-fpm:
+    category: programming
+    description: PHP 8.3 with FPM
+    image: php:8.3-fpm
+    keep_alive_cmd: php-fpm
+    shell: /bin/bash

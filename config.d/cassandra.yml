@@ -1,0 +1,9 @@
+images:
+  cassandra:
+    category: database
+    description: Apache Cassandra - Wide-column store
+    image: cassandra:latest
+    keep_alive_cmd: cassandra -f
+    ports:
+    - 9042:9042
+    shell: /bin/bash

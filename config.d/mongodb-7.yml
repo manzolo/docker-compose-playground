@@ -1,120 +1,26 @@
 images:
   mongodb-7:
-    image: mongo:7
-    shell: /bin/bash
-    keep_alive_cmd: mongod
-    description: "MongoDB 7 (Latest)"
     category: database
-    
+    description: MongoDB 7 (Latest)
+    image: mongo:7
+    keep_alive_cmd: mongod
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \               MongoDB 7 Quick Reference                    ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F510 Connection Info:\n   Host: localhost / Container IP\n   Port: 27017\n\
+      \   No authentication required (default)\n\n\U0001F4CA Basic Commands:\n   mongosh\
+      \                                       # Connect to MongoDB\n   show dbs  \
+      \                                    # List databases\n   use mydb         \
+      \                             # Switch/create database\n   show collections\
+      \                              # List collections\n   db.collection.find() \
+      \                         # Show all documents\n\n\U0001F4BE Backup & Restore:\n\
+      \   mongodump --db playground --out /shared/backup\n   mongorestore --db playground\
+      \ /shared/backup/playground\n   mongoexport --db playground --collection users\
+      \ --out /shared/users.json\n   mongoimport --db playground --collection users\
+      \ --file /shared/users.json\n\n\U0001F50D CRUD Operations:\n   db.users.insertOne({name:\
+      \ \"John\", age: 30})\n   db.users.find({name: \"John\"})\n   db.users.updateOne({name:\
+      \ \"John\"}, {$set: {age: 31}})\n   db.users.deleteOne({name: \"John\"})\n\n\
+      \U0001F4C8 Aggregation:\n   db.users.aggregate([\n     {$match: {age: {$gte:\
+      \ 18}}},\n     {$group: {_id: \"$city\", count: {$sum: 1}}}\n   ])\n"
     ports:
-      - "27017:27017"
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                  MongoDB 7 Quick Reference                    ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🔐 Connection Info:
-         Host: localhost / Container IP
-         Port: 27017
-         No authentication required (default)
-      
-      📊 Basic Commands:
-         mongosh                                       # Connect to MongoDB
-         show dbs                                      # List databases
-         use mydb                                      # Switch/create database
-         show collections                              # List collections
-         db.collection.find()                          # Show all documents
-         db.collection.find().pretty()                 # Pretty print
-         exit                                          # Exit mongosh
-      
-      💾 Backup & Restore:
-         # Backup entire database
-         mongodump --db playground --out /shared/backup
-         
-         # Backup specific collection
-         mongodump --db playground --collection users --out /shared/backup
-         
-         # Restore database
-         mongorestore --db playground /shared/backup/playground
-         
-         # Export to JSON
-         mongoexport --db playground --collection users --out /shared/users.json
-         
-         # Import from JSON
-         mongoimport --db playground --collection users --file /shared/users.json
-      
-      🔍 CRUD Operations:
-         # Insert
-         db.users.insertOne({name: "John", age: 30})
-         db.users.insertMany([{name: "Jane"}, {name: "Bob"}])
-         
-         # Find
-         db.users.find()                               # Find all
-         db.users.find({name: "John"})                 # Find with filter
-         db.users.findOne({name: "John"})              # Find one
-         
-         # Update
-         db.users.updateOne({name: "John"}, {$set: {age: 31}})
-         db.users.updateMany({}, {$inc: {age: 1}})
-         
-         # Delete
-         db.users.deleteOne({name: "John"})
-         db.users.deleteMany({age: {$lt: 18}})
-      
-      📈 Aggregation Example:
-         db.users.aggregate([
-           {$match: {age: {$gte: 18}}},
-           {$group: {_id: "$city", count: {$sum: 1}}},
-           {$sort: {count: -1}}
-         ])
-      
-      🔧 Useful Commands:
-         db.stats()                                    # Database statistics
-         db.users.countDocuments()                     # Count documents
-         db.users.createIndex({email: 1})             # Create index
-         db.users.getIndexes()                        # List indexes
-    
-    scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "🍃 Initializing MongoDB 7 for $CONTAINER_NAME..."
-          
-          # Wait for MongoDB to be ready
-          sleep 5
-          
-          # Create a test database and collection
-          docker exec "$CONTAINER_NAME" mongosh --eval "
-            use playground;
-            db.playground_info.insertOne({
-              created_at: new Date(),
-              message: 'MongoDB initialized by playground manager',
-              version: '7.0'
-            });
-          " 2>/dev/null || true
-          
-          echo "✓ MongoDB 7 initialized with test collection"
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up MongoDB databases from $CONTAINER_NAME..."
-          
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/mongodb-7"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          BACKUP_PATH="$BACKUP_DIR/mongodb_${TIMESTAMP}"
-          
-          # Create backup of all databases
-          docker exec "$CONTAINER_NAME" \
-            mongodump --out /shared/backups/mongodb-7/mongodb_${TIMESTAMP} 2>/dev/null || true
-          
-          if [ -d "$BACKUP_PATH" ]; then
-            echo "✓ Backup saved to: backups/mongodb-7/mongodb_${TIMESTAMP}/"
-          else
-            echo "⚠ Backup may have failed - check logs"
-          fi
+    - 27017:27017
+    shell: /bin/bash

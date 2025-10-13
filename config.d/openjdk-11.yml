@@ -1,0 +1,7 @@
+images:
+  openjdk-11:
+    category: programming
+    description: OpenJDK 11 LTS
+    image: openjdk:11
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

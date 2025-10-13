@@ -1,0 +1,7 @@
+images:
+  anaconda:
+    category: programming
+    description: Anaconda - Data Science stack
+    image: continuumio/anaconda3
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

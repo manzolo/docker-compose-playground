@@ -1,0 +1,7 @@
+images:
+  node-18:
+    category: programming
+    description: Node.js 18 LTS
+    image: node:18
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

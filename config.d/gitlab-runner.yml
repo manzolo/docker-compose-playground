@@ -1,0 +1,7 @@
+images:
+  gitlab-runner:
+    category: devops
+    description: GitLab Runner - CI/CD runner
+    image: gitlab/gitlab-runner:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

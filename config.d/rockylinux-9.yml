@@ -1,0 +1,7 @@
+images:
+  rockylinux-9:
+    category: linux
+    description: Rocky Linux 9 (RHEL clone)
+    image: rockylinux:9
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

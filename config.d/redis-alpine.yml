@@ -1,0 +1,9 @@
+images:
+  redis-alpine:
+    category: database
+    description: Redis 7 Alpine (Minimal)
+    image: redis:7-alpine
+    keep_alive_cmd: redis-server
+    ports:
+    - 6380:6379
+    shell: /bin/sh

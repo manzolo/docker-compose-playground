@@ -1,0 +1,11 @@
+images:
+  jupyter:
+    category: ml
+    description: Jupyter Notebook - Interactive computing
+    environment:
+      JUPYTER_ENABLE_LAB: 'yes'
+    image: jupyter/base-notebook:latest
+    keep_alive_cmd: start-notebook.sh
+    ports:
+    - 8888:8888
+    shell: /bin/bash

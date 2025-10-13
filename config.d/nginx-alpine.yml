@@ -1,0 +1,9 @@
+images:
+  nginx-alpine:
+    category: webserver
+    description: Nginx Alpine (Minimal)
+    image: nginx:alpine
+    keep_alive_cmd: nginx -g 'daemon off;'
+    ports:
+    - 8081:80
+    shell: /bin/sh

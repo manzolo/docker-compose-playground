@@ -1,0 +1,9 @@
+images:
+  prometheus:
+    category: monitoring
+    description: Prometheus - Monitoring system
+    image: prom/prometheus:latest
+    keep_alive_cmd: /bin/prometheus
+    ports:
+    - 9090:9090
+    shell: /bin/sh

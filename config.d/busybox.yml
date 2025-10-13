@@ -1,0 +1,7 @@
+images:
+  busybox:
+    category: utility
+    description: BusyBox - Minimal Unix utilities
+    image: busybox:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

@@ -1,0 +1,7 @@
+images:
+  netshoot:
+    category: utility
+    description: Network troubleshooting tools
+    image: nicolaka/netshoot:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

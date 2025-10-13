@@ -1,0 +1,7 @@
+images:
+  ruby-alpine:
+    category: programming
+    description: Ruby 3.3 on Alpine
+    image: ruby:3.3-alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

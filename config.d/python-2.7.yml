@@ -1,0 +1,7 @@
+images:
+  python-2.7:
+    category: programming
+    description: Python 2.7
+    image: python:2.7
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

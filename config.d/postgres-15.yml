@@ -1,0 +1,13 @@
+images:
+  postgres-15:
+    category: database
+    description: PostgreSQL 15
+    environment:
+      POSTGRES_DB: playground
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+    image: postgres:15
+    keep_alive_cmd: postgres
+    ports:
+    - 5433:5432
+    shell: /bin/bash

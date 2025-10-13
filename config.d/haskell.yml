@@ -1,0 +1,7 @@
+images:
+  haskell:
+    category: programming
+    description: Haskell - Pure functional language
+    image: haskell:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

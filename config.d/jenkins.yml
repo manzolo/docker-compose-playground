@@ -1,0 +1,10 @@
+images:
+  jenkins:
+    category: devops
+    description: Jenkins - CI/CD automation server
+    image: jenkins/jenkins:lts
+    keep_alive_cmd: /usr/bin/tini -- /usr/local/bin/jenkins.sh
+    ports:
+    - 8087:8080
+    - 50000:50000
+    shell: /bin/bash

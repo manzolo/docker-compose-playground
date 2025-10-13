@@ -1,0 +1,7 @@
+images:
+  clang:
+    category: programming
+    description: Clang - LLVM C/C++ compiler
+    image: silkeh/clang:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

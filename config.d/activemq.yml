@@ -1,0 +1,10 @@
+images:
+  activemq:
+    category: messaging
+    description: Apache ActiveMQ - Message broker
+    image: apache/activemq-classic:latest
+    keep_alive_cmd: sleep infinity
+    ports:
+    - 61616:61616
+    - 8161:8161
+    shell: /bin/bash

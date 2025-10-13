@@ -1,7 +1,7 @@
 #!/bin/bash
 # create_config_template.sh
 
-cat > config.d/template.yml <<'EOF'
+cat > custom.d/template.yml <<'EOF'
 images:
   my-custom-image:
     image: myimage:latest

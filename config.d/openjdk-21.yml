@@ -1,0 +1,7 @@
+images:
+  openjdk-21:
+    category: programming
+    description: OpenJDK 21 LTS (Latest)
+    image: openjdk:21
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

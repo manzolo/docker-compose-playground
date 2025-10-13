@@ -1,0 +1,9 @@
+images:
+  python-3.12:
+    category: programming
+    description: Python 3.12
+    image: python:3.12
+    keep_alive_cmd: sleep infinity
+    scripts:
+      post_start: python_init.sh
+    shell: /bin/bash

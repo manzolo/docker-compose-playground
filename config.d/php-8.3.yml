@@ -1,0 +1,7 @@
+images:
+  php-8.3:
+    category: programming
+    description: PHP 8.3 (Latest)
+    image: php:8.3
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

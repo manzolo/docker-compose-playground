@@ -1,0 +1,7 @@
+images:
+  elixir:
+    category: programming
+    description: Elixir - Functional language (Erlang VM)
+    image: elixir:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

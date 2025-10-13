@@ -1,0 +1,12 @@
+images:
+  couchdb:
+    category: database
+    description: CouchDB - Document database
+    environment:
+      COUCHDB_PASSWORD: playground
+      COUCHDB_USER: admin
+    image: couchdb:latest
+    keep_alive_cmd: /docker-entrypoint.sh /opt/couchdb/bin/couchdb
+    ports:
+    - 5984:5984
+    shell: /bin/bash

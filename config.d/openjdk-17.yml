@@ -1,0 +1,7 @@
+images:
+  openjdk-17:
+    category: programming
+    description: OpenJDK 17 LTS
+    image: openjdk:17
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

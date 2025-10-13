@@ -1,0 +1,7 @@
+images:
+  curl:
+    category: utility
+    description: curl - HTTP client
+    image: curlimages/curl:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

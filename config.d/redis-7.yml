@@ -1,137 +1,32 @@
 images:
   redis-7:
-    image: redis:7
-    shell: /bin/sh
-    keep_alive_cmd: redis-server
-    description: "Redis 7 (Latest) - In-memory cache"
     category: database
-    
+    description: Redis 7 (Latest) - In-memory cache
+    image: redis:7
+    keep_alive_cmd: redis-server
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \                Redis 7 Quick Reference                     ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F510 Connection Info:\n   Host: localhost / Container IP\n   Port: 6379\n\
+      \   No authentication required (default)\n\n\U0001F4CA Basic Commands:\n   redis-cli\
+      \                                     # Connect to Redis\n   PING          \
+      \                                # Test connection\n   INFO                \
+      \                          # Server information\n   DBSIZE                 \
+      \                       # Number of keys\n   FLUSHDB                       \
+      \                # Clear current database\n\n\U0001F4BE Backup & Restore:\n\
+      \   SAVE                                          # Synchronous save\n   BGSAVE\
+      \                                        # Background save\n   docker cp playground-redis-7:/data/dump.rdb\
+      \ /shared/redis_backup.rdb\n\n\U0001F511 String Operations:\n   SET key \"value\"\
+      \                               # Set string\n   GET key                   \
+      \                    # Get string\n   MSET key1 \"val1\" key2 \"val2\"     \
+      \            # Set multiple\n   INCR counter                               \
+      \   # Increment\n   EXPIRE key 3600                               # Set expiry\
+      \ (seconds)\n\n\U0001F4DD List Operations:\n   LPUSH mylist \"item1\"      \
+      \                    # Push to left\n   RPUSH mylist \"item2\"             \
+      \             # Push to right\n   LRANGE mylist 0 -1                       \
+      \     # Get all items\n\n\U0001F5C2️ Hash Operations:\n   HSET user:1 name \"\
+      John\" age 30               # Set hash fields\n   HGET user:1 name         \
+      \                    # Get field\n   HGETALL user:1                        \
+      \       # Get all fields\n"
     ports:
-      - "6379:6379"
-    
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║                   Redis 7 Quick Reference                     ║
-      ╚══════════════════════════════════════════════════════════════╝
-      
-      🔐 Connection Info:
-         Host: localhost / Container IP
-         Port: 6379
-         No authentication required (default)
-      
-      📊 Basic Commands:
-         redis-cli                                     # Connect to Redis
-         PING                                          # Test connection
-         INFO                                          # Server information
-         DBSIZE                                        # Number of keys
-         FLUSHDB                                       # Clear current database
-         FLUSHALL                                      # Clear all databases
-         exit                                          # Exit redis-cli
-      
-      💾 Backup & Restore:
-         # Trigger manual save
-         SAVE                                          # Synchronous save
-         BGSAVE                                        # Background save
-         
-         # Backup file location: /data/dump.rdb
-         # Copy backup to shared
-         cat /data/dump.rdb > /shared/redis_backup.rdb
-      
-      🔑 String Operations:
-         SET key "value"                               # Set string
-         GET key                                       # Get string
-         MSET key1 "val1" key2 "val2"                 # Set multiple
-         MGET key1 key2                               # Get multiple
-         INCR counter                                  # Increment
-         DECR counter                                  # Decrement
-         EXPIRE key 3600                               # Set expiry (seconds)
-         TTL key                                       # Time to live
-         PERSIST key                                   # Remove expiry
-      
-      📝 List Operations:
-         LPUSH mylist "item1"                          # Push to left
-         RPUSH mylist "item2"                          # Push to right
-         LRANGE mylist 0 -1                            # Get all items
-         LPOP mylist                                   # Pop from left
-         RPOP mylist                                   # Pop from right
-         LLEN mylist                                   # List length
-      
-      🗂️ Hash Operations:
-         HSET user:1 name "John" age 30               # Set hash fields
-         HGET user:1 name                             # Get field
-         HGETALL user:1                               # Get all fields
-         HINCRBY user:1 age 1                         # Increment field
-         HDEL user:1 name                             # Delete field
-         HEXISTS user:1 name                          # Check if field exists
-      
-      📊 Set Operations:
-         SADD myset "item1" "item2"                   # Add to set
-         SMEMBERS myset                               # Get all members
-         SISMEMBER myset "item1"                      # Check membership
-         SCARD myset                                  # Set cardinality
-         SREM myset "item1"                           # Remove from set
-      
-      🔢 Sorted Set Operations:
-         ZADD leaderboard 100 "player1"               # Add with score
-         ZRANGE leaderboard 0 -1 WITHSCORES          # Get all with scores
-         ZRANK leaderboard "player1"                  # Get rank
-         ZINCRBY leaderboard 10 "player1"            # Increment score
-      
-      💡 Tips:
-         - All data is in-memory (very fast!)
-         - Persistence with RDB snapshots
-         - Use for caching, sessions, queues
-         - Default port: 6379
-    
-    scripts:
-      post_start:
-        inline: |
-          #!/bin/sh
-          CONTAINER_NAME="$1"
-          echo "🔴 Initializing Redis 7 for $CONTAINER_NAME..."
-          
-          # Wait for Redis to be ready
-          sleep 3
-          
-          # Test Redis connection and add initial data
-          docker exec "$CONTAINER_NAME" redis-cli SET playground:initialized "Redis initialized by playground manager" 2>/dev/null || true
-          docker exec "$CONTAINER_NAME" redis-cli SET playground:version "7.0" 2>/dev/null || true
-          docker exec "$CONTAINER_NAME" redis-cli SET playground:timestamp "$(date +%s)" 2>/dev/null || true
-          docker exec "$CONTAINER_NAME" redis-cli SAVE 2>/dev/null || true
-          
-          echo "✓ Redis 7 initialized"
-      
-      pre_stop:
-        inline: |
-          #!/bin/bash
-          CONTAINER_NAME="$1"
-          echo "💾 Backing up Redis data from $CONTAINER_NAME..."
-          
-          BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/redis-7"
-          mkdir -p "$BACKUP_DIR"
-          
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
-          # Force a save before backup
-          docker exec "$CONTAINER_NAME" redis-cli SAVE 2>/dev/null || true
-          
-          # Wait a moment for save to complete
-          sleep 2
-          
-          # Copy the RDB file
-          docker exec "$CONTAINER_NAME" cat /data/dump.rdb > \
-            "$BACKUP_DIR/dump_${TIMESTAMP}.rdb" 2>/dev/null || true
-          
-          # Also backup as latest
-          docker exec "$CONTAINER_NAME" cat /data/dump.rdb > \
-            "$BACKUP_DIR/dump_latest.rdb" 2>/dev/null || true
-          
-          # Export some keys info
-          docker exec "$CONTAINER_NAME" redis-cli INFO keyspace > \
-            "$BACKUP_DIR/keyspace_${TIMESTAMP}.txt" 2>/dev/null || true
-          
-          if [ -f "$BACKUP_DIR/dump_${TIMESTAMP}.rdb" ]; then
-            echo "✓ Backup saved to: backups/redis-7/dump_${TIMESTAMP}.rdb"
-          else
-            echo "⚠ Backup may have failed"
-          fi
+    - 6379:6379
+    shell: /bin/sh

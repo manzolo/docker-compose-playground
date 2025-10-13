@@ -1,0 +1,9 @@
+images:
+  caddy:
+    category: webserver
+    description: Caddy - Modern web server with auto HTTPS
+    image: caddy:latest
+    keep_alive_cmd: caddy run --config /etc/caddy/Caddyfile
+    ports:
+    - 8084:80
+    shell: /bin/sh

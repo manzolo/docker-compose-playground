@@ -1,0 +1,7 @@
+images:
+  pytorch:
+    category: ml
+    description: PyTorch - ML framework
+    image: pytorch/pytorch:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

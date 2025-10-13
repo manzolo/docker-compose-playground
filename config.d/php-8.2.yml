@@ -1,0 +1,7 @@
+images:
+  php-8.2:
+    category: programming
+    description: PHP 8.2
+    image: php:8.2
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

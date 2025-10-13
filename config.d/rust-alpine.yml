@@ -1,0 +1,7 @@
+images:
+  rust-alpine:
+    category: programming
+    description: Rust on Alpine
+    image: rust:alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

@@ -1,0 +1,12 @@
+images:
+  mysql-5.7:
+    category: database
+    description: MySQL 5.7 (Legacy)
+    environment:
+      MYSQL_DATABASE: playground
+      MYSQL_ROOT_PASSWORD: playground
+    image: mysql:5.7
+    keep_alive_cmd: mysqld
+    ports:
+    - 3307:3306
+    shell: /bin/bash

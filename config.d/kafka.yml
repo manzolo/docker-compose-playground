@@ -1,0 +1,9 @@
+images:
+  kafka:
+    category: messaging
+    description: Apache Kafka - Event streaming platform
+    image: apache/kafka:latest
+    keep_alive_cmd: /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+    ports:
+    - 9092:9092
+    shell: /bin/bash

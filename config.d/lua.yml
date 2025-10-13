@@ -1,0 +1,7 @@
+images:
+  lua:
+    category: programming
+    description: Lua - Lightweight scripting language
+    image: nickblah/lua:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

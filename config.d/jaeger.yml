@@ -1,0 +1,9 @@
+images:
+  jaeger:
+    category: monitoring
+    description: Jaeger - Distributed tracing
+    image: jaegertracing/all-in-one:latest
+    keep_alive_cmd: /go/bin/all-in-one-linux
+    ports:
+    - 16686:16686
+    shell: /bin/sh

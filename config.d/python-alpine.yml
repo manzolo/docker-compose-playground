@@ -1,0 +1,7 @@
+images:
+  python-alpine:
+    category: programming
+    description: Python 3.12 on Alpine (Minimal)
+    image: python:3.12-alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh

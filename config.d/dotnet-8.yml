@@ -1,0 +1,7 @@
+images:
+  dotnet-8:
+    category: programming
+    description: .NET 8 SDK (C#/F#)
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

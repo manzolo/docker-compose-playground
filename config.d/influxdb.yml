@@ -1,0 +1,9 @@
+images:
+  influxdb:
+    category: database
+    description: InfluxDB - Time series database
+    image: influxdb:latest
+    keep_alive_cmd: influxd
+    ports:
+    - 8086:8086
+    shell: /bin/bash
