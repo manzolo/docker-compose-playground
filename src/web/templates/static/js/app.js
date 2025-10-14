@@ -43,7 +43,7 @@ function showToast(message, type = 'info') {
  * @param {string} operationId The ID of the background operation.
  */
 async function pollStopAllStatus(operationId) {
-    const maxAttempts = 60; // Max 60 seconds of polling
+    const maxAttempts = 180; // Max 180 seconds of polling
     let attempts = 0;
 
     showLoader('Stopping containers: Awaiting progress...');
