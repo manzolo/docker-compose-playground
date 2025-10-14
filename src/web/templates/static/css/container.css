@@ -1,0 +1,139 @@
+.containers-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.container-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ========================================
+   ENHANCED CONTAINER TAGS (Clickable)
+   ======================================== */
+
+.container-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 2px solid #e2e8f0;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.container-tag:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.container-tag:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+}
+
+/* Hover effect - show "click to filter" */
+.container-tag::after {
+    content: '🔍';
+    position: absolute;
+    right: -24px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.container-tag:hover::after {
+    opacity: 1;
+    right: -28px;
+}
+
+/* Status indicator dot */
+.container-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* Running state */
+.container-tag[data-running="true"] .container-status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.container-tag[data-running="true"] {
+    border-color: #d1fae5;
+    background: #f0fdf4;
+}
+
+.container-tag[data-running="true"]:hover {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+/* Stopped state */
+.container-tag[data-running="false"] .container-status-dot {
+    background: #94a3b8;
+}
+
+.container-tag[data-running="false"] {
+    opacity: 0.8;
+}
+
+/* Pulse animation for running containers */
+@keyframes pulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(0.9);
+    }
+}
+
+/* Add a subtle glow on hover */
+.container-tag:hover .container-status-dot {
+    filter: brightness(1.2);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+    .container-tag::after {
+        display: none; /* Hide the search icon on mobile */
+    }
+    
+    .container-tag {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+
+/* Loading state (optional) */
+.container-tag.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.container-tag.loading .container-status-dot {
+    background: #f59e0b;
+    animation: pulse 1s ease-in-out infinite;
+}

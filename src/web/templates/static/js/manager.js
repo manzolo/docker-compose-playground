@@ -598,3 +598,237 @@ window.addEventListener('beforeunload', () => {
         systemInfoInterval = null;
     }
 });
+
+// Start group from manage page
+async function startGroupFromManage(groupName) {
+    try {
+        const confirmed = await showConfirmModal(
+            'Start Application Stack',
+            `Start all containers in <strong>${groupName}</strong>?`,
+            'success'
+        );
+        if (!confirmed) return;
+
+        pauseSystemInfoUpdates();
+        showLoader(`Initiating start for '${groupName}'...`);
+        showToast(`Starting ${groupName}...`, 'info');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(`/api/start-group/${encodeURIComponent(groupName)}`, { 
+            method: 'POST',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Use the same polling function from app.js
+            pollStartGroupStatusManager(data.operation_id, groupName);
+        } else {
+            showToast(data.detail || 'Failed to start stack', 'error');
+            hideLoader();
+            resumeSystemInfoUpdates();
+        }
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            showToast('Request timed out', 'warning');
+        } else {
+            showToast(`Error: ${e.message}`, 'error');
+        }
+        hideLoader();
+        resumeSystemInfoUpdates();
+    }
+}
+
+/**
+ * Poll start group status from manager page
+ */
+async function pollStartGroupStatusManager(operationId, groupName) {
+    const maxAttempts = 180;
+    let attempts = 0;
+
+    const poll = async () => {
+        try {
+            const response = await fetch(`/api/operation-status/${operationId}`);
+            const statusData = await response.json();
+
+            const total = statusData.total || '?';
+            const started = statusData.started || 0;
+            const alreadyRunning = statusData.already_running || 0;
+            const failed = statusData.failed || 0;
+            const completed = started + alreadyRunning + failed;
+            
+            showLoader(
+                `Starting '${groupName}': ${completed}/${total} | ` +
+                `✓ ${started}, ⚡ ${alreadyRunning}, ✗ ${failed}`
+            );
+
+            if (statusData.status === 'completed') {
+                let message = `Stack '${groupName}': `;
+                let details = [];
+                if (started > 0) details.push(`${started} started`);
+                if (alreadyRunning > 0) details.push(`${alreadyRunning} running`);
+                if (failed > 0) details.push(`${failed} failed`);
+                message += details.join(', ');
+                
+                showToast(message, failed > 0 ? 'warning' : 'success');
+                hideLoader();
+                resumeSystemInfoUpdates();
+                return;
+            }
+
+            if (statusData.status === 'error') {
+                showToast(`Start failed: ${statusData.error}`, 'error');
+                hideLoader();
+                resumeSystemInfoUpdates();
+                return;
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Operation timed out. Check status manually.', 'warning');
+                hideLoader();
+                resumeSystemInfoUpdates();
+            }
+
+        } catch (e) {
+            console.error('Polling error:', e);
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Polling failed', 'error');
+                hideLoader();
+                resumeSystemInfoUpdates();
+            }
+        }
+    };
+
+    poll();
+}
+
+// Stop group from manage page
+async function stopGroupFromManage(groupName) {
+    try {
+        const confirmed = await showConfirmModal(
+            'Stop Application Stack',
+            `Stop all containers in <strong>${groupName}</strong>?`,
+            'warning'
+        );
+        if (!confirmed) return;
+
+        pauseSystemInfoUpdates();
+        showLoader(`Initiating stop for '${groupName}'...`);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(`/api/stop-group/${encodeURIComponent(groupName)}`, { 
+            method: 'POST',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Start polling
+            pollStopGroupStatusManager(data.operation_id, groupName);
+        } else {
+            showToast(data.detail || 'Failed to stop stack', 'error');
+            hideLoader();
+            resumeSystemInfoUpdates();
+        }
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            showToast('Request timed out', 'warning');
+        } else {
+            showToast(`Error: ${e.message}`, 'error');
+        }
+        hideLoader();
+        resumeSystemInfoUpdates();
+    }
+}
+
+/**
+ * Poll stop group status from manager page
+ */
+async function pollStopGroupStatusManager(operationId, groupName) {
+    const maxAttempts = 180;
+    let attempts = 0;
+
+    const poll = async () => {
+        try {
+            const response = await fetch(`/api/operation-status/${operationId}`);
+            const statusData = await response.json();
+
+            // Default values to handle incomplete status data
+            const total = statusData.total || 0;
+            const stopped = statusData.stopped || 0;
+            const notRunning = statusData.not_running || 0;
+            const failed = statusData.failed || 0;
+            const completed = stopped + notRunning + failed;
+            
+            showLoader(
+                `Stopping '${groupName}': ${completed}/${total} | ` +
+                `⏹ ${stopped}, ⏸ ${notRunning}, ✗ ${failed}`
+            );
+
+            if (statusData.status === 'completed') {
+                let message = `Stack '${groupName}': `;
+                let details = [];
+                if (stopped > 0) details.push(`${stopped} stopped`);
+                if (notRunning > 0) details.push(`${notRunning} not running`);
+                if (failed > 0) details.push(`${failed} failed`);
+                
+                if (details.length > 0) {
+                    message += details.join(', ');
+                }
+                
+                showToast(message, failed > 0 ? 'warning' : 'success');
+                hideLoader();
+                resumeSystemInfoUpdates();
+                return;
+            }
+
+            if (statusData.status === 'error') {
+                showToast(`Stop failed: ${statusData.error || 'Unknown error'}`, 'error');
+                hideLoader();
+                resumeSystemInfoUpdates();
+                return;
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Operation timed out. Check status manually.', 'warning');
+                hideLoader();
+                resumeSystemInfoUpdates();
+            }
+
+        } catch (e) {
+            console.error('Polling error:', e);
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            } else {
+                showToast('Polling failed', 'error');
+                hideLoader();
+                resumeSystemInfoUpdates();
+            }
+        }
+    };
+
+    poll();
+}
+
+// View group - redirect to main page with group filter
+function viewGroup(groupName) {
+    window.location.href = `/?group=${encodeURIComponent(groupName)}`;
+}

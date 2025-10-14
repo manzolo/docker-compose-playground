@@ -1,0 +1,125 @@
+
+/* ========================================
+   GROUPS SECTION STYLES
+   ======================================== */
+
+.groups-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.group-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 2px solid #e0f2fe;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    border-color: #0ea5e9;
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.group-title-area {
+    flex: 1;
+}
+
+.group-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #0369a1;
+    margin: 0 0 8px 0;
+}
+
+.group-badge {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.group-category-badge {
+    flex-shrink: 0;
+}
+
+.group-description {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.group-containers {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.group-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.group-start-btn {
+    flex: 1;
+}
+
+.group-stop-btn {
+    padding: 10px 16px;
+}
+
+.group-source {
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.group-source small {
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .groups-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .group-actions {
+        flex-direction: column;
+    }
+    
+    .group-stop-btn {
+        width: 100%;
+    }
+}

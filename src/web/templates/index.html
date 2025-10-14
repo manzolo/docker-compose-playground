@@ -4,12 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>🐳 Docker Playground Dashboard</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/modal.css">
+    <link rel="stylesheet" href="/static/css/container.css">
+    <link rel="stylesheet" href="/static/css/search.css">
+    <link rel="stylesheet" href="/static/css/groups.css">
 </head>
 
 <body>
@@ -41,6 +43,9 @@
             <div class="search-section">
                 <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
                 <span class="search-count" id="search-count"></span>
+                <button class="search-clear-btn" id="search-clear" onclick="clearSearch()" title="Clear search">
+                    ✕
+                </button>
             </div>
 
             <div class="filter-buttons">
@@ -77,6 +82,57 @@
 
     <!-- Container Grid -->
     <div class="container">
+        <!-- Groups Section -->
+        {% if groups %}
+        <div class="groups-section">
+            <h2 class="section-title">🚀 Application Stacks</h2>
+            <div class="groups-grid">
+                {% for group_name, group in groups.items() %}
+                <div class="group-card" data-group="{{ group_name }}">
+                    <div class="group-header">
+                        <div class="group-title-area">
+                            <h3 class="group-title">{{ group.name }}</h3>
+                            <span class="group-badge">{{ group.containers|length }} containers</span>
+                        </div>
+                        <span class="group-category-badge badge badge-{{ group.category }}">
+                            {{ group.category }}
+                        </span>
+                    </div>
+
+                    <p class="group-description">{{ group.description }}</p>
+
+                    <div class="group-containers">
+                        <span class="containers-label">Containers:</span>
+                        <div class="container-tags">
+                            {% for container in group.containers %}
+                            <span class="container-tag" data-container="{{ container }}">
+                                <span class="container-status-dot"></span>
+                                {{ container }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="group-actions">
+                        <button onclick="startGroup('{{ group_name }}')"
+                            class="btn btn-success btn-block group-start-btn">
+                            <span class="btn-icon">🚀</span> Start Stack
+                        </button>
+                        <button onclick="stopGroup('{{ group_name }}')" class="btn btn-danger btn-sm group-stop-btn">
+                            <span class="btn-icon">⏹</span> Stop All
+                        </button>
+                    </div>
+
+                    {% if group.source %}
+                    <div class="group-source">
+                        <small>Source: {{ group.source }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         <div id="images" class="image-grid">
             {% for name, data in images.items() %}
             <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
