@@ -126,7 +126,7 @@ images:
           
           # Create auto-login config
           docker exec "${CONTAINER_NAME}" sh -c '
-          cat > /etc/phpmyadmin-stack/config.user.inc.php << "PHP"
+          cat > /etc/phpmyadmin/config.user.inc.php << "PHP"
           <?php
           /* Auto-login configuration */
           $cfg["Servers"][$i]["auth_type"] = "config";
