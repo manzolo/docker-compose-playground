@@ -306,6 +306,7 @@ main() {
     parse_arguments "$@"
     # Pulisci i log all'inizio
     rm -f "$LOG_FILE" "$ERROR_LOG_FILE" "$JSON_LOG_FILE"
+    mkdir -p "$PROJECT_DIR/venv"
     trap cleanup SIGINT SIGTERM
     setup_logging
     show_environment
