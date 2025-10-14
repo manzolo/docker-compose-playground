@@ -11,11 +11,6 @@ echo "Waiting for PostgreSQL to accept connections..."
 MAX_WAIT=30
 COUNT=0
 
-<<<<<<< Updated upstream
-# Create example table
-docker exec "$CONTAINER_NAME" psql -U playground -d playground -c "
-CREATE TABLE IF NOT EXISTS playground_info (
-=======
 while [ $COUNT -lt $MAX_WAIT ]; do
     if docker exec "${CONTAINER_NAME}" pg_isready -U playground -d playground &>/dev/null; then
         echo "PostgreSQL is ready!"
@@ -26,11 +21,11 @@ while [ $COUNT -lt $MAX_WAIT ]; do
 done
 
 if [ $COUNT -ge $MAX_WAIT ]; then
-    echo "Warning: PostgreSQL may not be ready"
+    echo "Error: PostgreSQL is not ready after ${MAX_WAIT} seconds"
     exit 1
 fi
 
-# Create extension and sample schema
+# Create extension, schema, and sample table
 docker exec "${CONTAINER_NAME}" psql -U playground -d playground -c "
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 CREATE SCHEMA IF NOT EXISTS playground;
@@ -38,7 +33,6 @@ SET search_path TO playground, public;
 
 -- Sample table
 CREATE TABLE IF NOT EXISTS playground.welcome (
->>>>>>> Stashed changes
     id SERIAL PRIMARY KEY,
     message TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -52,8 +46,10 @@ ON CONFLICT DO NOTHING;
 
 if [ $? -eq 0 ]; then
     echo "✓ PostgreSQL initialization complete!"
+    echo "✓ Created extension: pg_stat_statements"
     echo "✓ Created schema: playground"
-    echo "✓ Created sample table: welcome"
+    echo "✓ Created sample table: playground.welcome"
 else
-    echo "⚠ PostgreSQL initialization had some errors"
+    echo "⚠ PostgreSQL initialization failed"
+    exit 1
 fi
