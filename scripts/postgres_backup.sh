@@ -5,7 +5,7 @@ CONTAINER_NAME="$1"
 IMAGE_NAME="${CONTAINER_NAME#playground-}"
 SHARED_DIR="${SHARED_DIR:-./shared-volumes}"
 BACKUP_BASE="${SHARED_DIR}/backups"
-BACKUP_DIR="${BACKUP_BASE}/postgres"
+BACKUP_DIR="${BACKUP_BASE}/${CONTAINER_NAME#playground-}"
 
 echo "💾 Backing up PostgreSQL from ${CONTAINER_NAME}..."
 
