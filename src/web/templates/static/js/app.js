@@ -713,10 +713,13 @@ async function pollStartGroupStatus(operationId, groupName) {
                 if (failed > 0) details.push(`${failed} failed`);
                 message += details.join(', ');
                 
-                // Show appropriate toast
+                // Show appropriate toast and errors if any
                 if (failed > 0) {
                     showToast(message, 'warning');
-                    console.warn('Start group errors:', statusData.errors);
+                    // Show detailed errors as sequential toasts
+                    if (statusData.errors && statusData.errors.length > 0) {
+                        showErrorsAsToasts(statusData.errors, `Errors in group '${groupName}':`);
+                    }
                 } else {
                     showToast(message, 'success');
                 }
@@ -724,7 +727,7 @@ async function pollStartGroupStatus(operationId, groupName) {
                 // Reload page after delay
                 setTimeout(() => {
                     location.reload();
-                }, 2000);
+                }, 5000);
                 return;
             }
 
@@ -757,6 +760,23 @@ async function pollStartGroupStatus(operationId, groupName) {
 
     // Start polling
     poll();
+}
+
+/**
+ * Show errors as sequential toast messages
+ */
+function showErrorsAsToasts(errors, baseMessage = 'Errors:') {
+    if (!errors || errors.length === 0) return;
+    
+    // First show the base message
+    showToast(baseMessage, 'warning');
+    
+    // Then show each error as separate toast after a short delay
+    errors.forEach((error, index) => {
+        setTimeout(() => {
+            showToast(`Error: ${error}`, 'error');
+        }, (index + 1) * 800); // 800ms delay between toasts
+    });
 }
 
 /**

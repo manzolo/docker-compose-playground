@@ -672,16 +672,24 @@ async function pollStartGroupStatusManager(operationId, groupName) {
                 if (started > 0) details.push(`${started} started`);
                 if (alreadyRunning > 0) details.push(`${alreadyRunning} running`);
                 if (failed > 0) details.push(`${failed} failed`);
+                
                 message += details.join(', ');
                 
-                showToast(message, failed > 0 ? 'warning' : 'success');
+                // Mostra errori dettagliati se presenti
+                if (statusData.errors && statusData.errors.length > 0) {
+                    showErrorsAsToasts(statusData.errors, message, failed > 0 ? 'warning' : 'success');
+                } else {
+                    showToast(message, failed > 0 ? 'warning' : 'success');
+                }
+                
                 hideLoader();
                 resumeSystemInfoUpdates();
                 return;
             }
 
             if (statusData.status === 'error') {
-                showToast(`Start failed: ${statusData.error}`, 'error');
+                const errorMessage = statusData.error || 'Unknown error occurred';
+                showToast(`Start failed: ${errorMessage}`, 'error');
                 hideLoader();
                 resumeSystemInfoUpdates();
                 return;
@@ -710,6 +718,23 @@ async function pollStartGroupStatusManager(operationId, groupName) {
     };
 
     poll();
+}
+
+/**
+ * Show errors as sequential toast messages
+ */
+function showErrorsAsToasts(errors, baseMessage, baseType = 'warning') {
+    if (!errors || errors.length === 0) return;
+    
+    // First show the base message
+    showToast(baseMessage, baseType);
+    
+    // Then show each error as separate toast after a short delay
+    errors.forEach((error, index) => {
+        setTimeout(() => {
+            showToast(`Error: ${error}`, 'error');
+        }, (index + 1) * 800); // 800ms delay between toasts
+    });
 }
 
 // Stop group from manage page

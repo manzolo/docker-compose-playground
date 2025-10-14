@@ -2,7 +2,8 @@
 docker-compose.yml
 
 # Shared volume directory
-shared-volumes/
+shared-volumes/*
+!shared-volumes/.gitkeep
 
 # Log files
 playground.log
@@ -27,3 +28,4 @@ venv.log
 # User custom configurations
 custom.d/*.yml
 !custom.d/.gitkeep
+

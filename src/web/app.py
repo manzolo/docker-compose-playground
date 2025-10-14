@@ -17,6 +17,7 @@ import json
 import concurrent.futures
 import time
 import uuid
+import socket
 
 # Configura logging
 logging.basicConfig(
@@ -40,6 +41,64 @@ SHARED_DIR = Path(__file__).parent.parent.parent / "shared-volumes"
 NETWORK_NAME = "playground-network"
 
 active_operations: Dict[str, dict] = {}
+
+def check_port_available(port: int) -> tuple[bool, str]:
+    """
+    Check if a port is available on the host
+    Returns: (is_available, used_by_container_name)
+    """
+    try:
+        # Check if port is used by any container
+        all_containers = docker_client.containers.list(all=True)
+        for container in all_containers:
+            ports = container.attrs.get('NetworkSettings', {}).get('Ports', {})
+            if ports:
+                for container_port, bindings in ports.items():
+                    if bindings:
+                        for binding in bindings:
+                            if binding and binding.get('HostPort') == str(port):
+                                return False, container.name
+        
+        # Also check if port is used by host system
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(('0.0.0.0', port))
+        sock.close()
+        
+        if result == 0:
+            return False, "host system"
+        
+        return True, ""
+    except Exception as e:
+        logger.warning("Error checking port %d: %s", port, str(e))
+        return True, ""  # Assume available if check fails
+
+
+def validate_ports_available(img_data: dict, container_name: str) -> tuple[bool, list]:
+    """
+    Validate all ports are available for a container
+    Returns: (all_available, list_of_conflicts)
+    """
+    conflicts = []
+    ports = img_data.get("ports", [])
+    
+    for port_mapping in ports:
+        try:
+            host_port, container_port = port_mapping.split(":")
+            host_port = int(host_port)
+            
+            is_available, used_by = check_port_available(host_port)
+            if not is_available:
+                conflicts.append({
+                    "host_port": host_port,
+                    "container_port": container_port,
+                    "used_by": used_by
+                })
+        except ValueError:
+            logger.warning("Invalid port mapping: %s", port_mapping)
+    
+    return len(conflicts) == 0, conflicts
 
 # Create playground network if not exists
 def ensure_network():
@@ -70,19 +129,19 @@ def load_config():
             group_name = config["group"].get("name", f"group_{len(groups)}")
             groups[group_name] = config["group"]
             groups[group_name]["source"] = source_name
-            logger.info("Loaded group '%s' from %s", group_name, source_name)
+            logger.debug("Loaded group '%s' from %s", group_name, source_name)
         
         # Load images - support both "images:" key and direct container keys
         if "images" in config and isinstance(config["images"], dict):
             # New structure: images: { container1: {...}, container2: {...} }
             images.update(config["images"])
-            logger.info("Loaded %d images from 'images' key in %s", len(config["images"]), source_name)
+            logger.debug("Loaded %d images from 'images' key in %s", len(config["images"]), source_name)
         else:
             # Old structure: direct container keys (skip 'group' key)
             for key, value in config.items():
                 if key != "group" and isinstance(value, dict) and "image" in value:
                     images[key] = value
-            logger.info("Loaded images from direct keys in %s", source_name)
+            logger.debug("Loaded images from direct keys in %s", source_name)
     
     # 1. Load from config.yml
     if CONFIG_FILE.exists():
@@ -365,6 +424,22 @@ async def start_group_background(operation_id: str, group_name: str, containers:
             # Get container config
             img_data = images[container_name]
             
+            # *** Check if ports are available ***
+            ports_available, conflicts = validate_ports_available(img_data, container_name)
+            if not ports_available:
+                conflict_details = ", ".join([
+                    f"port {c['host_port']} (used by {c['used_by']})" 
+                    for c in conflicts
+                ])
+                error_msg = f"Port conflict: {conflict_details}"
+                logger.error("%s: %s", container_name, error_msg)
+                return {
+                    "status": "failed", 
+                    "name": container_name, 
+                    "error": error_msg,
+                    "conflicts": conflicts
+                }
+            
             # Ensure network exists
             ensure_network()
             
@@ -445,6 +520,7 @@ async def start_group_background(operation_id: str, group_name: str, containers:
             logger.error("%s: %s", container_name, error_msg)
             return {"status": "failed", "name": container_name, "error": error_msg}
     
+    # *** QUESTA È LA PARTE CHE MANCAVA - IL LOOP CHE PROCESSA I CONTAINER ***
     try:
         loop = asyncio.get_event_loop()
         
@@ -730,6 +806,16 @@ async def start_container(image: str):
     container_name = f"playground-{image}"
     
     try:
+        # *** NEW: Check ports availability FIRST ***
+        ports_available, conflicts = validate_ports_available(img_data, container_name)
+        if not ports_available:
+            conflict_msg = "; ".join([
+                f"Port {c['host_port']} is already used by {c['used_by']}"
+                for c in conflicts
+            ])
+            logger.error("Port conflict for %s: %s", image, conflict_msg)
+            raise HTTPException(409, f"Port conflict: {conflict_msg}")
+        
         # Ensure network exists
         ensure_network()
         
@@ -767,19 +853,18 @@ async def start_container(image: str):
         logger.info("Container created: %s", container.name)
         
         # Wait for container to be running (with timeout)
-        max_wait = 30  # 30 seconds max
-        wait_interval = 0.5  # Check every 500ms
+        max_wait = 30
+        wait_interval = 0.5
         elapsed = 0
         
         while elapsed < max_wait:
             try:
-                container.reload()  # Refresh container state
+                container.reload()
                 if container.status == "running":
                     logger.info("Container %s is now running after %.1fs", container_name, elapsed)
                     break
                 elif container.status in ["exited", "dead"]:
                     logger.error("Container %s failed to start: %s", container_name, container.status)
-                    # Get logs for debugging
                     logs = container.logs(tail=50).decode('utf-8', errors='replace')
                     logger.error("Container logs: %s", logs)
                     raise HTTPException(500, f"Container failed to start: {container.status}")
@@ -801,7 +886,6 @@ async def start_container(image: str):
         scripts = img_data.get('scripts', {})
         if 'post_start' in scripts:
             logger.info("Scheduling post-start script for %s", image)
-            # Run in background
             asyncio.create_task(run_script_async(scripts['post_start'], container_name, image))
         
         return {
@@ -816,10 +900,12 @@ async def start_container(image: str):
     except docker.errors.APIError as e:
         logger.error("Docker API error starting %s: %s", image, str(e))
         raise HTTPException(500, f"Docker error: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Failed to start %s: %s", image, str(e))
         raise HTTPException(500, str(e))
-
+    
 @app.post("/stop/{container}")
 async def stop_container(container: str):
     logger.info("Stopping container: %s", container)
