@@ -72,12 +72,23 @@ function validateCurrentStep() {
             input.classList.add('error');
             isValid = false;
         } else {
-            input.classList.remove('error');
+            // Validazione specifica per containerName
+            if (input.id === 'containerName') {
+                if (!/^[a-z0-9\-\.]+$/.test(input.value.trim())) {
+                    input.classList.add('error');
+                    isValid = false;
+                    showToast('Container name can only contain lowercase letters, numbers, hyphens, and dots', 'error');
+                } else {
+                    input.classList.remove('error');
+                }
+            } else {
+                input.classList.remove('error');
+            }
         }
     });
     
-    if (!isValid) {
-        showToast('Please fill in all required fields', 'error');
+    if (!isValid && currentStep === 1) {
+        showToast('Please fill in all required fields with valid values', 'error');
     }
     
     return isValid;
@@ -306,7 +317,8 @@ function formatAsYAML(obj) {
 document.getElementById('addContainerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    if (!validateCurrentStep()) {
+    // VALIDA TUTTI GLI STEP invece di solo quello corrente
+    if (!validateAllSteps()) {
         return;
     }
     
@@ -361,6 +373,51 @@ document.getElementById('addContainerForm').addEventListener('submit', async (e)
         hideLoader();
     }
 });
+
+function validateAllSteps() {
+    let isValid = true;
+    const errors = [];
+    
+    // Step 1
+    const imageName = document.getElementById('imageName').value.trim();
+    const containerName = document.getElementById('containerName').value.trim();
+    const description = document.getElementById('description').value.trim();
+    
+    if (!imageName) errors.push('Docker Image is required');
+    if (!containerName) errors.push('Container Name is required');
+    if (!description) errors.push('Description is required');
+    
+    // MODIFICA QUESTA RIGA - aggiungi \. al pattern
+    if (!/^[a-z0-9\-\.]+$/.test(containerName)) {
+        errors.push('Container name can only contain lowercase letters, numbers, hyphens, and dots');
+    }
+    
+    // Step 2
+    const category = document.getElementById('categoryNew').value.trim() || 
+                     document.getElementById('categorySelect').value;
+    if (!category) errors.push('Category is required');
+    
+    // Step 3
+    const shell = document.getElementById('shell').value;
+    if (!shell) errors.push('Shell is required');
+    
+    if (errors.length > 0) {
+        errors.forEach(error => showToast(error, 'error'));
+        isValid = false;
+        
+        // Vai al primo step con errori
+        if (!imageName || !containerName || !description) {
+            currentStep = 1;
+        } else if (!category) {
+            currentStep = 2;
+        } else {
+            currentStep = 3;
+        }
+        updateStepDisplay();
+    }
+    
+    return isValid;
+}
 
 // Initialize
 updateStepDisplay();

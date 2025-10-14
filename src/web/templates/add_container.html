@@ -37,7 +37,7 @@
     <div class="container">
         <!-- Add Container Form -->
         <div class="form-container">
-            <form id="addContainerForm">
+            <form id="addContainerForm" novalidate>
                 
                 <!-- Step Indicator -->
                 <div class="step-indicator">
@@ -80,7 +80,7 @@
                             <span class="field-hint">Unique identifier (lowercase, no spaces)</span>
                         </label>
                         <input type="text" id="containerName" name="name" required 
-                               placeholder="my-nginx" pattern="[a-z0-9\-]+" autocomplete="off">
+                               placeholder="my-nginx" pattern="[a-z0-9\-\.]+" autocomplete="off">
                     </div>
 
                     <div class="form-group">

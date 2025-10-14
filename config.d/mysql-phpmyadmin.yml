@@ -1,0 +1,157 @@
+# Metadati del gruppo
+group:
+  name: "MySQL-Stack"
+  description: "MySQL 8 database with phpmyadmin-stack web interface"
+  category: database
+  containers: 
+    - mysql-8-stack
+    - phpmyadmin-stack
+
+# Configurazioni dei container
+images:
+  mysql-8-stack:
+    category: database
+    description: MySQL 8 Database Server
+    image: mysql:8
+    keep_alive_cmd: mysqld
+    shell: /bin/bash
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_DATABASE: playground
+      MYSQL_ROOT_PASSWORD: playground
+      MYSQL_USER: playground
+      MYSQL_PASSWORD: playground
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Initializing MySQL..."
+          
+          # Wait for MySQL
+          MAX_WAIT=60
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER_NAME}" mysqladmin ping -u root -pplayground --silent 2>/dev/null; then
+              echo "✓ MySQL is ready!"
+              break
+            fi
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          
+          sleep 5
+          
+          # Create tables and insert data
+          docker exec "${CONTAINER_NAME}" mysql -u root -pplayground playground -e "
+          CREATE TABLE IF NOT EXISTS users (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              username VARCHAR(50) UNIQUE NOT NULL,
+              email VARCHAR(100),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS products (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              name VARCHAR(100) NOT NULL,
+              price DECIMAL(10,2),
+              category VARCHAR(50)
+          );
+          
+          INSERT INTO users (username, email) VALUES 
+            ('admin', 'admin@playground.local'),
+            ('user1', 'user1@example.com')
+          ON DUPLICATE KEY UPDATE username=username;
+          
+          INSERT INTO products (name, price, category) VALUES 
+            ('Laptop', 999.99, 'Electronics'),
+            ('Mouse', 29.99, 'Electronics')
+          ON DUPLICATE KEY UPDATE name=name;
+          " 2>/dev/null
+          
+          echo "✓ MySQL initialized"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          mkdir -p "${BACKUP_DIR}"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          docker exec "${CONTAINER_NAME}" mysqldump -u root -pplayground playground > "${BACKUP_DIR}/mysql_${TIMESTAMP}.sql" 2>/dev/null
+          gzip "${BACKUP_DIR}/mysql_${TIMESTAMP}.sql"
+          echo "✓ Backup created"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                MySQL 8 Database Server                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection:
+         Host: mysql-8-stack or localhost
+         Port: 3306
+         User: root / playground
+         Password: playground
+         Database: playground
+      
+      📊 Quick Commands:
+         mysql -u root -pplayground playground
+         SHOW TABLES;
+         SELECT * FROM users;
+      
+      🌐 phpmyadmin-stack: http://localhost:8088
+
+  phpmyadmin-stack:
+    category: database
+    description: phpmyadmin-stack - MySQL Web Interface
+    image: phpmyadmin:latest
+    keep_alive_cmd: /docker-entrypoint.sh apache2-foreground
+    shell: /bin/bash
+    ports:
+      - "8088:80"
+    environment:
+      PMA_HOST: mysql-8-stack
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: playground
+      MYSQL_ROOT_PASSWORD: playground
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Configuring phpmyadmin-stack auto-login..."
+          
+          # Wait for phpmyadmin-stack
+          sleep 5
+          
+          # Create auto-login config
+          docker exec "${CONTAINER_NAME}" sh -c '
+          cat > /etc/phpmyadmin-stack/config.user.inc.php << "PHP"
+          <?php
+          /* Auto-login configuration */
+          $cfg["Servers"][$i]["auth_type"] = "config";
+          $cfg["Servers"][$i]["user"] = "root";
+          $cfg["Servers"][$i]["password"] = "playground";
+          $cfg["Servers"][$i]["AllowNoPassword"] = true;
+          
+          /* Disable login cookie expiration warnings */
+          $cfg["LoginCookieValidity"] = 86400;
+          
+          /* Set default database */
+          $cfg["Servers"][$i]["only_db"] = "";
+          ?>
+          PHP
+          '
+          
+          echo "✓ phpmyadmin-stack ready at http://localhost:8088"
+          echo "✓ Auto-login enabled (root/playground)"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              phpmyadmin-stack - Web Interface                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 Access: http://localhost:8088
+      🔐 Auto-login: Enabled (root user)
+      
+      💡 Just open the URL - no login required!

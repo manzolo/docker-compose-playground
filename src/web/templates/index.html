@@ -4,12 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>🐳 Docker Playground Dashboard</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/modal.css">
+    <link rel="stylesheet" href="/static/css/container.css">
+    <link rel="stylesheet" href="/static/css/search.css">
+    <link rel="stylesheet" href="/static/css/groups.css">
 </head>
 
 <body>
@@ -41,25 +43,28 @@
             <div class="search-section">
                 <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
                 <span class="search-count" id="search-count"></span>
+                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()" title="Clear search">
+                    ✕
+                </button>
             </div>
 
             <div class="filter-buttons">
-                <button class="filter-btn active" data-filter="all" onclick="filterByStatus('all')">
+                <button class="filter-btn active" data-filter="all" onclick="FilterManager.filterByStatus('all')">
                     <span class="filter-icon">📦</span> All
                     <span class="filter-badge" id="count-all">0</span>
                 </button>
-                <button class="filter-btn" data-filter="running" onclick="filterByStatus('running')">
+                <button class="filter-btn" data-filter="running" onclick="FilterManager.filterByStatus('running')">
                     <span class="filter-icon">▶</span> Running
                     <span class="filter-badge badge-success" id="count-running">0</span>
                 </button>
-                <button class="filter-btn" data-filter="stopped" onclick="filterByStatus('stopped')">
+                <button class="filter-btn" data-filter="stopped" onclick="FilterManager.filterByStatus('stopped')">
                     <span class="filter-icon">⏹</span> Stopped
                     <span class="filter-badge badge-secondary" id="count-stopped">0</span>
                 </button>
             </div>
 
             <div class="category-filter">
-                <select id="category-filter" onchange="filterByCategory(this.value)">
+                <select id="category-filter" onchange="FilterManager.filterByCategory(this.value)">
                     <option value="">All Categories</option>
                     {% for category in categories %}
                     <option value="{{ category }}">{{ category|title }} ({{ category_counts[category] }})</option>
@@ -68,7 +73,7 @@
             </div>
 
             <div class="bulk-actions">
-                <button class="btn btn-sm btn-danger" onclick="stopAllRunning()" title="Stop all running containers">
+                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()" title="Stop all running containers">
                     <span class="btn-icon">⏹</span> Stop All
                 </button>
             </div>
@@ -77,6 +82,57 @@
 
     <!-- Container Grid -->
     <div class="container">
+        <!-- Groups Section -->
+        {% if groups %}
+        <div class="groups-section">
+            <h2 class="section-title">🚀 Application Stacks</h2>
+            <div class="groups-grid">
+                {% for group_name, group in groups.items() %}
+                <div class="group-card" data-group="{{ group_name }}">
+                    <div class="group-header">
+                        <div class="group-title-area">
+                            <h3 class="group-title">{{ group.name }}</h3>
+                            <span class="group-badge">{{ group.containers|length }} containers</span>
+                        </div>
+                        <span class="group-category-badge badge badge-{{ group.category }}">
+                            {{ group.category }}
+                        </span>
+                    </div>
+
+                    <p class="group-description">{{ group.description }}</p>
+
+                    <div class="group-containers">
+                        <span class="containers-label">Containers:</span>
+                        <div class="container-tags">
+                            {% for container in group.containers %}
+                            <span class="container-tag" data-container="{{ container }}">
+                                <span class="container-status-dot"></span>
+                                {{ container }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="group-actions">
+                        <button onclick="GroupManager.startGroup('{{ group_name }}')"
+                            class="btn btn-success btn-block group-start-btn">
+                            <span class="btn-icon">🚀</span> Start Stack
+                        </button>
+                        <button onclick="GroupManager.stopGroup('{{ group_name }}')" class="btn btn-danger btn-sm group-stop-btn">
+                            <span class="btn-icon">⏹</span> Stop All
+                        </button>
+                    </div>
+
+                    {% if group.source %}
+                    <div class="group-source">
+                        <small>Source: {{ group.source }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         <div id="images" class="image-grid">
             {% for name, data in images.items() %}
             <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
@@ -114,17 +170,17 @@
 
                 <div class="card-actions">
                     {% if running.get(name) %}
-                    <button class="btn btn-danger" onclick="stopContainer('{{ name }}', '{{ running[name].name }}')">
+                    <button class="btn btn-danger" onclick="ContainerManager.stopContainer('{{ name }}', '{{ running[name].name }}')">
                         <span class="btn-icon">⏹</span> Stop
                     </button>
                     <button class="btn btn-primary" onclick="showLogs('{{ running[name].name }}')">
                         <span class="btn-icon">📋</span> Logs
                     </button>
-                    <button class="btn btn-success" onclick="openConsole('{{ running[name].name }}', '{{ name }}')">
+                    <button class="btn btn-success" onclick="ConsoleManager.open('{{ running[name].name }}', '{{ name }}')">
                         <span class="btn-icon">💻</span> Console
                     </button>
                     {% else %}
-                    <button class="btn btn-success btn-block" onclick="startContainer('{{ name }}')">
+                    <button class="btn btn-success btn-block" onclick="ContainerManager.startContainer('{{ name }}')">
                         <span class="btn-icon">▶</span> Start Container
                     </button>
                     {% endif %}
@@ -156,11 +212,11 @@
 
     <!-- Modal for Console -->
     <div id="consoleModal" class="modal">
-        <div class="modal-overlay" onclick="closeConsole()"></div>
+        <div class="modal-overlay" onclick="ConsoleManager.close()"></div>
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>💻 Interactive Console</h2>
-                <button class="modal-close" onclick="closeConsole()">&times;</button>
+                <button class="modal-close" onclick="ConsoleManager.close()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="console-info">
@@ -170,7 +226,7 @@
                 <div id="terminal" class="terminal-wrapper"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-danger" onclick="closeConsole()">Disconnect</button>
+                <button class="btn btn-danger" onclick="ConsoleManager.close()">Disconnect</button>
             </div>
         </div>
     </div>
