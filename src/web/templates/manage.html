@@ -71,25 +71,25 @@
         <div class="manager-section">
             <h2>🚀 Bulk Operations</h2>
             <div class="action-grid">
-                <button class="action-card" onclick="startByCategory()">
+                <button class="action-card" onclick="CategoryOperations.startByCategory()">
                     <span class="action-icon">▶</span>
                     <h3>Start by Category</h3>
                     <p>Start multiple containers from a specific category</p>
                 </button>
 
-                <button class="action-card action-danger" onclick="stopAll()">
+                <button class="action-card action-danger" onclick="OperationHandlers.stopAll()">
                     <span class="action-icon">⏹</span>
                     <h3>Stop All</h3>
                     <p>Stop all running containers at once</p>
                 </button>
 
-                <button class="action-card action-warning" onclick="restartAll()">
+                <button class="action-card action-warning" onclick="OperationHandlers.restartAll()">
                     <span class="action-icon">🔄</span>
                     <h3>Restart All</h3>
                     <p>Restart all running containers</p>
                 </button>
 
-                <button class="action-card action-danger" onclick="cleanupAll()">
+                <button class="action-card action-danger" onclick="OperationHandlers.cleanupAll()">
                     <span class="action-icon">🧹</span>
                     <h3>Cleanup All</h3>
                     <p>Stop and remove ALL containers</p>
@@ -141,10 +141,10 @@
                             <span class="category-count">{{ group.containers|length }} containers</span>
                         </div>
                         <div class="category-actions">
-                            <button class="btn btn-sm btn-success" onclick="startGroupFromManage('{{ group_name }}')">
+                            <button class="btn btn-sm btn-success" onclick="GroupOperations.startGroup('{{ group_name }}', true)">
                                 <span class="btn-icon">▶</span> Start Stack
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="stopGroupFromManage('{{ group_name }}')">
+                            <button class="btn btn-sm btn-danger" onclick="GroupOperations.stopGroup('{{ group_name }}', true)">
                                 <span class="btn-icon">⏹</span> Stop Stack
                             </button>
                             <button class="btn btn-sm btn-primary" onclick="viewGroup('{{ group_name }}')">
@@ -182,7 +182,7 @@
                             <span class="category-count">{{ count }} containers</span>
                         </div>
                         <div class="category-actions">
-                            <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); startCategory('{{ category }}')">
+                            <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); CategoryOperations.startCategory('{{ category }}')">
                                 <span class="btn-icon">▶</span> Start All
                             </button>
                             <button class="btn btn-sm btn-primary" onclick="viewCategory('{{ category }}')">
@@ -225,34 +225,34 @@
 
     <!-- Modal for Server Logs -->
     <div id="logModal" class="modal">
-        <div class="modal-overlay" onclick="closeModal('logModal')"></div>
+        <div class="modal-overlay" onclick="ModalManager.close('logModal')"></div>
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>📋 Server Logs</h2>
-                <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
+                <button class="modal-close" onclick="ModalManager.close('logModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <pre id="logContent" class="log-content"></pre>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('logModal')">Close</button>
+                <button class="btn btn-secondary" onclick="ModalManager.close('logModal')">Close</button>
             </div>
         </div>
     </div>
 
     <!-- Modal for Backups -->
     <div id="backupsModal" class="modal">
-        <div class="modal-overlay" onclick="closeModal('backupsModal')"></div>
+        <div class="modal-overlay" onclick="ModalManager.close('backupsModal')"></div>
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>💾 Manage Backups</h2>
-                <button class="modal-close" onclick="closeModal('backupsModal')">&times;</button>
+                <button class="modal-close" onclick="ModalManager.close('backupsModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="backupsList"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('backupsModal')">Close</button>
+                <button class="btn btn-secondary" onclick="ModalManager.close('backupsModal')">Close</button>
             </div>
         </div>
     </div>
