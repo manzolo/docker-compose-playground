@@ -29,8 +29,8 @@ const Constants = {
         MAX_ATTEMPTS: 180,
         INTERVAL: 1000,
         TIMEOUT: {
-            START: 35000,
-            STOP: 120000,
+            START: 180000,
+            STOP: 180000,
             GROUP: 10000
         }
     },
