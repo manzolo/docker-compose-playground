@@ -1,0 +1,366 @@
+# Metadati del gruppo
+group:
+  name: "PostgreSQL-Stack"
+  description: "PostgreSQL database with pgAdmin web interface"
+  category: database
+  containers: 
+    - postgres-16-stack
+    - pgadmin-7-stack
+
+# Configurazioni dei container
+images:
+  postgres-16-stack:
+    category: database
+    description: PostgreSQL 16 Database Server
+    image: postgres:16
+    keep_alive_cmd: postgres
+    shell: /bin/bash
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: playground
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Initializing PostgreSQL..."
+          
+          # Wait for PostgreSQL to be ready
+          MAX_WAIT=30
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER_NAME}" pg_isready -U playground -d playground &>/dev/null; then
+              echo "✓ PostgreSQL is ready!"
+              break
+            fi
+            sleep 1
+            COUNT=$((COUNT + 1))
+          done
+          
+          if [ $COUNT -ge $MAX_WAIT ]; then
+            echo "⚠ PostgreSQL startup timeout"
+            exit 1
+          fi
+          
+          # Initialize database
+          docker exec "${CONTAINER_NAME}" psql -U playground -d playground << 'PGSQL'
+          -- Create extensions
+          CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+          
+          -- Create schema
+          CREATE SCHEMA IF NOT EXISTS playground;
+          SET search_path TO playground, public;
+          
+          -- Create sample table
+          CREATE TABLE IF NOT EXISTS playground.welcome (
+              id SERIAL PRIMARY KEY,
+              message TEXT NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Insert welcome message
+          INSERT INTO playground.welcome (message) 
+          VALUES ('Welcome to Docker Playground PostgreSQL!') 
+          ON CONFLICT DO NOTHING;
+          
+          -- Create sample users table
+          CREATE TABLE IF NOT EXISTS playground.users (
+              id SERIAL PRIMARY KEY,
+              username VARCHAR(50) UNIQUE NOT NULL,
+              email VARCHAR(100),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          PGSQL
+          
+          if [ $? -eq 0 ]; then
+            echo "✓ PostgreSQL initialized successfully"
+            echo "✓ Database: playground"
+            echo "✓ Schema: playground"
+            echo "✓ Tables: welcome, users"
+          else
+            echo "⚠ PostgreSQL initialization had errors"
+          fi
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          echo "Creating PostgreSQL backup..."
+          
+          BACKUP_DIR="${SHARED_DIR}/backups/postgres"
+          mkdir -p "${BACKUP_DIR}"
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="${BACKUP_DIR}/postgres_backup_${TIMESTAMP}.sql"
+          
+          # Create backup
+          if docker exec "${CONTAINER_NAME}" pg_dump -U playground -d playground > "${BACKUP_FILE}" 2>/dev/null; then
+            gzip "${BACKUP_FILE}"
+            BACKUP_SIZE=$(du -h "${BACKUP_FILE}.gz" 2>/dev/null | cut -f1)
+            echo "✓ Backup created: postgres_backup_${TIMESTAMP}.sql.gz (${BACKUP_SIZE})"
+            
+            # Keep only last 5 backups
+            cd "${BACKUP_DIR}" 2>/dev/null && ls -t postgres_backup_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm
+            echo "✓ Cleaned old backups (keeping last 5)"
+          else
+            echo "⚠ Backup failed"
+            rm -f "${BACKUP_FILE}" 2>/dev/null
+          fi
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║            PostgreSQL 16 Database Server                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Database Connection:
+         Host: postgres-16-stack (container name) or localhost
+         Port: 5432
+         User: playground
+         Password: playground
+         Database: playground
+      
+      📊 Quick Start Commands:
+         # Connect to database
+         psql -U playground -d playground
+         
+         # List tables
+         \dt playground.*
+         
+         # Query sample data
+         SELECT * FROM playground.welcome;
+      
+      📁 Shared Storage:
+         /shared - Mounted volume for data exchange
+      
+      💾 Automatic Backups:
+         Backups are created automatically on container stop
+         Location: /shared/backups/postgres/
+      
+      💡 Tips:
+         - All data persists across restarts
+         - pgAdmin is available at http://localhost:8086
+         - Use '\q' to exit psql, 'exit' to close console
+
+  pgadmin-7-stack:
+    category: database
+    description: pgAdmin 4 - PostgreSQL Management Tool
+    image: dpage/pgadmin4:7
+    keep_alive_cmd: /entrypoint.sh
+    shell: /bin/sh
+    ports:
+      - "8086:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@playground.local
+      PGADMIN_DEFAULT_PASSWORD: playground
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Configuring pgAdmin auto-connection..."
+          
+          # Wait for pgAdmin web server
+          MAX_WAIT=60
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER_NAME}" sh -c "wget -q --spider http://localhost:80" 2>/dev/null; then
+              echo "✓ pgAdmin web server is ready"
+              break
+            fi
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          
+          if [ $COUNT -ge $MAX_WAIT ]; then
+            echo "⚠ pgAdmin startup timeout"
+            exit 1
+          fi
+          
+          # Additional wait for full initialization
+          sleep 5
+          
+          # Create storage directory and configuration
+          docker exec "${CONTAINER_NAME}" sh -c '
+          STORAGE_DIR="/var/lib/pgadmin/storage/admin_playground.local"
+          mkdir -p "${STORAGE_DIR}"
+          
+          # Create pgpass file
+          cat > /tmp/.pgpass << "PGPASS"
+          postgres-16-stack:5432:*:playground:playground
+          PGPASS
+          chmod 600 /tmp/.pgpass
+          
+          # Create servers.json configuration
+          cat > "${STORAGE_DIR}/servers.json" << "SERVERS"
+          {
+            "Servers": {
+              "1": {
+                "Name": "PostgreSQL 16 Playground",
+                "Group": "Playground",
+                "Host": "postgres-16-stack",
+                "Port": 5432,
+                "MaintenanceDB": "playground",
+                "Username": "playground",
+                "SSLMode": "prefer",
+                "PassFile": "/tmp/.pgpass",
+                "Comment": "Auto-configured by Docker Playground"
+              }
+            }
+          }
+          SERVERS
+          
+          # Set proper ownership
+          chown -R pgadmin:pgadmin "${STORAGE_DIR}" 2>/dev/null || chown -R 5050:5050 "${STORAGE_DIR}" 2>/dev/null
+          
+          echo "✓ Server configuration created"
+          ' 2>&1 | grep -v "chown:"
+          
+          # Try to import via pgAdmin Python API
+          docker exec "${CONTAINER_NAME}" sh -c '
+          python3 << "PYSETUP"
+          import json
+          import sys
+          import os
+          
+          try:
+              # Add pgAdmin to path
+              sys.path.insert(0, "/pgadmin4")
+              
+              # Import server configuration
+              config_file = "/var/lib/pgadmin/storage/admin_playground.local/servers.json"
+              
+              if os.path.exists(config_file):
+                  print("✓ Configuration file exists")
+                  
+                  # Try to load servers using pgAdmin setup module
+                  try:
+                      from setup import load_servers
+                      load_servers(config_file)
+                      print("✓ Server loaded via pgAdmin API")
+                  except ImportError:
+                      print("ℹ Server config created, will load on first login")
+                  except Exception as e:
+                      print(f"ℹ Server config ready: {e}")
+              else:
+                  print("⚠ Config file not found")
+                  
+          except Exception as e:
+              print(f"ℹ Setup note: {e}")
+              
+          sys.exit(0)
+          PYSETUP
+          ' 2>&1
+          
+          # Create connection instructions
+          docker exec "${CONTAINER_NAME}" sh -c '
+          cat > /tmp/connection_info.txt << "INFO"
+          ╔════════════════════════════════════════════════════════════╗
+          ║          pgAdmin 4 - Connection Information                ║
+          ╚════════════════════════════════════════════════════════════╝
+          
+          🌐 Web Access:
+             URL: http://localhost:8086
+          
+          🔐 Login Credentials:
+             Email:    admin@playground.local
+             Password: playground
+          
+          ✅ Auto-Configured Server:
+             Name:     PostgreSQL 16 Playground
+             Status:   Should appear automatically in left panel
+          
+          📖 How to Use:
+             1. Open http://localhost:8086 in your browser
+             2. Login with credentials above
+             3. Look in left panel under:
+                Servers → Playground → PostgreSQL 16 Playground
+             4. Click on the server to connect
+             5. Enter password if prompted: playground
+          
+          🔧 If Server Not Visible:
+             Right-click "Servers" → Register → Server
+             
+             General tab:
+               Name: PostgreSQL 16 Playground
+               
+             Connection tab:
+               Host:     postgres-16-stack
+               Port:     5432
+               Database: playground
+               Username: playground
+               Password: playground
+               ☑ Save password
+          
+          💡 Tips:
+             - Configuration is saved and persists
+             - First connection may require password entry
+             - After first login, connection is automatic
+          
+          INFO
+          ' 2>&1
+          
+          # Save instructions to shared volume
+          docker exec "${CONTAINER_NAME}" cat /tmp/connection_info.txt > "${SHARED_DIR}/pgadmin_connection_info.txt" 2>/dev/null || true
+          
+          echo ""
+          echo "═══════════════════════════════════════════════════════"
+          echo "✓ pgAdmin setup complete!"
+          echo "═══════════════════════════════════════════════════════"
+          echo ""
+          echo "🌐 Access pgAdmin at: http://localhost:8086"
+          echo "📧 Login: admin@playground.local / playground"
+          echo ""
+          echo "📖 Full instructions saved to:"
+          echo "   ${SHARED_DIR}/pgadmin_connection_info.txt"
+          echo ""
+          echo "💡 Server 'PostgreSQL 16 Playground' should appear"
+          echo "   automatically in the Servers list"
+          echo ""
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                pgAdmin 4 - Web Interface                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 Web Access:
+         URL:   http://localhost:8086
+         Email: admin@playground.local
+         Pass:  playground
+      
+      ✅ Pre-Configured PostgreSQL Server:
+         The PostgreSQL 16 server is automatically configured!
+         Just login and expand: Servers → Playground
+      
+      📊 What You Can Do:
+         • Browse databases and tables
+         • Run SQL queries
+         • View data in tables
+         • Create and modify database objects
+         • Monitor database performance
+         • Backup and restore databases
+      
+      🔗 Connection Details:
+         Server: PostgreSQL 16 Playground
+         Host:   postgres-16-stack
+         Port:   5432
+         DB:     playground
+         User:   playground
+         Pass:   playground
+      
+      📖 Instructions:
+         Full setup guide available at:
+         /shared/pgadmin_connection_info.txt
+      
+      💡 Tips:
+         - This is a web-based tool (use browser, not this console)
+         - Configuration persists across restarts
+         - First connection may prompt for password
+         - Use 'exit' to close this console
+      
+      ⚙️  Troubleshooting:
+         If server doesn't appear automatically:
+         1. Right-click 'Servers' → Register → Server
+         2. Use connection details above
