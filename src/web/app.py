@@ -1104,25 +1104,32 @@ async def cleanup_all():
         for c in containers:
             logger.info("  - %s (status: %s)", c.name, c.status)
         
-        if len(containers) == 0:
-            return {"status": "completed", "removed": 0, "containers": [], "message": "No containers to cleanup"}
-        
         operation_id = str(uuid.uuid4())
-
+        is_empty = len(containers) == 0
+        
         active_operations[operation_id] = {
-            "status": "running",
+            "status": "completed" if is_empty else "running",
             "started_at": datetime.now().isoformat(),
             "total": len(containers),
             "removed": 0,
-            "operation": "cleanup"
+            "operation": "cleanup",
+            "containers": [],
+            "message": "No containers to cleanup" if is_empty else None,
+            "completed_at": datetime.now().isoformat() if is_empty else None
         }
-
-        asyncio.create_task(cleanup_all_background(operation_id, containers))
-        return {"operation_id": operation_id, "status": "started", "total": len(containers)}
+        
+        if not is_empty:
+            asyncio.create_task(cleanup_all_background(operation_id, containers))
+        
+        return {
+            "operation_id": operation_id,
+            "status": "completed" if is_empty else "started",
+            "total": len(containers)
+        }
     except Exception as e:
         logger.error("Error starting cleanup_all: %s", str(e))
         raise HTTPException(500, str(e))
-
+    
 async def cleanup_all_background(operation_id: str, containers):
     """Background task to cleanup all containers"""
     removed = []
