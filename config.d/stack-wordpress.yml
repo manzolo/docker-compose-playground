@@ -1,7 +1,7 @@
 # Metadati del gruppo
 group:
   name: "WordPress-Stack"
-  description: "WordPress with MySQL 8 database and phpMyAdmin web interface"
+  description: "WordPress with MySQL 8, phpMyAdmin and automatic backup/restore system for persistence between restarts"
   category: programming
   containers: 
     - mysql-wp-stack
@@ -12,7 +12,7 @@ group:
 images:
   mysql-wp-stack:
     category: database
-    description: MySQL 8 Database Server for WordPress
+    description: MySQL 8 Database Server for WordPress Stack
     image: mysql:8
     keep_alive_cmd: mysqld
     shell: /bin/bash
@@ -29,27 +29,75 @@ images:
           #!/bin/bash
           echo "Initializing MySQL for WordPress..."
           
-          # Wait for MySQL
-          MAX_WAIT=60
+          # Wait for MySQL to be ready with longer timeout
+          MAX_WAIT=90
           COUNT=0
+          echo -n "Waiting for MySQL to start"
           while [ $COUNT -lt $MAX_WAIT ]; do
             if docker exec "${CONTAINER_NAME}" mysqladmin ping -u root -pwordpress --silent 2>/dev/null; then
+              echo ""
               echo "✓ MySQL is ready!"
               break
             fi
-            sleep 2
-            COUNT=$((COUNT + 2))
+            echo -n "."
+            sleep 3
+            COUNT=$((COUNT + 3))
+            if [ $COUNT -ge $MAX_WAIT ]; then
+              echo ""
+              echo "✗ MySQL failed to start within $MAX_WAIT seconds"
+              exit 1
+            fi
           done
           
+          # Additional safety wait
           sleep 5
           
-          # Create WordPress database and user
+          # Create WordPress database and user (idempotent)
+          echo "Setting up WordPress database..."
           docker exec "${CONTAINER_NAME}" mysql -u root -pwordpress -e "
           CREATE DATABASE IF NOT EXISTS wordpress;
           CREATE USER IF NOT EXISTS 'wordpress'@'%' IDENTIFIED BY 'wordpress';
           GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'%';
           FLUSH PRIVILEGES;
           " 2>/dev/null
+          
+          # Wait a bit more before attempting restore
+          sleep 3
+          
+          # Restore from the latest backup if available
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          echo "Checking for database backups in ${BACKUP_DIR}..."
+          if [ -d "${BACKUP_DIR}" ] && [ "$(ls -A "${BACKUP_DIR}"/*.sql.gz 2>/dev/null)" ]; then
+            # Find the latest database backup
+            LATEST_DB_BACKUP=$(ls -t "${BACKUP_DIR}"/wordpress_db_*.sql.gz 2>/dev/null | head -1)
+            if [ -n "${LATEST_DB_BACKUP}" ]; then
+              echo "✓ Found database backup: ${LATEST_DB_BACKUP}. Starting restore..."
+              
+              # Decompress the backup temporarily
+              TEMP_SQL="${SHARED_DIR}/temp_restore.sql"
+              gunzip -c "${LATEST_DB_BACKUP}" > "${TEMP_SQL}" 2>/dev/null
+              
+              # Verify the SQL file is not empty
+              if [ -s "${TEMP_SQL}" ]; then
+                echo "Importing backup into wordpress database..."
+                docker exec -i "${CONTAINER_NAME}" mysql -u root -pwordpress wordpress < "${TEMP_SQL}" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                  echo "✓ Database restore completed successfully from ${LATEST_DB_BACKUP}"
+                else
+                  echo "✗ Database restore failed for ${LATEST_DB_BACKUP}"
+                fi
+              else
+                echo "✗ Database backup file ${LATEST_DB_BACKUP} is empty or invalid"
+              fi
+              
+              # Clean up temporary file
+              rm -f "${TEMP_SQL}"
+            else
+              echo "✗ No valid database backup found"
+            fi
+          else
+            echo "✗ No database backups found in ${BACKUP_DIR}"
+          fi
           
           echo "✓ MySQL initialized for WordPress"
       
@@ -60,9 +108,17 @@ images:
           mkdir -p "${BACKUP_DIR}"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
-          docker exec "${CONTAINER_NAME}" mysqldump -u root -pwordpress wordpress > "${BACKUP_DIR}/wordpress_${TIMESTAMP}.sql" 2>/dev/null
-          gzip "${BACKUP_DIR}/wordpress_${TIMESTAMP}.sql"
-          echo "✓ WordPress database backup created"
+          # Create database backup
+          BACKUP_FILE="${BACKUP_DIR}/wordpress_db_${TIMESTAMP}.sql"
+          echo "Creating database backup..."
+          docker exec "${CONTAINER_NAME}" mysqldump -u root -pwordpress wordpress > "${BACKUP_FILE}" 2>/dev/null
+          if [ $? -eq 0 ] && [ -s "${BACKUP_FILE}" ]; then
+            gzip "${BACKUP_FILE}"
+            echo "✓ WordPress database backup created: ${BACKUP_FILE}.gz"
+          else
+            echo "✗ Failed to create database backup"
+            rm -f "${BACKUP_FILE}"
+          fi
     
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
@@ -84,7 +140,7 @@ images:
 
   wordpress-stack:
     category: web
-    description: "WordPress with Apache and MySQL extensions"
+    description: "WordPress with Apache, MySQL extensions and automatic file backup/restore"
     image: wordpress:php8.3-apache
     keep_alive_cmd: apache2-foreground
     shell: /bin/bash
@@ -102,7 +158,27 @@ images:
           #!/bin/bash
           echo "Setting up WordPress environment..."
           
-          # Wait for WordPress files to be extracted
+          # Wait for MySQL to be fully ready before proceeding
+          echo "Waiting for MySQL to be ready..."
+          MAX_WAIT=90
+          COUNT=0
+          echo -n "Checking MySQL connectivity"
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "playground-mysql-wp-stack" mysqladmin ping -u root -pwordpress --silent 2>/dev/null; then
+              echo ""
+              echo "✓ MySQL is ready for WordPress!"
+              break
+            fi
+            echo -n "."
+            sleep 3
+            COUNT=$((COUNT + 3))
+            if [ $COUNT -ge $MAX_WAIT ]; then
+              echo ""
+              echo "✗ MySQL not ready after $MAX_WAIT seconds, continuing anyway..."
+            fi
+          done
+          
+          # Wait for WordPress container to be ready
           sleep 10
           
           # Install required PHP extensions for WordPress
@@ -113,7 +189,7 @@ images:
           docker-php-ext-configure gd --with-freetype --with-jpeg && \
           docker-php-ext-install -j$(nproc) gd zip mysqli pdo_mysql && \
           docker-php-ext-enable gd zip mysqli pdo_mysql
-          '
+          ' 2>/dev/null
           
           # Set proper permissions for WordPress
           docker exec "${CONTAINER_NAME}" sh -c '
@@ -121,57 +197,152 @@ images:
           chmod -R 755 /var/www/html && \
           find /var/www/html -type d -exec chmod 755 {} \; && \
           find /var/www/html -type f -exec chmod 644 {} \;
-          '
+          ' 2>/dev/null
           
-          # Create wp-config.php if it doesn't exist
-          docker exec "${CONTAINER_NAME}" sh -c '
-          if [ ! -f /var/www/html/wp-config.php ]; then
-            cat > /var/www/html/wp-config.php << "EOF"
-          <?php
-          /**
-           * WordPress Configuration
-           */
-          define( "DB_NAME", "wordpress" );
-          define( "DB_USER", "wordpress" );
-          define( "DB_PASSWORD", "wordpress" );
-          define( "DB_HOST", "mysql-wp-stack" );
-          define( "DB_CHARSET", "utf8" );
-          define( "DB_COLLATE", "" );
-
-          // Authentication Unique Keys and Salts
-          define( "AUTH_KEY",         "put your unique phrase here" );
-          define( "SECURE_AUTH_KEY",  "put your unique phrase here" );
-          define( "LOGGED_IN_KEY",    "put your unique phrase here" );
-          define( "NONCE_KEY",        "put your unique phrase here" );
-          define( "AUTH_SALT",        "put your unique phrase here" );
-          define( "SECURE_AUTH_SALT", "put your unique phrase here" );
-          define( "LOGGED_IN_SALT",   "put your unique phrase here" );
-          define( "NONCE_SALT",       "put your unique phrase here" );
-
-          // WordPress Database Table prefix
-          $table_prefix = "wp_";
-
-          // WordPress debugging mode
-          define( "WP_DEBUG", true );
-
-          // Absolute path to the WordPress directory
-          if ( ! defined( "ABSPATH" ) ) {
-            define( "ABSPATH", __DIR__ . "/" );
-          }
-
-          // Sets up WordPress vars and included files
-          require_once ABSPATH . "wp-settings.php";
-          EOF
+          # Create wp-config.php if it doesn't exist using docker cp approach
+          docker exec "${CONTAINER_NAME}" sh -c '[ -f /var/www/html/wp-config.php ]' 2>/dev/null
+          if [ $? -ne 0 ]; then
+            echo "Creating wp-config.php using docker cp method..."
+            
+            # Create a temporary container to generate wp-config.php
+            docker run -d --name temp_wp_config \
+              -e WORDPRESS_DB_HOST=mysql-wp-stack \
+              -e WORDPRESS_DB_NAME=wordpress \
+              -e WORDPRESS_DB_USER=wordpress \
+              -e WORDPRESS_DB_PASSWORD=wordpress \
+              wordpress:php8.3-apache > /dev/null 2>&1
+            
+            # Wait for WordPress to generate the config
+            echo -n "Waiting for WordPress config generation"
+            CONFIG_WAIT=30
+            CONFIG_COUNT=0
+            while [ $CONFIG_COUNT -lt $CONFIG_WAIT ]; do
+              docker exec temp_wp_config sh -c '[ -f /var/www/html/wp-config.php ]' 2>/dev/null
+              if [ $? -eq 0 ]; then
+                echo ""
+                echo "✓ WordPress generated wp-config.php"
+                break
+              fi
+              echo -n "."
+              sleep 2
+              CONFIG_COUNT=$((CONFIG_COUNT + 2))
+            done
+            
+            # Copy the generated wp-config.php to our main container
+            docker cp temp_wp_config:/var/www/html/wp-config.php "${SHARED_DIR}/temp_wp_config.php" 2>/dev/null
+            docker cp "${SHARED_DIR}/temp_wp_config.php" "${CONTAINER_NAME}:/var/www/html/wp-config.php" 2>/dev/null
+            rm -f "${SHARED_DIR}/temp_wp_config.php"
+            
+            # Clean up temporary container
+            docker stop temp_wp_config > /dev/null 2>&1
+            docker rm temp_wp_config > /dev/null 2>&1
+            
+            echo "✓ wp-config.php created and copied to container"
+          else
+            echo "✓ wp-config.php already exists"
           fi
-          '
           
-          # Restart Apache to apply changes
-          docker restart "${CONTAINER_NAME}"
+          # Restore WordPress files from backup if available
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          if [ -d "${BACKUP_DIR}" ] && [ "$(ls -A "${BACKUP_DIR}"/*.tar.gz 2>/dev/null)" ]; then
+            LATEST_FILES_BACKUP=$(ls -t "${BACKUP_DIR}"/wordpress_files_*.tar.gz 2>/dev/null | head -1)
+            if [ -n "${LATEST_FILES_BACKUP}" ]; then
+              echo "✓ Found WordPress files backup: ${LATEST_FILES_BACKUP}. Restoring..."
+              
+              # Stop Apache temporarily during restore
+              docker exec "${CONTAINER_NAME}" sh -c 'pkill apache2' 2>/dev/null
+              sleep 2
+              
+              # Extract backup directly to container using docker cp
+              TEMP_RESTORE_DIR="${SHARED_DIR}/temp_restore_${TIMESTAMP}"
+              mkdir -p "${TEMP_RESTORE_DIR}"
+              tar -xzf "${LATEST_FILES_BACKUP}" -C "${TEMP_RESTORE_DIR}" 2>/dev/null
+              
+              if [ $? -eq 0 ]; then
+                # Check if we have nested temp_wordpress_backup directory and handle it
+                if [ -d "${TEMP_RESTORE_DIR}/temp_wordpress_backup" ]; then
+                  echo "Found nested backup structure, extracting actual WordPress files..."
+                  docker cp "${TEMP_RESTORE_DIR}/temp_wordpress_backup/." "${CONTAINER_NAME}:/var/www/html/" 2>/dev/null
+                else
+                  # Copy files directly to container
+                  docker cp "${TEMP_RESTORE_DIR}/." "${CONTAINER_NAME}:/var/www/html/" 2>/dev/null
+                fi
+                
+                echo "✓ WordPress files restore completed successfully"
+              else
+                echo "✗ WordPress files restore failed"
+              fi
+              
+              # Clean up and restart Apache
+              rm -rf "${TEMP_RESTORE_DIR}"
+              docker exec "${CONTAINER_NAME}" sh -c 'apache2-foreground &' 2>/dev/null
+              sleep 3
+            fi
+          else
+            echo "ℹ No WordPress files backup found in ${BACKUP_DIR}"
+          fi
+          
+          # Restart Apache to apply all changes
+          docker restart "${CONTAINER_NAME}" > /dev/null 2>&1
+          sleep 5
+          
+          # Set correct permissions for www-data
+          echo "Setting permissions for www-data..."
+          
+          docker exec ${CONTAINER_NAME} sh -c '
+            chown -R www-data:www-data /var/www/html && \
+            chmod -R 755 /var/www/html && \
+            find /var/www/html -type d -exec chmod 755 {} \; && \
+            find /var/www/html -type f -exec chmod 644 {} \; && \
+            chmod -R 775 /var/www/html
+          ' 2>/dev/null
           
           echo "✓ WordPress environment setup completed"
           echo "🌐 WordPress: http://localhost:8081"
           echo "🔧 Admin: http://localhost:8081/wp-admin"
           echo "📊 Database: mysql-wp-stack:3306"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          mkdir -p "${BACKUP_DIR}"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Create WordPress files backup using docker cp
+          echo "Creating WordPress files backup..."
+          
+          # Create temporary directory for backup
+          TEMP_BACKUP_DIR="${SHARED_DIR}/temp_wordpress_backup_${TIMESTAMP}"
+          mkdir -p "${TEMP_BACKUP_DIR}"
+          
+          # Copy WordPress files from container to temporary directory using docker cp
+          docker cp "${CONTAINER_NAME}:/var/www/html/." "${TEMP_BACKUP_DIR}/" 2>/dev/null
+          
+          if [ $? -eq 0 ] && [ "$(ls -A "${TEMP_BACKUP_DIR}" 2>/dev/null)" ]; then
+            # Create tar archive of the backup CONTENT (not the directory itself)
+            FILES_BACKUP="${BACKUP_DIR}/wordpress_files_${TIMESTAMP}.tar.gz"
+            cd "${TEMP_BACKUP_DIR}"
+            tar -czf "${FILES_BACKUP}" . 2>/dev/null
+            
+            if [ $? -eq 0 ] && [ -s "${FILES_BACKUP}" ]; then
+              echo "✓ WordPress files backup created: ${FILES_BACKUP}"
+              echo "Backup size: $(du -h "${FILES_BACKUP}" | cut -f1)"
+              echo "Backup contents:"
+              tar -tzf "${FILES_BACKUP}" | head -10
+            else
+              echo "✗ Failed to create files backup archive"
+            fi
+          else
+            echo "✗ Failed to copy WordPress files from container"
+          fi
+          
+          # Clean up temporary directory
+          rm -rf "${TEMP_BACKUP_DIR}"
+          
+          # List all backups for verification
+          echo "Current backups in ${BACKUP_DIR}:"
+          ls -la "${BACKUP_DIR}"/*.gz 2>/dev/null || echo "No backup files found"
     
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
@@ -188,6 +359,7 @@ images:
          • MySQL 8 database
          • GD library for images
          • Zip support for plugins/themes
+         • Automatic file and database backup/restore
       
       💡 First time setup:
          1. Visit http://localhost:8081
@@ -213,7 +385,23 @@ images:
         inline: |
           #!/bin/bash
           echo "Configuring phpMyAdmin for WordPress..."
-          sleep 5
+          
+          # Wait for MySQL to be ready
+          MAX_WAIT=60
+          COUNT=0
+          echo -n "Waiting for MySQL"
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "playground-mysql-wp-stack" mysqladmin ping -u root -pwordpress --silent 2>/dev/null; then
+              echo ""
+              echo "✓ MySQL ready for phpMyAdmin"
+              break
+            fi
+            echo -n "."
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          
+          sleep 3
           
           docker exec "${CONTAINER_NAME}" sh -c '
           cat > /etc/phpmyadmin/config.user.inc.php << "EOF"
@@ -221,12 +409,12 @@ images:
           $cfg["Servers"][$i]["auth_type"] = "config";
           $cfg["Servers"][$i]["user"] = "root";
           $cfg["Servers"][$i]["password"] = "wordpress";
-          $cfg["Servers"][$i]["AllowNoPassword"] = true;
+          $cfg["AllowNoPassword"] = true;
           $cfg["LoginCookieValidity"] = 86400;
           $cfg["Servers"][$i]["only_db"] = "wordpress";
           ?>
           EOF
-          '
+          ' 2>/dev/null
           
           echo "✓ phpMyAdmin ready at http://localhost:8089"
           echo "✓ Auto-login enabled (root/wordpress)"
