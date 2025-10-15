@@ -1,7 +1,7 @@
 images:
   alpine-3.22:
     category: linux
-    description: Alpine Linux 3.22 (Lightweight - 5MB)
+    description: Alpine Linux 3.22 (Lightweight - 8MB)
     image: alpine:3.22
     keep_alive_cmd: tail -f /dev/null
     motd: |-

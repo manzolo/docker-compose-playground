@@ -1,0 +1,7 @@
+images:
+  openjdk-8:
+    category: programming
+    description: OpenJDK 8
+    image: openjdk:8
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash

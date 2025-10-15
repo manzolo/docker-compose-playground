@@ -1,0 +1,56 @@
+images:
+  postgres-17:
+    category: database
+    description: PostgreSQL 17
+    environment:
+      POSTGRES_DB: playground
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+    image: postgres:17
+    keep_alive_cmd: postgres
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                PostgreSQL 17 Quick Reference                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         Host: localhost / Container IP
+         Port: 5432
+         User: playground
+         Password: playground
+         Database: playground
+
+      📊 Basic Commands:
+         psql -U playground                            # Connect to PostgreSQL
+         \l                                            # List databases
+         \c database_name                              # Connect to database
+         \dt                                           # List tables
+         \d table_name                                 # Describe table
+         \q                                            # Quit
+
+      💾 Backup & Restore:
+         pg_dump -U playground playground > /shared/backup.sql
+         pg_dump -U playground -Fc playground > /shared/backup.dump
+         psql -U playground playground < /shared/backup.sql
+         pg_restore -U playground -d playground /shared/backup.dump
+
+      📝 Quick Table Example:
+         CREATE TABLE users (
+           id SERIAL PRIMARY KEY,
+           name VARCHAR(100),
+           email VARCHAR(100) UNIQUE,
+           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );
+         INSERT INTO users (name, email) VALUES ('Test', 'test@example.com');
+         SELECT * FROM users;
+
+      🔍 Useful Queries:
+         SELECT version();                             # PostgreSQL version
+         SELECT current_database();                    # Current database
+         \timing on                                    # Enable query timing
+    ports:
+    - 5432:5432
+    scripts:
+      post_start: postgres_init.sh
+      pre_stop: postgres_backup.sh
+    shell: /bin/bash

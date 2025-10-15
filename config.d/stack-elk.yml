@@ -1,0 +1,240 @@
+group:
+  name: "ELK-Stack"
+  description: "Elasticsearch, Logstash, Kibana - Log management and analytics with backup/restore"
+  category: monitoring
+  containers: 
+    - elasticsearch-stack
+    - kibana-stack
+
+images:
+  elasticsearch-stack:
+    category: database
+    description: Elasticsearch - Search & analytics engine with backup/restore
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    keep_alive_cmd: /usr/local/bin/docker-entrypoint.sh
+    shell: /bin/bash
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Waiting for Elasticsearch to start..."
+          
+          MAX_WAIT=60
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if curl -s http://localhost:9200 > /dev/null; then
+              echo "✓ Elasticsearch is ready!"
+              break
+            fi
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          
+          if [ $COUNT -ge $MAX_WAIT ]; then
+            echo "⚠ Elasticsearch startup timeout"
+            exit 1
+          fi
+          
+          # Install elasticdump for backup/restore
+          echo "Installing elasticdump..."
+          docker exec "${CONTAINER_NAME}" sh -c '
+            apk add --no-cache nodejs npm && \
+            npm install elasticdump -g
+          ' 2>/dev/null
+          
+          # Restore from the latest backup if available
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          echo "Checking for Elasticsearch backups in ${BACKUP_DIR}..."
+          if [ -d "${BACKUP_DIR}" ] && [ "$(ls -A "${BACKUP_DIR}"/*.json.gz 2>/dev/null)" ]; then
+            LATEST_BACKUP=$(ls -t "${BACKUP_DIR}"/es_backup_*.json.gz 2>/dev/null | head -1)
+            if [ -n "${LATEST_BACKUP}" ]; then
+              echo "✓ Found Elasticsearch backup: ${LATEST_BACKUP}. Starting restore..."
+              
+              # Decompress the backup temporarily
+              TEMP_JSON="${SHARED_DIR}/temp_restore.json"
+              gunzip -c "${LATEST_BACKUP}" > "${TEMP_JSON}" 2>/dev/null
+              
+              # Verify the JSON file is not empty
+              if [ -s "${TEMP_JSON}" ]; then
+                echo "Importing backup into Elasticsearch..."
+                docker cp "${TEMP_JSON}" "${CONTAINER_NAME}:/tmp/temp_restore.json" 2>/dev/null
+                docker exec "${CONTAINER_NAME}" sh -c '
+                  elasticdump --input=/tmp/temp_restore.json --output=http://localhost:9200/.kibana --type=data
+                  elasticdump --input=/tmp/temp_restore.json --output=http://localhost:9200/logs --type=data
+                ' 2>/dev/null
+                if [ $? -eq 0 ]; then
+                  echo "✓ Elasticsearch restore completed successfully from ${LATEST_BACKUP}"
+                else
+                  echo "✗ Elasticsearch restore failed for ${LATEST_BACKUP}"
+                fi
+                rm -f "/tmp/temp_restore.json"
+              else
+                echo "✗ Elasticsearch backup file ${LATEST_BACKUP} is empty or invalid"
+              fi
+              
+              # Clean up temporary file
+              rm -f "${TEMP_JSON}"
+            else
+              echo "✗ No valid Elasticsearch backup found"
+            fi
+          else
+            echo "✗ No Elasticsearch backups found in ${BACKUP_DIR}"
+          fi
+          
+          # Check cluster health
+          echo "Checking cluster health..."
+          curl -s http://localhost:9200/_cluster/health | python3 -m json.tool
+          
+          echo ""
+          echo "✓ Elasticsearch setup complete!"
+          echo "🌐 Access: http://localhost:9200"
+    
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          mkdir -p "${BACKUP_DIR}"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Create Elasticsearch backup
+          BACKUP_FILE="${BACKUP_DIR}/es_backup_${TIMESTAMP}.json"
+          echo "Creating Elasticsearch backup..."
+          docker exec "${CONTAINER_NAME}" sh -c '
+            apk add --no-cache nodejs npm && \
+            npm install elasticdump -g && \
+            elasticdump --input=http://localhost:9200/.kibana --output=/tmp/es_backup.json --type=data && \
+            elasticdump --input=http://localhost:9200/logs --output=/tmp/es_backup.json --type=data --append
+          ' 2>/dev/null
+          
+          if [ $? -eq 0 ]; then
+            docker cp "${CONTAINER_NAME}:/tmp/es_backup.json" "${BACKUP_FILE}" 2>/dev/null
+            if [ -s "${BACKUP_FILE}" ]; then
+              gzip "${BACKUP_FILE}"
+              echo "✓ Elasticsearch backup created: ${BACKUP_FILE}.gz"
+              echo "Backup size: $(du -h "${BACKUP_FILE}.gz" | cut -f1)"
+            else
+              echo "✗ Failed to create Elasticsearch backup"
+              rm -f "${BACKUP_FILE}"
+            fi
+            docker exec "${CONTAINER_NAME}" sh -c 'rm -f /tmp/es_backup.json' 2>/dev/null
+          else
+            echo "✗ Failed to export Elasticsearch data"
+          fi
+          
+          # List all backups for verification
+          echo "Current backups in ${BACKUP_DIR}:"
+          ls -la "${BACKUP_DIR}"/*.gz 2>/dev/null || echo "No backup files found"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Elasticsearch Stack                        ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔍 Search & Analytics Engine
+      📊 Port: 9200
+      
+      🌐 Web Access:
+         URL: http://localhost:9200
+      
+      📋 Quick Commands:
+         # Check cluster health
+         curl http://localhost:9200/_cluster/health
+         
+         # List indices
+         curl http://localhost:9200/_cat/indices?v
+         
+         # Node info
+         curl http://localhost:9200/_nodes/stats?pretty
+      
+      🔗 Connected Services:
+         • Kibana: http://localhost:5601
+      
+      💡 Tips:
+         - Security is disabled for development
+         - Data persists in Docker volume with backup/restore
+         - Single-node cluster for testing
+
+  kibana-stack:
+    category: monitoring
+    description: Kibana - Data visualization dashboard
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    keep_alive_cmd: /usr/local/bin/kibana-docker
+    shell: /bin/bash
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch-stack:9200
+    depends_on:
+      - elasticsearch-stack
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Waiting for Kibana to start..."
+          
+          MAX_WAIT=90
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if curl -s http://localhost:5601/api/status > /dev/null; then
+              echo "✓ Kibana is ready!"
+              break
+            fi
+            sleep 3
+            COUNT=$((COUNT + 3))
+          done
+          
+          if [ $COUNT -ge $MAX_WAIT ]; then
+            echo "⚠ Kibana startup timeout"
+            exit 1
+          fi
+          
+          # Create sample index pattern
+          echo "Setting up Kibana..."
+          sleep 10
+          
+          echo ""
+          echo "✓ Kibana setup complete!"
+          echo "🌐 Access: http://localhost:5601"
+          echo ""
+          echo "📊 Next steps:"
+          echo "   1. Go to http://localhost:5601"
+          echo "   2. Navigate to Stack Management > Index Patterns"
+          echo "   3. Create pattern: logs-*"
+          echo "   4. Explore Discover and Dashboard sections"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                      Kibana Dashboard                        ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📈 Data Visualization & Exploration
+      🌐 Port: 5601
+      
+      🌐 Web Access:
+         URL: http://localhost:5601
+      
+      🚀 Quick Start:
+         1. Open http://localhost:5601
+         2. Go to "Discover" to explore data
+         3. Create "logs-*" index pattern
+         4. Build dashboards in "Dashboard"
+      
+      📋 Features:
+         • Discover: Search and filter logs
+         • Dashboard: Create visualizations
+         • Visualize: Build charts and graphs
+         • Dev Tools: Run Elasticsearch queries
+      
+      🔗 Data Source:
+         Connected to Elasticsearch: elasticsearch-stack:9200
+      
+      💡 Tips:
+         - First setup may take 1-2 minutes
+         - Use 'logs-*' pattern for Logstash data
+         - Explore sample data in "Discover"
