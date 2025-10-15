@@ -49,8 +49,8 @@ cli:
 
 web:
 	@echo "$(CYAN)Starting web dashboard...$(NC)"
-	@chmod +x start-web.sh
-	@./start-web.sh
+	@chmod +x start-webui.sh
+	@./start-webui.sh
 
 clean:
 	@echo "$(CYAN)Cleaning up virtual environments...$(NC)"

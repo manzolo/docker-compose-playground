@@ -22,6 +22,7 @@ A professional tool for managing multiple Docker development environments. Choos
 - 📊 **Real-time Console** - WebSocket-based terminal access (Web UI)
 - ➕ **Add Containers** - Visual form to create new configurations (Web UI)
 - 🧹 **Bulk Operations** - Stop all, cleanup, category management
+- 🚀 **Container Groups** - Organize and manage related containers together (e.g., start/stop entire groups like a development stack)
 
 ## 📋 Requirements
 
@@ -33,11 +34,7 @@ A professional tool for managing multiple Docker development environments. Choos
 ```bash
 # Ubuntu/Debian
 sudo apt-get update
-sudo apt-get install docker.io python3 python3-venv
-
-# Add user to docker group
-sudo usermod -aG docker $USER
-newgrp docker
+sudo apt-get install python3 python3-venv
 ```
 
 ## 🚀 Quick Start
@@ -60,21 +57,17 @@ chmod +x start-web.sh
 
 # 3. CLI (Command Line)
 chmod +x playground install-cli.sh
-make install  # or ./install-cli.sh
-playground list
+./playground list
 ```
 
 ## 🖥️ Interface Comparison
 
 | Feature | TUI | Web UI | CLI |
 |---------|-----|--------|-----|
-| Interactive menus | ✅ | ✅ | ❌ |
-| Remote access | ❌ | ✅ | ❌ |
-| Scriptable | ❌ | ❌ | ✅ |
-| Real-time console | ✅ | ✅ | ✅ |
 | Add containers | ❌ | ✅ | ❌ |
 | JSON output | ❌ | ✅ | ✅ |
 | Bulk operations | ✅ | ✅ | ✅ |
+| Group management | ❌ | ✅ | ✅ |
 
 ## 📖 Usage
 
@@ -88,8 +81,8 @@ playground list
 <img width="940" height="476" alt="image" src="https://github.com/user-attachments/assets/2c28f6ee-5ea8-4d91-9a9c-d61ecdff92bb" />
 
 Main menu:
-- Start containers / Start by category
-- Stop containers / Enter container
+- Start containers / Start by category / Start group
+- Stop containers / Stop group / Enter container
 - View logs / Container statistics
 - Search images / Browse catalog
 - Export logs / Cleanup
@@ -108,7 +101,7 @@ Features:
 - **Filters** - Search, category, status (All/Running/Stopped)
 - **Console** - Interactive terminal via WebSocket
 - **Add Container** - Step-by-step wizard to create configs
-- **Advanced Manager** - Bulk operations, system info, backups
+- **Advanced Manager** - Bulk operations, group management, system info, backups
 
 ### CLI Commands
 ```bash
@@ -118,6 +111,9 @@ playground start <container> [--force]
 playground stop <container>
 playground restart <container>
 playground ps [--all]
+playground group start <group_name>
+playground group stop <group_name>
+playground group restart <group_name>
 
 # Interaction
 playground logs <container> [--follow] [--tail N]
@@ -134,13 +130,37 @@ playground categories
 playground version
 ```
 
+## 🗂️ Groups
+
+Groups allow you to organize related containers (e.g., a web server, database, and cache for a development stack) and manage them as a single unit. You can start, stop, or restart all containers in a group with a single command, simplifying workflows for complex environments. Groups are defined in configuration files (`config.yml`, `config.d/`, or `custom.d/`) and are accessible via all interfaces (TUI, Web UI, CLI).
+
+Example:
+```yaml
+group:
+  name: dev-stack
+  description: Development stack with web and database
+  containers:
+    - nginx-latest
+    - postgres-latest
+    - redis-latest
+```
+
+Start the group:
+```bash
+# CLI
+playground group start dev-stack
+
+# Web UI
+Dashboard → Groups → dev-stack → Start
+```
+
 ## ⚙️ Configuration
 
 ### Structure
 ```
 docker-playground/
-├── config.yml              # Base (100+ images)
-├── config.d/              # Shared configs (Git-tracked)
+├── config.yml              # Shared configs
+├── config.d/              # Base (100+ images) (Git-tracked)
 │   ├── linux.yml
 │   ├── database.yml
 │   └── programming.yml
@@ -209,25 +229,23 @@ Container appears immediately in all interfaces.
 
 ### Start Development Stack (CLI)
 ```bash
-playground start postgres-latest
-playground start redis-latest
-playground start nginx-latest
-playground ps
+./playground group start PHP-MySQL-Stack
+./playground ps
 ```
 
 ### Create Database Backup (any interface)
 The `pre_stop` script in PostgreSQL config automatically creates backups when stopping:
 ```bash
-# Backup created in: shared-volumes/backups/postgres/
+# Backup created in: shared-volumes/backups/postgres-16/
 ```
 
 ### Access Container Shell
 ```bash
 # CLI
-playground exec postgres
+./playground exec postgres-16
 
 # TUI
-./playground.sh → Enter a container → Select postgres
+./playground.sh → Enter a container → Select postgres-16
 
 # Web UI
 Dashboard → postgres card → Console button
@@ -236,8 +254,8 @@ Dashboard → postgres card → Console button
 ### Filter and Start Category
 ```bash
 # CLI
-playground list --category database
-playground start postgres
+./playground list --category database
+./playground start postgres-16
 
 # Web UI
 Dashboard → Category dropdown → database → Start
@@ -268,7 +286,7 @@ playground exec alpine "cat /shared/file.txt"
 Containers can communicate using their names:
 ```bash
 # From nginx container
-playground exec nginx "ping postgres"
+playground exec nginx "ping postgres-16"
 playground exec nginx "curl http://redis:6379"
 ```
 
@@ -302,7 +320,7 @@ rm -rf venv/environments venv/.cli_venv_ready
 ```bash
 # Check what's using port 8000
 sudo lsof -i :8000
-# Kill process or change port in start-web.sh
+# Kill process or change port in start-webui.sh
 ```
 
 ### Container won't start
@@ -315,6 +333,7 @@ playground logs <container>  # CLI
 ./playground.sh → View logs  # TUI
 Dashboard → Logs button      # Web UI
 ```
+
 ## 🤝 Contributing
 
 Contributions welcome:
@@ -327,7 +346,8 @@ Contributions welcome:
 ```bash
 # Test your changes
 ./playground.sh        # TUI
-./start-web.sh         # Web UI
+./playground           # CLI
+./start-webui.sh       # Web UI
 make test              # CLI tests
 ```
 
@@ -337,10 +357,18 @@ This project is licensed under the **MIT License** - see the [LICENSE](https://o
 
 **Attribution Requirement:** If you use this project, please include:
 - A link to the original repository
-- Credit to the original author ([Il Tuo Nome])
+- Credit to the original author (Manzolo - Andrea Manzi)
 - Mention of the MIT License
 
 ---
+
+## 🤖 Shout-out to the AI Crew
+
+Massive thanks to the squad of virtual minds who contributed ideas, code snippets, and robotic encouragement:
+
+> **Grok, DeepSeek, Gemini, Claude, ChatGPT** - Thanks for lending your (metaphorical) neurons to this project. With your combined computational power and 16 virtual hands, we've turned chaos into a working container! More or less.
+
+**Disclaimer:** No LLMs were harmed during development. Maybe just a little confused.
 
 **Made with ❤️ for developers**
 
