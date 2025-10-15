@@ -181,18 +181,25 @@ def exec(
     # Get shell from config
     image_name = container_name.replace("playground-", "")
     config = load_config()
-    shell = config.get(image_name, {}).get("shell", "/bin/bash")
+    img_data = config.get(image_name, {})
+    shell = img_data.get("shell", "/bin/bash")
     
     if command:
         # Execute command
         result = cont.exec_run(command, tty=True)
         console.print(result.output.decode('utf-8', errors='replace'))
     else:
+        # Show MOTD before opening interactive shell
+        motd = img_data.get("motd", "")
+        if motd:
+            console.print("\n[cyan]" + "="*60 + "[/cyan]")
+            console.print(motd)
+            console.print("[cyan]" + "="*60 + "[/cyan]\n")
+        
         # Interactive shell
         console.print(f"[cyan]Opening shell in {container_name}...[/cyan]")
         console.print(f"[yellow]Using shell: {shell}[/yellow]\n")
         subprocess.run(["docker", "exec", "-it", container_name, shell])
-
 
 @app.command()
 def info(
