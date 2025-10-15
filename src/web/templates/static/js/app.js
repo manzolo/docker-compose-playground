@@ -1081,22 +1081,6 @@ const ContainerTagManager = {
 };
 
 // =========================================================
-// Logs Management
-// =========================================================
-async function showLogs(container) {
-    try {
-        const response = await fetch(`/logs/${container}`);
-        const data = await response.json();
-
-        document.getElementById('logContainerName').textContent = container;
-        document.getElementById('logContent').textContent = data.logs || 'No logs available';
-        openModal('logModal');
-    } catch (error) {
-        ToastManager.show(`Error loading logs: ${error.message}`, 'error');
-    }
-}
-
-// =========================================================
 // Event Listeners & Initialization
 // =========================================================
 function initializeEventListeners() {
@@ -1230,24 +1214,169 @@ const ConfirmModalManager = {
 };
 
 // =========================================================
-// Logs Management (aggiornata)
+// Logs Management
 // =========================================================
 const LogsManager = {
-    async show(container) {
+    currentContainer: null,
+    refreshInterval: null,
+    isFollowing: false,
+    refreshRate: 2000, // 2 secondi
+
+    async show(container, follow = false) {
         try {
+            this.currentContainer = container;
             const response = await fetch(`/logs/${container}`);
             const data = await response.json();
 
             document.getElementById('logContainerName').textContent = container;
             document.getElementById('logContent').textContent = data.logs || 'No logs available';
+            
+            // Aggiungi controlli per il follow
+            this.addFollowControls();
+            
             ModalManager.open('logModal');
+            
+            // Se richiesto, avvia il follow
+            if (follow) {
+                this.startFollowing();
+            }
         } catch (error) {
             ToastManager.show(`Error loading logs: ${error.message}`, 'error');
         }
     },
 
+    addFollowControls() {
+    // Crea o aggiorna i controlli nel modal
+    let controls = document.getElementById('logFollowControls');
+    if (!controls) {
+        controls = document.createElement('div');
+        controls.id = 'logFollowControls';
+        controls.className = 'log-controls';
+        controls.innerHTML = `
+            <button id="followToggleBtn" class="btn btn-sm">
+                <span class="follow-icon">▶</span> Following log
+            </button>
+            <button id="refreshLogBtn" class="btn btn-sm hidden">
+                🔄 Refresh
+            </button>
+            <span id="followStatus" class="status-indicator"></span>
+        `;
+        
+        const logHeader = document.querySelector('#logModal .modal-header');
+        const closeButton = logHeader.querySelector('.btn-close'); // Seleziona il pulsante di chiusura
+        
+        if (closeButton) {
+            // Inserisci i controlli prima del pulsante di chiusura
+            logHeader.insertBefore(controls, closeButton);
+        } else {
+            // Se non c'è il pulsante di chiusura, aggiungi i controlli come ultimo elemento
+            logHeader.appendChild(controls);
+        }
+        
+        // Aggiungi event listeners
+        document.getElementById('followToggleBtn').addEventListener('click', () => {
+            this.toggleFollow();
+        });
+        
+        document.getElementById('refreshLogBtn').addEventListener('click', () => {
+            this.refreshLogs();
+        });
+    }
+    
+    this.updateFollowButton();
+},
+
+    async refreshLogs() {
+        if (!this.currentContainer) return;
+        
+        try {
+            const response = await fetch(`/logs/${this.currentContainer}?t=${Date.now()}`);
+            const data = await response.json();
+            
+            const logContent = document.getElementById('logContent');
+            logContent.textContent = data.logs || 'No logs available';
+            
+            // Se stiamo seguendo, scrolla in fondo
+            if (this.isFollowing) {
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+            
+            this.updateFollowStatus('Ultimo aggiornamento: ' + new Date().toLocaleTimeString());
+        } catch (error) {
+            ToastManager.show(`Error refreshing logs: ${error.message}`, 'error');
+            this.stopFollowing();
+        }
+    },
+
+    toggleFollow() {
+        if (this.isFollowing) {
+            this.stopFollowing();
+        } else {
+            this.startFollowing();
+        }
+    },
+
+    startFollowing() {
+        this.isFollowing = true;
+        this.refreshInterval = setInterval(() => {
+            this.refreshLogs();
+        }, this.refreshRate);
+        
+        this.updateFollowButton();
+        this.updateFollowStatus('Seguendo i log...');
+        
+        // Scrolla immediatamente in fondo
+        const logContent = document.getElementById('logContent');
+        logContent.scrollTop = logContent.scrollHeight;
+    },
+
+    stopFollowing() {
+        this.isFollowing = false;
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
+        
+        this.updateFollowButton();
+        this.updateFollowStatus('Pausa');
+    },
+
+    updateFollowButton() {
+        const btn = document.getElementById('followToggleBtn');
+        const icon = btn.querySelector('.follow-icon');
+        if (btn) {
+            if (this.isFollowing) {
+                btn.classList.add('active');
+                icon.textContent = '⏸';
+                btn.innerHTML = btn.innerHTML.replace('Segui log', 'Pausa');
+            } else {
+                btn.classList.remove('active');
+                icon.textContent = '▶';
+                btn.innerHTML = btn.innerHTML.replace('Pausa', 'Segui log');
+            }
+        }
+    },
+
+    updateFollowStatus(message) {
+        const status = document.getElementById('followStatus');
+        if (status) {
+            status.textContent = message;
+        }
+    },
+
     close() {
+        this.stopFollowing();
+        this.currentContainer = null;
         ModalManager.close('logModal');
+    },
+
+    // Metodo per cambiare la frequenza di aggiornamento
+    setRefreshRate(rate) {
+        this.refreshRate = rate;
+        if (this.isFollowing) {
+            this.stopFollowing();
+            this.startFollowing();
+        }
     }
 };
 
