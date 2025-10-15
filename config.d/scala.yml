@@ -1,7 +1,0 @@
-images:
-  scala:
-    category: programming
-    description: Scala with SBT
-    image: hseeberger/scala-sbt:latest
-    keep_alive_cmd: sleep infinity
-    shell: /bin/bash

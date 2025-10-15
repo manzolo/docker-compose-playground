@@ -1,7 +1,0 @@
-images:
-  haproxy:
-    category: webserver
-    description: HAProxy - High performance load balancer
-    image: haproxy:latest
-    keep_alive_cmd: haproxy -f /usr/local/etc/haproxy/haproxy.cfg
-    shell: /bin/bash

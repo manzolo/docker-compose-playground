@@ -5,3 +5,9 @@ images:
     image: ubuntu:18.04
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    volumes:
+      # Bind mount (directory host)
+      - host: venv
+        path: /var/venv
+        type: bind
+        readonly: false

@@ -3,5 +3,8 @@ images:
     category: database
     description: CockroachDB - Distributed SQL
     image: cockroachdb/cockroach:latest
-    keep_alive_cmd: sleep infinity
+    keep_alive_cmd: start-single-node --insecure
     shell: /bin/bash
+    ports:
+       - "26257:26257"
+       - "28080:8080"

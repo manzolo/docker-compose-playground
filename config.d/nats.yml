@@ -1,9 +1,0 @@
-images:
-  nats:
-    category: messaging
-    description: NATS - Cloud native messaging
-    image: nats:latest
-    keep_alive_cmd: /nats-server
-    ports:
-    - 4222:4222
-    shell: /bin/sh

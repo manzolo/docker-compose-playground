@@ -1,7 +1,0 @@
-images:
-  debian-6:
-    category: linux
-    description: Debian 6 (Squeeze)
-    image: debian:6
-    keep_alive_cmd: sleep infinity
-    shell: /bin/bash

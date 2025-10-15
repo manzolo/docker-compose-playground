@@ -1,7 +1,0 @@
-images:
-  zig:
-    category: programming
-    description: Zig - Modern systems language
-    image: euantorano/zig:latest
-    keep_alive_cmd: sleep infinity
-    shell: /bin/bash

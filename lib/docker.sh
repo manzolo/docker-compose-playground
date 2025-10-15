@@ -7,21 +7,44 @@
 generate_compose() {
   local selected=("$@")
   
+  # Inizializza il file docker-compose.yml
   cat <<EOF > "$COMPOSE_FILE"
 networks:
   $NETWORK_NAME:
     driver: bridge
-
-services:
 EOF
+
+  # Raccogli tutti i named volumes (top-level)
+  local named_volumes=()
+  for img in "${selected[@]}"; do
+    img="${img//\"/}"
+    local volume_count=$(yq eval ".images.\"$img\".volumes | length" "$CONFIG_FILE" 2>/dev/null || echo "0")
+    if [ "$volume_count" -gt 0 ]; then
+      for ((i=0; i<volume_count; i++)); do
+        local vol_type=$(yq eval ".images.\"$img\".volumes[$i].type" "$CONFIG_FILE" 2>/dev/null || echo "named")
+        local vol_name=$(yq eval ".images.\"$img\".volumes[$i].name" "$CONFIG_FILE" 2>/dev/null || echo "")
+        if [ "$vol_type" = "named" ] && [ -n "$vol_name" ] && [ "$vol_name" != "null" ]; then
+          if [[ ! " ${named_volumes[@]} " =~ " ${vol_name} " ]]; then
+            named_volumes+=("$vol_name")
+            echo "  $vol_name:" >> "$COMPOSE_FILE"
+          fi
+        fi
+      done
+    fi
+  done
+
+  echo "" >> "$COMPOSE_FILE"
+  echo "services:" >> "$COMPOSE_FILE"
 
   for img in "${selected[@]}"; do
     img="${img//\"/}"
     
+    # Proprietà di base dell'immagine
     local image_name=$(get_image_property "$img" "image")
     local keep_alive_cmd=$(get_image_property "$img" "keep_alive_cmd" "sleep infinity")
     local privileged=$(get_image_property "$img" "privileged" "false")
     
+    # Scrivi la definizione del servizio
     cat <<EOF >> "$COMPOSE_FILE"
   $img:
     image: $image_name
@@ -31,6 +54,53 @@ EOF
       - $NETWORK_NAME
     volumes:
       - $SHARED_DIR:/shared
+EOF
+
+    # Aggiungi volumi specifici (bind, named, file)
+    local volume_count=$(yq eval ".images.\"$img\".volumes | length" "$CONFIG_FILE" 2>/dev/null || echo "0")
+    if [ "$volume_count" -gt 0 ]; then
+      for ((i=0; i<volume_count; i++)); do
+        local vol_type=$(yq eval ".images.\"$img\".volumes[$i].type" "$CONFIG_FILE" 2>/dev/null || echo "named")
+        local vol_path=$(yq eval ".images.\"$img\".volumes[$i].path" "$CONFIG_FILE" 2>/dev/null)
+        local readonly=$(yq eval ".images.\"$img\".volumes[$i].readonly" "$CONFIG_FILE" 2>/dev/null || echo "false")
+        
+        if [ "$vol_type" = "named" ]; then
+          local vol_name=$(yq eval ".images.\"$img\".volumes[$i].name" "$CONFIG_FILE" 2>/dev/null)
+          if [ -n "$vol_name" ] && [ "$vol_name" != "null" ]; then
+            if [ "$readonly" = "true" ]; then
+              echo "      - ${vol_name}:${vol_path}:ro" >> "$COMPOSE_FILE"
+            else
+              echo "      - ${vol_name}:${vol_path}" >> "$COMPOSE_FILE"
+            fi
+          fi
+        elif [ "$vol_type" = "bind" ] || [ "$vol_type" = "file" ]; then
+          local vol_host=$(yq eval ".images.\"$img\".volumes[$i].host" "$CONFIG_FILE" 2>/dev/null)
+          if [ -n "$vol_host" ] && [ "$vol_host" != "null" ]; then
+            # Converti percorsi relativi in assoluti
+            if [[ ! "$vol_host" = /* ]]; then
+              vol_host="${SCRIPT_DIR}/${vol_host}"
+            fi
+            
+            # Crea directory/file se non esistono
+            if [ "$vol_type" = "bind" ]; then
+              mkdir -p "$vol_host"
+            elif [ "$vol_type" = "file" ]; then
+              mkdir -p "$(dirname "$vol_host")"
+              touch "$vol_host"
+            fi
+            
+            if [ "$readonly" = "true" ]; then
+              echo "      - ${vol_host}:${vol_path}:ro" >> "$COMPOSE_FILE"
+            else
+              echo "      - ${vol_host}:${vol_path}" >> "$COMPOSE_FILE"
+            fi
+          fi
+        fi
+      done
+    fi
+
+    # Aggiungi il resto delle proprietà del servizio
+    cat <<EOF >> "$COMPOSE_FILE"
     command: $keep_alive_cmd
     stdin_open: true
     tty: true
@@ -40,6 +110,7 @@ EOF
       - "playground.image=$img"
 EOF
 
+    # Privileged
     if [ "$privileged" = "true" ]; then
       echo "    privileged: true" >> "$COMPOSE_FILE"
     fi

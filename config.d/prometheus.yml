@@ -3,7 +3,7 @@ images:
     category: monitoring
     description: Prometheus - Monitoring system
     image: prom/prometheus:latest
-    keep_alive_cmd: /bin/prometheus
+    keep_alive_cmd: --config.file=/etc/prometheus/prometheus.yml
     ports:
-    - 9090:9090
+    - 9091:9090
     shell: /bin/sh
