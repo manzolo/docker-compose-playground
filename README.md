@@ -51,8 +51,8 @@ chmod +x playground.sh
 ./playground.sh
 
 # 2. Web UI (Browser Interface)
-chmod +x start-web.sh
-./start-web.sh
+chmod +x start-webui.sh
+./start-webui.sh
 # Open http://localhost:8000
 
 # 3. CLI (Command Line)
@@ -89,7 +89,7 @@ Main menu:
 
 ### Web UI
 ```bash
-./start-web.sh
+./start-webui.sh
 # Open http://localhost:8000
 ```
 <img width="1890" height="906" alt="image" src="https://github.com/user-attachments/assets/52b8f36d-e560-4acf-9117-9799ab8148a3" />
