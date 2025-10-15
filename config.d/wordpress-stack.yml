@@ -1,0 +1,247 @@
+# Metadati del gruppo
+group:
+  name: "WordPress-Stack"
+  description: "WordPress with MySQL 8 database and phpMyAdmin web interface"
+  category: programming
+  containers: 
+    - mysql-wp-stack
+    - wordpress-stack
+    - phpmyadmin-wp-stack
+
+# Configurazioni dei container
+images:
+  mysql-wp-stack:
+    category: database
+    description: MySQL 8 Database Server for WordPress
+    image: mysql:8
+    keep_alive_cmd: mysqld
+    shell: /bin/bash
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Initializing MySQL for WordPress..."
+          
+          # Wait for MySQL
+          MAX_WAIT=60
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER_NAME}" mysqladmin ping -u root -pwordpress --silent 2>/dev/null; then
+              echo "✓ MySQL is ready!"
+              break
+            fi
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          
+          sleep 5
+          
+          # Create WordPress database and user
+          docker exec "${CONTAINER_NAME}" mysql -u root -pwordpress -e "
+          CREATE DATABASE IF NOT EXISTS wordpress;
+          CREATE USER IF NOT EXISTS 'wordpress'@'%' IDENTIFIED BY 'wordpress';
+          GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'%';
+          FLUSH PRIVILEGES;
+          " 2>/dev/null
+          
+          echo "✓ MySQL initialized for WordPress"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          mkdir -p "${BACKUP_DIR}"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          docker exec "${CONTAINER_NAME}" mysqldump -u root -pwordpress wordpress > "${BACKUP_DIR}/wordpress_${TIMESTAMP}.sql" 2>/dev/null
+          gzip "${BACKUP_DIR}/wordpress_${TIMESTAMP}.sql"
+          echo "✓ WordPress database backup created"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                MySQL for WordPress                          ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐 Connection:
+         Host: mysql-wp-stack or localhost
+         Port: 3306
+         User: root / wordpress
+         Password: wordpress
+         Database: wordpress
+      
+      📊 Quick Commands:
+         mysql -u root -pwordpress wordpress
+      
+      🌐 phpMyAdmin: http://localhost:8089
+      🌐 WordPress: http://localhost:8081
+
+  wordpress-stack:
+    category: web
+    description: "WordPress with Apache and MySQL extensions"
+    image: wordpress:php8.3-apache
+    keep_alive_cmd: apache2-foreground
+    shell: /bin/bash
+    ports:
+      - "8081:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql-wp-stack
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DEBUG: 1
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Setting up WordPress environment..."
+          
+          # Wait for WordPress files to be extracted
+          sleep 10
+          
+          # Install required PHP extensions for WordPress
+          echo "Installing WordPress required extensions..."
+          docker exec "${CONTAINER_NAME}" sh -c '
+          apt-get update && \
+          apt-get install -y libzip-dev libpng-dev libjpeg-dev libfreetype6-dev && \
+          docker-php-ext-configure gd --with-freetype --with-jpeg && \
+          docker-php-ext-install -j$(nproc) gd zip mysqli pdo_mysql && \
+          docker-php-ext-enable gd zip mysqli pdo_mysql
+          '
+          
+          # Set proper permissions for WordPress
+          docker exec "${CONTAINER_NAME}" sh -c '
+          chown -R www-data:www-data /var/www/html && \
+          chmod -R 755 /var/www/html && \
+          find /var/www/html -type d -exec chmod 755 {} \; && \
+          find /var/www/html -type f -exec chmod 644 {} \;
+          '
+          
+          # Create wp-config.php if it doesn't exist
+          docker exec "${CONTAINER_NAME}" sh -c '
+          if [ ! -f /var/www/html/wp-config.php ]; then
+            cat > /var/www/html/wp-config.php << "EOF"
+          <?php
+          /**
+           * WordPress Configuration
+           */
+          define( "DB_NAME", "wordpress" );
+          define( "DB_USER", "wordpress" );
+          define( "DB_PASSWORD", "wordpress" );
+          define( "DB_HOST", "mysql-wp-stack" );
+          define( "DB_CHARSET", "utf8" );
+          define( "DB_COLLATE", "" );
+
+          // Authentication Unique Keys and Salts
+          define( "AUTH_KEY",         "put your unique phrase here" );
+          define( "SECURE_AUTH_KEY",  "put your unique phrase here" );
+          define( "LOGGED_IN_KEY",    "put your unique phrase here" );
+          define( "NONCE_KEY",        "put your unique phrase here" );
+          define( "AUTH_SALT",        "put your unique phrase here" );
+          define( "SECURE_AUTH_SALT", "put your unique phrase here" );
+          define( "LOGGED_IN_SALT",   "put your unique phrase here" );
+          define( "NONCE_SALT",       "put your unique phrase here" );
+
+          // WordPress Database Table prefix
+          $table_prefix = "wp_";
+
+          // WordPress debugging mode
+          define( "WP_DEBUG", true );
+
+          // Absolute path to the WordPress directory
+          if ( ! defined( "ABSPATH" ) ) {
+            define( "ABSPATH", __DIR__ . "/" );
+          }
+
+          // Sets up WordPress vars and included files
+          require_once ABSPATH . "wp-settings.php";
+          EOF
+          fi
+          '
+          
+          # Restart Apache to apply changes
+          docker restart "${CONTAINER_NAME}"
+          
+          echo "✓ WordPress environment setup completed"
+          echo "🌐 WordPress: http://localhost:8081"
+          echo "🔧 Admin: http://localhost:8081/wp-admin"
+          echo "📊 Database: mysql-wp-stack:3306"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                     WordPress Stack                         ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 WordPress: http://localhost:8081
+      🔧 Admin Panel: http://localhost:8081/wp-admin
+      📊 Database: mysql-wp-stack:3306
+      
+      🔧 Features:
+         • WordPress latest with PHP 8.3
+         • Apache with required extensions
+         • MySQL 8 database
+         • GD library for images
+         • Zip support for plugins/themes
+      
+      💡 First time setup:
+         1. Visit http://localhost:8081
+         2. Complete WordPress installation
+         3. Use database credentials from MySQL container
+
+  phpmyadmin-wp-stack:
+    category: database
+    description: phpMyAdmin - MySQL Web Interface for WordPress
+    image: phpmyadmin:latest
+    keep_alive_cmd: /docker-entrypoint.sh apache2-foreground
+    shell: /bin/bash
+    ports:
+      - "8089:80"
+    environment:
+      PMA_HOST: mysql-wp-stack
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Configuring phpMyAdmin for WordPress..."
+          sleep 5
+          
+          docker exec "${CONTAINER_NAME}" sh -c '
+          cat > /etc/phpmyadmin/config.user.inc.php << "EOF"
+          <?php
+          $cfg["Servers"][$i]["auth_type"] = "config";
+          $cfg["Servers"][$i]["user"] = "root";
+          $cfg["Servers"][$i]["password"] = "wordpress";
+          $cfg["Servers"][$i]["AllowNoPassword"] = true;
+          $cfg["LoginCookieValidity"] = 86400;
+          $cfg["Servers"][$i]["only_db"] = "wordpress";
+          ?>
+          EOF
+          '
+          
+          echo "✓ phpMyAdmin ready at http://localhost:8089"
+          echo "✓ Auto-login enabled (root/wordpress)"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              phpMyAdmin for WordPress                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 Access: http://localhost:8089
+      🔐 Auto-login: Enabled (root/wordpress)
+      📁 Default DB: wordpress
+      
+      💡 Manage WordPress database tables:
+         • wp_* tables contain WordPress data
+         • wp_options: WordPress settings
+         • wp_posts: Posts and pages
+         • wp_users: User accounts
