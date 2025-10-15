@@ -294,13 +294,13 @@ echo ""
 
 if [ $FAILED_TESTS -eq 0 ]; then
     echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║   All tests passed! ✓                   ║${NC}"
+    echo -e "${GREEN}║   All tests passed! ✓                    ║${NC}"
     echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${CYAN}CLI is working correctly!${NC}"
 else
     echo -e "${RED}╔══════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║   Some tests failed! ✗                  ║${NC}"
+    echo -e "${RED}║   Some tests failed! ✗                   ║${NC}"
     echo -e "${RED}╚══════════════════════════════════════════╝${NC}"
     echo ""
     exit 1
