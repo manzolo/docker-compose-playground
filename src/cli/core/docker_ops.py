@@ -208,7 +208,7 @@ def stop_container(container_name: str, remove: bool = True) -> bool:
         cont = docker_client.containers.get(container_name)
         
         console.print(f"[yellow]Stopping container: {container_name}...[/yellow]")
-        cont.stop(timeout=90)
+        cont.stop(timeout=10)  # 10 seconds is reasonable for dev environments
         
         if remove:
             console.print("[yellow]Removing container...[/yellow]")

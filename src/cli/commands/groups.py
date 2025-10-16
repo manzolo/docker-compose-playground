@@ -195,7 +195,7 @@ def stop_group(
                         execute_script(scripts['pre_stop'], full_container_name, container_name)
                 
                 # Stop container
-                cont.stop(timeout=90)
+                cont.stop(timeout=10)  # 10 seconds for dev environments
                 
                 if remove:
                     cont.remove()
