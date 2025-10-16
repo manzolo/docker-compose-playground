@@ -137,12 +137,12 @@
             </div>
         </div>
         {% endif %}
-        
+
         <div id="images" class="image-grid">
             {% for name, data in images.items() %}
             {% set feature = features.get(name, {}) %}
             {% set running_info = running.get(name) %}
-            
+
             <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
                 data-container="playground-{{ name }}">
                 <div class="card-header">
@@ -164,7 +164,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <p class="card-description">{{ data.description }}</p>
 
                 <div class="card-status">
@@ -176,7 +176,7 @@
                     <span class="status-text">Stopped</span>
                     {% endif %}
                 </div>
-                
+
                 <!-- MOTD Section (Collapsed by default) -->
                 {% if feature.get('has_motd') %}
                 <div class="motd-section">
@@ -225,13 +225,21 @@
         <div class="modal-overlay" onclick="closeModal('logModal')"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📋 Container Logs</h2>
+                <div class="modal-header-left">
+                    <h2>📋 Container Logs</h2>
+                    <div class="log-info">
+                        Container: <strong id="logContainerName"></strong>
+                    </div>
+                </div>
+                <div id="logFollowControls" class="log-follow-controls">
+                    <button id="followToggleBtn" class="btn btn-sm btn-outline">
+                        <span class="follow-icon">▶</span> Follow
+                    </button>
+                    <span id="followStatus" class="follow-status"></span>
+                </div>
                 <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="log-info">
-                    Container: <strong id="logContainerName"></strong>
-                </div>
                 <pre id="logContent" class="log-content"></pre>
             </div>
             <div class="modal-footer">

@@ -233,6 +233,7 @@
     max-width: 1200px;
 }
 
+/* Standard Modal Header */
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -253,23 +254,24 @@
 }
 
 .modal-close {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     border: none;
     font-size: 24px;
     color: white;
     cursor: pointer;
-    width: 36px;
-    height: 36px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    width: auto;
+    height: auto;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    transition: all 0.2s;
-    font-weight: 300;
 }
 
 .modal-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.25);
     transform: rotate(90deg);
 }
 
@@ -277,6 +279,25 @@
     padding: 24px 32px;
     overflow: auto;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-body > pre {
+    margin: 0;
+    flex: 1;
+}
+
+.log-content {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow: auto;
+    max-height: 500px;
 }
 
 .modal-footer {
@@ -306,8 +327,100 @@
     font-style: italic;
 }
 
-/* Responsive */
-@media (max-width: 640px) {
+/* ========================================
+   LOG MODAL SPECIFIC STYLES
+   ======================================== */
+
+#logModal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.modal-header-left {
+    flex: 1;
+    min-width: 250px;
+}
+
+.modal-header-left h2 {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+}
+
+.log-info {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 400;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    margin: 0;
+}
+
+.log-info strong {
+    color: white;
+    font-weight: 600;
+}
+
+.log-follow-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+.btn-outline {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-outline:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-outline.active {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: white;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+.follow-icon {
+    font-size: 12px;
+    transition: transform 0.3s;
+    display: inline-block;
+}
+
+.btn-outline.active .follow-icon {
+    transform: rotate(90deg);
+}
+
+.follow-status {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
     .modal-content {
         width: 95%;
         border-radius: 16px;
@@ -341,5 +454,22 @@
     .confirm-modal-footer .btn {
         width: 100%;
         min-width: auto;
+    }
+    
+    #logModal .modal-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .log-follow-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .modal-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
     }
 }

@@ -330,7 +330,7 @@ const FilterPersistenceManager = {
         if (savedState) {
             try {
                 const filterState = JSON.parse(savedState);
-                
+
                 // Ripristina input di ricerca
                 if (DOM.filterInput && filterState.searchTerm) {
                     DOM.filterInput.value = filterState.searchTerm;
@@ -400,14 +400,14 @@ const ContainerManager = {
             });
 
             Utils.clearAbortTimeout(timeoutId);
-            
+
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.detail || 'Failed to start container');
             }
 
             const data = await response.json();
-            
+
             if (data.operation_id) {
                 ToastManager.show(`Starting container ${image}...`, 'info');
                 await this.pollContainerStatus(data.operation_id, image, btn, originalHTML);
@@ -425,37 +425,37 @@ const ContainerManager = {
             const statusData = await Utils.pollOperationStatus(
                 operationId,
                 (data) => this.formatContainerStatusMessage(data, image),
-                { 
-                    maxAttempts: Constants.POLLING.MAX_ATTEMPTS, 
-                    interval: Constants.POLLING.INTERVAL 
+                {
+                    maxAttempts: Constants.POLLING.MAX_ATTEMPTS,
+                    interval: Constants.POLLING.INTERVAL
                 }
             );
 
             if (statusData.status === 'completed') {
                 const started = statusData.started || 0;
                 const alreadyRunning = statusData.already_running || 0;
-                
+
                 if (started > 0) {
                     ToastManager.show(`✅ Container ${image} started successfully!`, 'success');
                 } else if (alreadyRunning > 0) {
                     ToastManager.show(`ℹ️ Container ${image} was already running`, 'info');
                 }
-                
+
                 this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                
+
                 // IMPORTANTE: Salva i filtri prima del reload
                 FilterPersistenceManager.saveFilterState();
-                
+
                 setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
-                
+
             } else if (statusData.status === 'error') {
                 const errorMsg = statusData.error || 'Unknown error';
                 ToastManager.show(`❌ Failed to start ${image}: ${errorMsg}`, 'error');
-                
+
                 if (statusData.errors && statusData.errors.length > 0) {
                     ToastManager.showErrorsSequentially(statusData.errors, `Errors starting ${image}:`);
                 }
-                
+
                 Utils.updateButtonState(btn, {
                     disabled: false,
                     originalHTML
@@ -557,7 +557,7 @@ const ContainerManager = {
         if (response.ok) {
             ToastManager.show(`✅ Container ${containerName} stopped`, 'success');
             this.updateCardUI(imageName, false, '');
-            
+
             // Salva i filtri prima del reload
             FilterPersistenceManager.saveFilterState();
             setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
@@ -698,6 +698,12 @@ const ConsoleManager = {
         window.addEventListener('resize', () => {
             if (AppState.fitAddon) AppState.fitAddon.fit();
         });
+        setTimeout(() => {
+            if (AppState.fitAddon) {
+                AppState.fitAddon.fit();
+            }
+            AppState.term.scrollToBottom();
+        }, 100);
     },
 
     connectWebSocket(container) {
@@ -707,11 +713,71 @@ const ConsoleManager = {
         AppState.ws.onopen = () => {
             this.updateConsoleUI(container, '● Connected', 'console-connected');
             AppState.term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
+
+            // Scroll both the modal body and xterm viewport
+            const scrollToBottomBoth = () => {
+                // Scroll xterm
+                if (AppState.term) {
+                    AppState.term.scrollToBottom();
+                }
+
+                // Scroll modal body
+                const modalBody = document.querySelector('#consoleModal .modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = modalBody.scrollHeight;
+                }
+
+                // Scroll xterm viewport directly
+                const viewport = document.querySelector('.xterm-viewport');
+                if (viewport) {
+                    viewport.scrollTop = viewport.scrollHeight;
+                }
+            };
+
+            // Scroll on render events
+            const renderListener = AppState.term.onRender(() => {
+                scrollToBottomBoth();
+            });
+
+            // Safety timeouts
+            setTimeout(() => scrollToBottomBoth(), 100);
+            setTimeout(() => scrollToBottomBoth(), 500);
+            setTimeout(() => {
+                if (renderListener && typeof renderListener.dispose === 'function') {
+                    renderListener.dispose();
+                }
+            }, 2000);
         };
 
         AppState.ws.onmessage = (event) => {
             AppState.term.write(event.data);
-            AppState.term.scrollToBottom();
+
+            // Immediate scroll after message
+            const scrollToBottomBoth = () => {
+                if (AppState.term) {
+                    AppState.term.scrollToBottom();
+                }
+
+                const modalBody = document.querySelector('#consoleModal .modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = modalBody.scrollHeight;
+                }
+
+                const viewport = document.querySelector('.xterm-viewport');
+                if (viewport) {
+                    viewport.scrollTop = viewport.scrollHeight;
+                }
+            };
+
+            scrollToBottomBoth();
+
+            // Render listener
+            const renderListener = AppState.term.onRender(() => {
+                scrollToBottomBoth();
+                if (renderListener && typeof renderListener.dispose === 'function') {
+                    renderListener.dispose();
+                }
+            });
         };
 
         AppState.ws.onerror = (error) => {
@@ -1298,13 +1364,26 @@ const LogsManager = {
 
             document.getElementById('logContainerName').textContent = container;
             document.getElementById('logContent').textContent = data.logs || 'No logs available';
-            
-            // Aggiungi controlli per il follow
+
+            // Add follow controls
             this.addFollowControls();
-            
+
+            // Open modal
             ModalManager.open('logModal');
-            
-            // Se richiesto, avvia il follow
+
+            // Scroll to bottom with proper timing
+            // First wait for modal to be rendered
+            requestAnimationFrame(() => {
+                // Then wait one more frame for layout calculation
+                requestAnimationFrame(() => {
+                    const logContent = document.getElementById('logContent');
+                    if (logContent) {
+                        logContent.scrollTop = logContent.scrollHeight;
+                    }
+                });
+            });
+
+            // Start following if requested
             if (follow) {
                 this.startFollowing();
             }
@@ -1314,62 +1393,35 @@ const LogsManager = {
     },
 
     addFollowControls() {
-    // Crea o aggiorna i controlli nel modal
-    let controls = document.getElementById('logFollowControls');
-    if (!controls) {
-        controls = document.createElement('div');
-        controls.id = 'logFollowControls';
-        controls.className = 'log-controls';
-        controls.innerHTML = `
-            <button id="followToggleBtn" class="btn btn-sm">
-                <span class="follow-icon">▶</span> Following log
-            </button>
-            <button id="refreshLogBtn" class="btn btn-sm hidden">
-                🔄 Refresh
-            </button>
-            <span id="followStatus" class="status-indicator"></span>
-        `;
-        
-        const logHeader = document.querySelector('#logModal .modal-header');
-        const closeButton = logHeader.querySelector('.btn-close'); // Seleziona il pulsante di chiusura
-        
-        if (closeButton) {
-            // Inserisci i controlli prima del pulsante di chiusura
-            logHeader.insertBefore(controls, closeButton);
-        } else {
-            // Se non c'è il pulsante di chiusura, aggiungi i controlli come ultimo elemento
-            logHeader.appendChild(controls);
+        // I controlli sono già nell'HTML, basta collegarli
+        const followToggleBtn = document.getElementById('followToggleBtn');
+        const refreshLogBtn = document.getElementById('refreshLogBtn');
+
+        if (followToggleBtn) {
+            followToggleBtn.addEventListener('click', () => {
+                this.toggleFollow();
+            });
         }
-        
-        // Aggiungi event listeners
-        document.getElementById('followToggleBtn').addEventListener('click', () => {
-            this.toggleFollow();
-        });
-        
-        document.getElementById('refreshLogBtn').addEventListener('click', () => {
-            this.refreshLogs();
-        });
-    }
-    
-    this.updateFollowButton();
-},
+
+        this.updateFollowButton();
+    },
 
     async refreshLogs() {
         if (!this.currentContainer) return;
-        
+
         try {
             const response = await fetch(`/logs/${this.currentContainer}?t=${Date.now()}`);
             const data = await response.json();
-            
+
             const logContent = document.getElementById('logContent');
             logContent.textContent = data.logs || 'No logs available';
-            
+
             // Se stiamo seguendo, scrolla in fondo
             if (this.isFollowing) {
                 logContent.scrollTop = logContent.scrollHeight;
             }
-            
-            this.updateFollowStatus('Ultimo aggiornamento: ' + new Date().toLocaleTimeString());
+
+            this.updateFollowStatus('Last update: ' + new Date().toLocaleTimeString());
         } catch (error) {
             ToastManager.show(`Error refreshing logs: ${error.message}`, 'error');
             this.stopFollowing();
@@ -1389,10 +1441,10 @@ const LogsManager = {
         this.refreshInterval = setInterval(() => {
             this.refreshLogs();
         }, this.refreshRate);
-        
+
         this.updateFollowButton();
-        this.updateFollowStatus('Seguendo i log...');
-        
+        this.updateFollowStatus('Following logs...');
+
         // Scrolla immediatamente in fondo
         const logContent = document.getElementById('logContent');
         logContent.scrollTop = logContent.scrollHeight;
@@ -1404,7 +1456,7 @@ const LogsManager = {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
         }
-        
+
         this.updateFollowButton();
         this.updateFollowStatus('Pausa');
     },
@@ -1484,7 +1536,7 @@ const MOTDManager = {
 
         const motdText = event.target.parentElement.parentElement.querySelector('.motd-text').textContent;
         AppState.ws.send(motdText + '\n');
-        
+
         ToastManager.show('Commands sent to console!', 'success');
     }
 };
