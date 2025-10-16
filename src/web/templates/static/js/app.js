@@ -1448,6 +1448,47 @@ const LogsManager = {
     }
 };
 
+const MOTDManager = {
+    toggle(header) {
+        const content = header.nextElementSibling;
+        const icon = header.querySelector('.motd-toggle-icon');
+
+        content.classList.toggle('open');
+        icon.classList.toggle('open');
+    },
+
+    copy(button) {
+        const motdText = button.parentElement.parentElement.querySelector('.motd-text');
+        const text = motdText.textContent;
+
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = button.textContent;
+            button.textContent = '✓ Copied!';
+
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+
+            ToastManager.show('Commands copied to clipboard!', 'success');
+        }).catch(() => {
+            ToastManager.show('Failed to copy commands', 'error');
+        });
+    },
+
+    async sendToConsole(containerName) {
+        if (!AppState.term || AppState.ws?.readyState !== WebSocket.OPEN) {
+            ToastManager.show('Console not connected. Open the console first.', 'warning');
+            ConsoleManager.open(containerName);
+            return;
+        }
+
+        const motdText = event.target.parentElement.parentElement.querySelector('.motd-text').textContent;
+        AppState.ws.send(motdText + '\n');
+        
+        ToastManager.show('Commands sent to console!', 'success');
+    }
+};
+
 // =========================================================
 // Global Export (for HTML onclick handlers)
 // =========================================================
@@ -1457,6 +1498,7 @@ window.GroupManager = GroupManager;
 window.BulkOperations = BulkOperations;
 window.FilterManager = FilterManager;
 window.LogsManager = LogsManager;
+window.MOTDManager = MOTDManager;
 window.FilterPersistenceManager = FilterPersistenceManager;
 
 window.showLogs = LogsManager.show.bind(LogsManager);

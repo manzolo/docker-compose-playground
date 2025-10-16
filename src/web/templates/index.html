@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/static/css/container.css">
     <link rel="stylesheet" href="/static/css/search.css">
     <link rel="stylesheet" href="/static/css/groups.css">
+    <link rel="stylesheet" href="/static/css/motd.css">
 </head>
 
 <body>
@@ -43,7 +44,8 @@
             <div class="search-section">
                 <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
                 <span class="search-count" id="search-count"></span>
-                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()" title="Clear search">
+                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()"
+                    title="Clear search">
                     ✕
                 </button>
             </div>
@@ -73,7 +75,8 @@
             </div>
 
             <div class="bulk-actions">
-                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()" title="Stop all running containers">
+                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()"
+                    title="Stop all running containers">
                     <span class="btn-icon">⏹</span> Stop All
                 </button>
             </div>
@@ -118,7 +121,8 @@
                             class="btn btn-success btn-block group-start-btn">
                             <span class="btn-icon">🚀</span> Start Stack
                         </button>
-                        <button onclick="GroupManager.stopGroup('{{ group_name }}')" class="btn btn-danger btn-sm group-stop-btn">
+                        <button onclick="GroupManager.stopGroup('{{ group_name }}')"
+                            class="btn btn-danger btn-sm group-stop-btn">
                             <span class="btn-icon">⏹</span> Stop All
                         </button>
                     </div>
@@ -133,8 +137,12 @@
             </div>
         </div>
         {% endif %}
+        
         <div id="images" class="image-grid">
             {% for name, data in images.items() %}
+            {% set feature = features.get(name, {}) %}
+            {% set running_info = running.get(name) %}
+            
             <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
                 data-container="playground-{{ name }}">
                 <div class="card-header">
@@ -143,23 +151,24 @@
                         <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
 
                         <!-- Icone compatte -->
-                        {% if features[name].has_motd %}
+                        {% if feature.get('has_motd') %}
                         <span class="feature-icon feature-motd" title="Has MOTD">📋</span>
                         {% endif %}
 
-                        {% if features[name].has_post_start %}
+                        {% if feature.get('has_post_start') %}
                         <span class="feature-icon feature-post-start" title="Has post-start script">🚀</span>
                         {% endif %}
 
-                        {% if features[name].has_pre_stop %}
+                        {% if feature.get('has_pre_stop') %}
                         <span class="feature-icon feature-pre-stop" title="Has pre-stop script">💾</span>
                         {% endif %}
                     </div>
                 </div>
+                
                 <p class="card-description">{{ data.description }}</p>
 
                 <div class="card-status">
-                    {% if running.get(name) %}
+                    {% if running_info %}
                     <span class="status-indicator status-running">●</span>
                     <span class="status-text">Running</span>
                     {% else %}
@@ -167,16 +176,37 @@
                     <span class="status-text">Stopped</span>
                     {% endif %}
                 </div>
+                
+                <!-- MOTD Section (Collapsed by default) -->
+                {% if feature.get('has_motd') %}
+                <div class="motd-section">
+                    <div class="motd-header" onclick="MOTDManager.toggle(this)">
+                        <div class="motd-header-content">
+                            <span class="motd-toggle-icon">▼</span>
+                            <span class="motd-label">📋 Quick Commands</span>
+                            <span class="motd-preview">({{ data.motd_commands|length }} commands)</span>
+                        </div>
+                    </div>
+
+                    <div class="motd-content">
+                        <div class="motd-body">
+                            <div class="motd-text">{{ data.motd|escape }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <div class="card-actions">
-                    {% if running.get(name) %}
-                    <button class="btn btn-danger" onclick="ContainerManager.stopContainer('{{ name }}', '{{ running[name].name }}')">
+                    {% if running_info %}
+                    <button class="btn btn-danger"
+                        onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
                         <span class="btn-icon">⏹</span> Stop
                     </button>
-                    <button class="btn btn-primary" onclick="showLogs('{{ running[name].name }}')">
+                    <button class="btn btn-primary" onclick="showLogs('{{ running_info.name }}')">
                         <span class="btn-icon">📋</span> Logs
                     </button>
-                    <button class="btn btn-success" onclick="ConsoleManager.open('{{ running[name].name }}', '{{ name }}')">
+                    <button class="btn btn-success"
+                        onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
                         <span class="btn-icon">💻</span> Console
                     </button>
                     {% else %}
