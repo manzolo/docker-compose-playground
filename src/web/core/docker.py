@@ -23,6 +23,72 @@ def ensure_network():
         docker_client.networks.create(NETWORK_NAME, driver="bridge")
         logger.info("Network %s created", NETWORK_NAME)
 
+
+def ensure_named_volumes(volumes_config: List[Dict[str, Any]]):
+    """Create named volumes if they don't exist"""
+    if not volumes_config:
+        return
+    
+    for vol_data in volumes_config:
+        if vol_data.get("type") == "named":
+            vol_name = vol_data.get("name")
+            if vol_name:
+                try:
+                    docker_client.volumes.get(vol_name)
+                except docker.errors.NotFound:
+                    logger.info("Creating named volume: %s", vol_name)
+                    docker_client.volumes.create(name=vol_name, driver="local")
+
+
+def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
+    """Prepare volumes for docker-compose format"""
+    if not volumes_config:
+        return []
+    
+    compose_volumes = []
+    
+    for vol_data in volumes_config:
+        vol_type = vol_data.get("type", "named")
+        vol_path = vol_data.get("path", "")
+        readonly = vol_data.get("readonly", False)
+        
+        if not vol_path:
+            logger.warning("Volume missing path: %s", vol_data)
+            continue
+        
+        if vol_type == "named":
+            vol_name = vol_data.get("name")
+            if vol_name:
+                vol_str = f"{vol_name}:{vol_path}"
+                if readonly:
+                    vol_str += ":ro"
+                compose_volumes.append(vol_str)
+        
+        elif vol_type in ("bind", "file"):
+            host_path = vol_data.get("host")
+            if host_path:
+                # Convert relative paths to absolute
+                if not host_path.startswith("/"):
+                    host_path = str(BASE_DIR / host_path)
+                
+                # Create directory/file if needed
+                try:
+                    if vol_type == "bind":
+                        Path(host_path).mkdir(parents=True, exist_ok=True)
+                    elif vol_type == "file":
+                        Path(host_path).parent.mkdir(parents=True, exist_ok=True)
+                        Path(host_path).touch(exist_ok=True)
+                except Exception as e:
+                    logger.warning("Failed to prepare volume path %s: %s", host_path, str(e))
+                
+                vol_str = f"{host_path}:{vol_path}"
+                if readonly:
+                    vol_str += ":ro"
+                compose_volumes.append(vol_str)
+    
+    return compose_volumes
+
+
 def check_port_available(port: int) -> Tuple[bool, str]:
     """Check if a port is available on the host"""
     try:
@@ -51,6 +117,7 @@ def check_port_available(port: int) -> Tuple[bool, str]:
         logger.warning("Error checking port %d: %s", port, str(e))
         return True, ""
 
+
 def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> Tuple[bool, List[Dict[str, Any]]]:
     """Validate all ports are available for a container"""
     conflicts = []
@@ -73,8 +140,18 @@ def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> T
     
     return len(conflicts) == 0, conflicts
 
+
+def get_stop_timeout(img_data: Dict[str, Any]) -> int:
+    """Get appropriate stop timeout based on scripts"""
+    # If there's a pre-stop script, give it more time
+    scripts = img_data.get("scripts", {})
+    if scripts.get("pre_stop"):
+        return 30  # 30 seconds for containers with pre-stop scripts
+    return 10  # 10 seconds default
+
+
 def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Start a single container synchronously"""
+    """Start a single container synchronously with volume support"""
     from src.web.core.scripts import execute_script
     
     full_container_name = f"playground-{container_name}"
@@ -103,6 +180,15 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
     # Ensure network
     ensure_network()
     
+    # Prepare volumes
+    volumes_config = img_data.get("volumes", [])
+    ensure_named_volumes(volumes_config)
+    compose_volumes = prepare_volumes(volumes_config)
+    
+    # Build final volumes list
+    all_volumes = [f"{SHARED_DIR}:/shared"]
+    all_volumes.extend(compose_volumes)
+    
     # Parse ports
     ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}
     
@@ -114,9 +200,9 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
             name=full_container_name,
             hostname=container_name,
             environment=img_data.get("environment", {}),
-            ports=ports,
-            volumes=[f"{SHARED_DIR}:/shared"],
-            command=img_data["keep_alive_cmd"],
+            ports=ports if ports else None,
+            volumes=all_volumes,
+            command=img_data.get("keep_alive_cmd", "sleep infinity"),
             network=NETWORK_NAME,
             stdin_open=True,
             tty=True,
@@ -171,8 +257,9 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
     logger.error("%s: %s", container_name, error_msg)
     return {"status": "failed", "name": container_name, "error": error_msg}
 
+
 def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Stop a single container synchronously"""
+    """Stop a single container synchronously with proper timeout"""
     from src.web.core.scripts import execute_script
     
     full_container_name = f"playground-{container_name}"
@@ -188,13 +275,17 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) ->
         scripts = img_data.get('scripts', {})
         if 'pre_stop' in scripts:
             try:
+                logger.info("Executing pre-stop script for %s", container_name)
                 execute_script(scripts['pre_stop'], full_container_name, container_name)
+                logger.info("Pre-stop script completed for %s", container_name)
             except Exception as script_error:
                 logger.warning("Pre-stop script error for %s: %s", container_name, str(script_error))
         
-        # Stop and remove
-        logger.info("Stopping container %s", full_container_name)
-        cont.stop(timeout=90)
+        # Get appropriate timeout
+        timeout = get_stop_timeout(img_data)
+        logger.info("Stopping container %s with timeout %d seconds", full_container_name, timeout)
+        
+        cont.stop(timeout=timeout)
         cont.remove()
         
         logger.info("Container %s stopped and removed", container_name)
@@ -209,6 +300,7 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) ->
         logger.error(error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
 
+
 def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str, bool]:
     """Get special features of a container"""
     img_data = config.get(image_name, {})
@@ -216,8 +308,36 @@ def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str,
         'has_motd': bool(img_data.get('motd')),
         'has_scripts': bool(img_data.get('scripts')),
         'has_post_start': bool(img_data.get('scripts', {}).get('post_start')),
-        'has_pre_stop': bool(img_data.get('scripts', {}).get('pre_stop'))
+        'has_pre_stop': bool(img_data.get('scripts', {}).get('pre_stop')),
+        'has_volumes': bool(img_data.get('volumes'))
     }
+
+
+def get_container_volumes(container_name: str) -> Dict[str, str]:
+    """Get volumes mounted in a container"""
+    if not container_name.startswith("playground-"):
+        container_name = f"playground-{container_name}"
+    
+    try:
+        cont = docker_client.containers.get(container_name)
+        mounts = cont.attrs.get('Mounts', [])
+        
+        volumes_info = {}
+        for mount in mounts:
+            container_path = mount.get('Destination', '')
+            mount_type = mount.get('Type', '')
+            
+            if mount_type == 'volume':
+                volume_name = mount.get('Name', '')
+                volumes_info[container_path] = f"[volume] {volume_name}"
+            elif mount_type == 'bind':
+                source = mount.get('Source', '')
+                volumes_info[container_path] = f"[bind] {source}"
+        
+        return volumes_info
+    except:
+        return {}
+
 
 # Initialize network on import
 ensure_network()

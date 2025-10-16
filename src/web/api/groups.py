@@ -6,7 +6,10 @@ import logging
 from typing import Dict, Any
 
 from src.web.core.config import load_config
-from src.web.core.docker import start_single_container_sync, stop_single_container_sync, docker_client
+from src.web.core.docker import (
+    start_single_container_sync, stop_single_container_sync,
+    docker_client, get_stop_timeout
+)
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
@@ -14,12 +17,13 @@ logger = logging.getLogger("uvicorn")
 # Global state for operations
 active_operations: Dict[str, dict] = {}
 
+
 @router.post("/api/start-group/{group_name}")
 async def start_group(group_name: str):
     """Start all containers in a group"""
     try:
         config_data = load_config()
-        groups = config_data["group"]
+        groups = config_data["groups"]
         images = config_data["images"]
         
         if group_name not in groups:
@@ -63,6 +67,7 @@ async def start_group(group_name: str):
     except Exception as e:
         logger.error("Error starting group %s: %s", group_name, str(e))
         raise HTTPException(500, str(e))
+
 
 async def start_group_background(operation_id: str, group_name: str, containers: list, images: dict):
     """Background task to start group"""
@@ -118,12 +123,14 @@ async def start_group_background(operation_id: str, group_name: str, containers:
             "completed_at": datetime.now().isoformat()
         })
 
+
 @router.post("/api/stop-group/{group_name}")
 async def stop_group(group_name: str):
     """Stop all containers in a group"""
     try:
         config_data = load_config()
-        groups = config_data["group"]
+        groups = config_data["groups"]
+        images = config_data["images"]
         
         if group_name not in groups:
             raise HTTPException(404, f"Group '{group_name}' not found")
@@ -146,7 +153,7 @@ async def stop_group(group_name: str):
             "errors": []
         }
         
-        asyncio.create_task(stop_group_background(operation_id, group_name, containers, config_data["images"]))
+        asyncio.create_task(stop_group_background(operation_id, group_name, containers, images))
         
         return {"operation_id": operation_id, "status": "started", "total": len(containers)}
     
@@ -155,6 +162,7 @@ async def stop_group(group_name: str):
     except Exception as e:
         logger.error("Error stopping group: %s", str(e))
         raise HTTPException(500, str(e))
+
 
 async def stop_group_background(operation_id: str, group_name: str, containers: list, images: dict):
     """Background task to stop group"""
@@ -166,6 +174,7 @@ async def stop_group_background(operation_id: str, group_name: str, containers: 
     try:
         loop = asyncio.get_event_loop()
         
+        # Stop in reverse order (dependencies)
         for container_name in reversed(containers):
             try:
                 img_data = images.get(container_name, {})
@@ -206,12 +215,13 @@ async def stop_group_background(operation_id: str, group_name: str, containers: 
             "completed_at": datetime.now().isoformat()
         })
 
+
 @router.get("/api/group-status/{group_name}")
 async def get_group_status(group_name: str):
     """Get status of all containers in a group"""
     try:
         config_data = load_config()
-        groups = config_data["group"]
+        groups = config_data["groups"]
         
         if group_name not in groups:
             raise HTTPException(404, f"Group '{group_name}' not found")
@@ -245,6 +255,7 @@ async def get_group_status(group_name: str):
     except Exception as e:
         logger.error("Error getting group status: %s", str(e))
         raise HTTPException(500, str(e))
+
 
 @router.get("/api/operation-status/{operation_id}")
 async def get_operation_status(operation_id: str):

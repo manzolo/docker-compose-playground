@@ -12,27 +12,53 @@ CONFIG_DIR = BASE_DIR / "config.d"
 CUSTOM_CONFIG_DIR = BASE_DIR / "custom.d"
 CONFIG_FILE = BASE_DIR / "config.yml"
 
+
 def _process_config(config: Dict[str, Any], source_name: str, images: Dict[str, Any], groups: Dict[str, Any]):
-    """Process a single config file"""
+    """Process a single config file and extract images and groups"""
     if not config or not isinstance(config, dict):
         return
     
-    # Load group if present
+    # Load group (supports both singular "group" and plural "groups")
+    # Handle singular "group" with single group definition
     if "group" in config and isinstance(config["group"], dict):
-        group_name = config["group"].get("name", f"group_{len(groups)}")
-        groups[group_name] = config["group"]
-        groups[group_name]["source"] = source_name
-        logger.debug("Loaded group '%s' from %s", group_name, source_name)
+        group_data = config["group"]
+        if "name" in group_data:
+            # Single group with name inside
+            group_name = group_data["name"]
+            groups[group_name] = group_data
+            groups[group_name]["source"] = source_name
+            logger.debug("Loaded group '%s' from %s", group_name, source_name)
     
-    # Load images
+    # Handle plural "groups" (list or dict)
+    if "groups" in config:
+        groups_data = config["groups"]
+        if isinstance(groups_data, list):
+            for group in groups_data:
+                if isinstance(group, dict) and "name" in group:
+                    group_name = group["name"]
+                    groups[group_name] = group
+                    groups[group_name]["source"] = source_name
+                    logger.debug("Loaded group '%s' from %s", group_name, source_name)
+        elif isinstance(groups_data, dict):
+            for name, group in groups_data.items():
+                if isinstance(group, dict):
+                    group["name"] = name
+                    groups[name] = group
+                    groups[name]["source"] = source_name
+                    logger.debug("Loaded group '%s' from %s", name, source_name)
+    
+    # Load images from "images" section
     if "images" in config and isinstance(config["images"], dict):
         images.update(config["images"])
         logger.debug("Loaded %d images from 'images' key in %s", len(config["images"]), source_name)
     else:
+        # Fallback: load images from direct keys (not group, not groups, not settings)
         for key, value in config.items():
-            if key != "group" and isinstance(value, dict) and "image" in value:
+            if key not in ("group", "groups", "settings") and isinstance(value, dict) and "image" in value:
                 images[key] = value
-        logger.debug("Loaded images from direct keys in %s", source_name)
+        if any(key not in ("group", "groups", "settings") for key in config.keys()):
+            logger.debug("Loaded images from direct keys in %s", source_name)
+
 
 def load_config() -> Dict[str, Dict[str, Any]]:
     """Load configuration from config.yml, config.d and custom.d"""
@@ -81,6 +107,7 @@ def load_config() -> Dict[str, Dict[str, Any]]:
         "images": dict(sorted(images.items(), key=lambda x: x[0].lower())),
         "groups": groups
     }
+
 
 def get_motd(image_name: str, config: Dict[str, Any]) -> str:
     """Get MOTD for image"""

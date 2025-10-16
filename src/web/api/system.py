@@ -8,8 +8,11 @@ import logging
 import os
 
 from src.web.core.config import load_config
-from src.web.core.docker import docker_client, ensure_network, SHARED_DIR, NETWORK_NAME
-from src.web.core.scripts import execute_script  # ✅ AGGIUNTO IMPORT
+from src.web.core.docker import (
+    docker_client, ensure_network, SHARED_DIR, NETWORK_NAME,
+    get_stop_timeout, prepare_volumes, ensure_named_volumes
+)
+from src.web.core.scripts import execute_script
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
@@ -35,7 +38,6 @@ async def start_container(image_name: str):
         try:
             existing = docker_client.containers.get(container_name)
             if existing.status == "running":
-                # Create a completed operation for already running
                 operation_id = str(uuid.uuid4())
                 active_operations[operation_id] = {
                     "status": "completed",
@@ -56,7 +58,6 @@ async def start_container(image_name: str):
                     "message": f"Container {container_name} is already running"
                 }
             else:
-                # Remove stopped container
                 existing.remove()
         except docker.errors.NotFound:
             pass
@@ -90,10 +91,18 @@ async def start_container(image_name: str):
 
 
 async def start_container_background(operation_id: str, image_name: str, img_data: dict, container_name: str):
-    """Background task to start a single container"""
+    """Background task to start a single container with volume support"""
     try:
-        # Ensure network exists
         ensure_network()
+        
+        # Prepare volumes
+        volumes_config = img_data.get("volumes", [])
+        ensure_named_volumes(volumes_config)
+        compose_volumes = prepare_volumes(volumes_config)
+        
+        # Build final volumes list
+        all_volumes = [f"{SHARED_DIR}:/shared"]
+        all_volumes.extend(compose_volumes)
         
         # Parse ports
         ports = {}
@@ -108,9 +117,9 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
             name=container_name,
             hostname=image_name,
             environment=img_data.get("environment", {}),
-            ports=ports,
-            volumes=[f"{SHARED_DIR}:/shared"],
-            command=img_data["keep_alive_cmd"],
+            ports=ports if ports else None,
+            volumes=all_volumes,
+            command=img_data.get("keep_alive_cmd", "sleep infinity"),
             network=NETWORK_NAME,
             stdin_open=True,
             tty=True,
@@ -118,7 +127,7 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
         )
         
         # Wait for container to be ready (max 30 seconds)
-        max_wait = 60  # 60 attempts * 0.5s = 30 seconds
+        max_wait = 60
         for i in range(max_wait):
             await asyncio.sleep(0.5)
             container.reload()
@@ -135,7 +144,6 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
                         logger.warning(f"Failed to execute post-start script for {container_name}: {e}")
                         active_operations[operation_id]["errors"].append(f"Post-start script error: {str(e)}")
                 
-                # Success!
                 active_operations[operation_id].update({
                     "status": "completed",
                     "started": 1,
@@ -147,7 +155,6 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
             elif container.status in ["exited", "dead"]:
                 raise Exception(f"Container failed to start: {container.status}")
         
-        # Timeout
         raise Exception(f"Container did not start in time (status: {container.status})")
         
     except Exception as e:
@@ -164,7 +171,7 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
 
 @router.post("/stop/{container_name}")
 async def stop_container(container_name: str):
-    """Stop a single container"""
+    """Stop a single container with proper timeout"""
     try:
         container = docker_client.containers.get(container_name)
         
@@ -172,29 +179,31 @@ async def stop_container(container_name: str):
         if "playground.managed" not in container.labels:
             raise HTTPException(403, "Cannot stop non-playground containers")
         
-        # ✅ FIXED: Execute pre-stop script correttamente
+        # Execute pre-stop script and get timeout
         try:
             config_data = load_config()
-            # Extract image name from container name (remove 'playground-' prefix)
             image_name = container_name.replace("playground-", "")
             img_data = config_data["images"].get(image_name, {})
             
-            # ✅ CORREZIONE: Cerca in scripts.pre_stop invece di pre_stop
             scripts = img_data.get("scripts", {})
             if "pre_stop" in scripts:
                 try:
                     logger.info(f"Executing pre-stop script for {container_name}")
                     execute_script(scripts["pre_stop"], container_name, image_name)
                     logger.info(f"Pre-stop script completed for {container_name}")
-                    # Give it a moment to complete
                     await asyncio.sleep(1)
                 except Exception as e:
                     logger.warning(f"Failed to execute pre-stop script for {container_name}: {e}")
+            
+            # Get appropriate timeout based on scripts
+            timeout = get_stop_timeout(img_data)
         except Exception as e:
             logger.warning(f"Could not check for pre-stop script: {e}")
+            timeout = 10
         
         # Stop and remove container
-        container.stop(timeout=60)
+        logger.info(f"Stopping container {container_name} with timeout {timeout}s")
+        container.stop(timeout=timeout)
         container.remove()
         
         return {
@@ -231,6 +240,15 @@ async def start_category(category: str):
                 
                 try:
                     ensure_network()
+                    
+                    # Prepare volumes
+                    volumes_config = img_data.get("volumes", [])
+                    ensure_named_volumes(volumes_config)
+                    compose_volumes = prepare_volumes(volumes_config)
+                    
+                    all_volumes = [f"{SHARED_DIR}:/shared"]
+                    all_volumes.extend(compose_volumes)
+                    
                     ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}
                     
                     container = docker_client.containers.run(
@@ -239,16 +257,16 @@ async def start_category(category: str):
                         name=container_name,
                         hostname=img_name,
                         environment=img_data.get("environment", {}),
-                        ports=ports,
-                        volumes=[f"{SHARED_DIR}:/shared"],
-                        command=img_data["keep_alive_cmd"],
+                        ports=ports if ports else None,
+                        volumes=all_volumes,
+                        command=img_data.get("keep_alive_cmd", "sleep infinity"),
                         network=NETWORK_NAME,
                         stdin_open=True,
                         tty=True,
                         labels={"playground.managed": "true"}
                     )
                     
-                    # ✅ AGGIUNTO: Execute post-start script
+                    # Execute post-start script
                     scripts = img_data.get("scripts", {})
                     if "post_start" in scripts:
                         try:
@@ -289,7 +307,6 @@ async def stop_all_background(operation_id: str, containers):
     
     def stop_and_remove(container):
         try:
-            # ✅ AGGIUNTO: Execute pre-stop script per ogni container
             try:
                 config_data = load_config()
                 image_name = container.name.replace("playground-", "")
@@ -298,10 +315,13 @@ async def stop_all_background(operation_id: str, containers):
                 
                 if "pre_stop" in scripts:
                     execute_script(scripts["pre_stop"], container.name, image_name)
+                
+                timeout = get_stop_timeout(img_data)
             except Exception as e:
                 logger.warning(f"Pre-stop script error for {container.name}: {e}")
+                timeout = 10
             
-            container.stop(timeout=60)
+            container.stop(timeout=timeout)
             container.remove()
             return container.name
         except:
@@ -343,26 +363,24 @@ async def restart_all_background(operation_id: str, containers):
     """Background restart all"""
     def restart_cont(c):
         try:
-            # ✅ AGGIUNTO: Execute pre-stop and post-start scripts
             config_data = load_config()
             image_name = c.name.replace("playground-", "")
             img_data = config_data["images"].get(image_name, {})
             scripts = img_data.get("scripts", {})
             
-            # Pre-stop
             if "pre_stop" in scripts:
                 try:
                     execute_script(scripts["pre_stop"], c.name, image_name)
                 except Exception as e:
                     logger.warning(f"Pre-stop script error: {e}")
             
-            c.restart(timeout=30)
+            timeout = get_stop_timeout(img_data)
+            c.restart(timeout=timeout)
             
-            # Post-start
             if "post_start" in scripts:
                 try:
                     import time
-                    time.sleep(2)  # Wait for container to be ready
+                    time.sleep(2)
                     execute_script(scripts["post_start"], c.name, image_name)
                 except Exception as e:
                     logger.warning(f"Post-start script error: {e}")
@@ -410,7 +428,6 @@ async def cleanup_all_background(operation_id: str, containers):
     """Background cleanup"""
     def cleanup_cont(c):
         try:
-            # ✅ AGGIUNTO: Execute pre-stop if running
             if c.status == "running":
                 try:
                     config_data = load_config()
@@ -420,10 +437,13 @@ async def cleanup_all_background(operation_id: str, containers):
                     
                     if "pre_stop" in scripts:
                         execute_script(scripts["pre_stop"], c.name, image_name)
+                    
+                    timeout = get_stop_timeout(img_data)
                 except Exception as e:
                     logger.warning(f"Pre-stop script error: {e}")
+                    timeout = 10
                 
-                c.stop(timeout=30)
+                c.stop(timeout=timeout)
             c.remove()
             return c.name
         except:
