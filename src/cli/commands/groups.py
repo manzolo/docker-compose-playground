@@ -1,5 +1,5 @@
 """
-Group management commands
+Group management commands with volume support
 Operations on multiple containers: start-group, stop-group, status
 """
 
@@ -12,7 +12,7 @@ from rich.console import Console
 
 from ..core.config import load_config, load_groups
 from ..core.docker_ops import (
-    start_container, stop_container, get_container,
+    start_container, stop_container,
     docker_client, ensure_network, SHARED_DIR, NETWORK_NAME
 )
 from ..utils.display import (
@@ -33,6 +33,16 @@ def list_groups(
     
     if not groups:
         console.print("[yellow]No groups found[/yellow]")
+        console.print("[dim]To create groups, add them to config.yml:[/dim]")
+        console.print("""
+[dim]groups:
+  - name: MyGroup
+    description: "Group description"
+    category: "category"
+    containers:
+      - container1
+      - container2[/dim]
+""")
         return
     
     if json:
@@ -112,46 +122,9 @@ def start_group(
                 
                 # Start container
                 img_data = config[container_name]
-                ensure_network()
+                success, _ = start_container(container_name, img_data, force=force)
                 
-                # Parse ports
-                ports = {}
-                for p in img_data.get("ports", []):
-                    host_port, container_port = p.split(":")
-                    ports[container_port] = host_port
-                
-                # Start container
-                container = docker_client.containers.run(
-                    img_data["image"],
-                    detach=True,
-                    name=full_container_name,
-                    hostname=container_name,
-                    environment=img_data.get("environment", {}),
-                    ports=ports,
-                    volumes=[f"{SHARED_DIR}:/shared"],
-                    command=img_data["keep_alive_cmd"],
-                    network=NETWORK_NAME,
-                    stdin_open=True,
-                    tty=True,
-                    labels={"playground.managed": "true"}
-                )
-                
-                # Wait for container to be running
-                max_wait = 30
-                elapsed = 0
-                started = False
-                
-                while elapsed < max_wait:
-                    container.reload()
-                    if container.status == "running":
-                        started = True
-                        break
-                    elif container.status in ["exited", "dead"]:
-                        break
-                    time.sleep(0.5)
-                    elapsed += 0.5
-                
-                if started:
+                if success:
                     progress.update(task, description=f"[green]Started {container_name}[/green]")
                     success_count += 1
                     
@@ -164,15 +137,13 @@ def start_group(
                     failed_count += 1
                     
             except Exception as e:
-                import traceback
-                error_details = str(e)
-                if "port is already allocated" in error_details.lower():
-                    error_msg = f"Port conflict: {error_details.split('port')[1] if 'port' in error_details else error_details}"
+                error_msg = str(e)
+                if "port is already allocated" in error_msg.lower():
+                    error_display = "Port conflict"
                 else:
-                    error_msg = error_details
-                progress.update(task, description=f"[red]Error: {container_name} - {error_msg[:50]}[/red]")
+                    error_display = error_msg[:30]
+                progress.update(task, description=f"[red]Error: {container_name} - {error_display}[/red]")
                 failed_count += 1
-                console.print(f"[red]Full error for {container_name}:[/red] {error_details}")
     
     show_operation_summary(success_count, failed_count, skipped_count)
 
@@ -236,7 +207,7 @@ def stop_group(
                 progress.update(task, description=f"[yellow]Skipping {container_name} (not found)[/yellow]")
                 not_running_count += 1
             except Exception as e:
-                progress.update(task, description=f"[red]Error stopping {container_name}: {e}[/red]")
+                progress.update(task, description=f"[red]Error stopping {container_name}: {str(e)[:30]}[/red]")
                 failed_count += 1
     
     show_operation_summary(success_count, failed_count, not_running=not_running_count)
@@ -339,10 +310,8 @@ def restart_group(
     group_name: str = typer.Argument(..., help="Group name")
 ):
     """🔄 Restart all containers in a group"""
-    # First stop the group
     console.print("[cyan]Stopping group...[/cyan]")
     stop_group(group_name, remove=True)
     
-    # Then start the group
     console.print("\n[cyan]Starting group...[/cyan]")
     start_group(group_name, force=False)

@@ -19,7 +19,7 @@ async def start_group(group_name: str):
     """Start all containers in a group"""
     try:
         config_data = load_config()
-        groups = config_data["groups"]
+        groups = config_data["group"]
         images = config_data["images"]
         
         if group_name not in groups:
@@ -123,7 +123,7 @@ async def stop_group(group_name: str):
     """Stop all containers in a group"""
     try:
         config_data = load_config()
-        groups = config_data["groups"]
+        groups = config_data["group"]
         
         if group_name not in groups:
             raise HTTPException(404, f"Group '{group_name}' not found")
@@ -211,7 +211,7 @@ async def get_group_status(group_name: str):
     """Get status of all containers in a group"""
     try:
         config_data = load_config()
-        groups = config_data["groups"]
+        groups = config_data["group"]
         
         if group_name not in groups:
             raise HTTPException(404, f"Group '{group_name}' not found")

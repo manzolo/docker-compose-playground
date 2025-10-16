@@ -1,10 +1,11 @@
 """
 CLI Commands Package
-Exports all command modules
+Container, group, system, and debug management commands
 """
 
 from . import containers
 from . import groups
 from . import system
+from . import debug
 
-__all__ = ['containers', 'groups', 'system']
+__all__ = ['containers', 'groups', 'system', 'debug']

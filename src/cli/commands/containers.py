@@ -1,6 +1,7 @@
 """
 Container management commands
-Single container operations: start, stop, restart, logs, exec
+Single container operations: start, stop, restart, logs, exec, info
+Updated with volume support
 """
 
 import typer
@@ -12,7 +13,8 @@ from rich.console import Console
 from ..core.config import load_config, get_image_config
 from ..core.docker_ops import (
     start_container, stop_container, restart_container,
-    get_container_logs, get_running_containers_dict, get_container
+    get_container_logs, get_running_containers_dict, get_container,
+    get_container_volumes
 )
 from ..utils.display import (
     console, create_containers_table, format_container_status,
@@ -51,7 +53,8 @@ def list(
             "category": data.get("category"),
             "description": data.get("description"),
             "status": container_status,
-            "ports": data.get("ports", [])
+            "ports": data.get("ports", []),
+            "volumes": len(data.get("volumes", []))
         })
     
     if json:
@@ -67,15 +70,19 @@ def list(
             is_running = img["status"] == "running"
             status_str = format_container_status(img["status"], is_running)
             desc = img["description"]
-            if len(desc) > 50:
-                desc = desc[:50] + "..."
+            if len(desc) > 40:
+                desc = desc[:40] + "..."
+            
+            vol_info = ""
+            if img["volumes"] > 0:
+                vol_info = f" [dim]({img['volumes']} volumes)[/dim]"
             
             table.add_row(
                 img["name"],
                 img["category"],
                 status_str,
                 img["image"],
-                desc
+                desc + vol_info
             )
         
         console.print(table)
@@ -106,8 +113,9 @@ def start(
     # Show connection info
     ports = {}
     for p in img_data.get("ports", []):
-        host_port, container_port = p.split(":")
-        ports[container_port] = host_port
+        if ':' in p:
+            host_port, container_port = p.split(":")
+            ports[container_port] = host_port
     
     show_port_mappings(ports)
 
@@ -201,6 +209,7 @@ def exec(
         console.print(f"[yellow]Using shell: {shell}[/yellow]\n")
         subprocess.run(["docker", "exec", "-it", container_name, shell])
 
+
 @app.command()
 def info(
     container: str = typer.Argument(..., help="Container name")
@@ -247,4 +256,37 @@ def info(
     else:
         info_data["Ports"] = "None"
     
+    # Volumes
+    volumes_info = get_container_volumes(container_name)
+    if volumes_info:
+        info_data["Volumes"] = str(len(volumes_info))
+    
     show_info_table(info_data, f"Container: {container_name}")
+    
+    # Show volumes in detail if any
+    if volumes_info:
+        console.print("[cyan bold]Volume Mounts:[/cyan bold]")
+        for path, info in volumes_info.items():
+            console.print(f"  {path}: {info}")
+        console.print()
+
+
+@app.command()
+def volumes(
+    container: str = typer.Argument(..., help="Container name")
+):
+    """📦 Show container volumes and mounts"""
+    container_name = container if container.startswith("playground-") else f"playground-{container}"
+    
+    cont = get_container(container_name)
+    volumes_info = get_container_volumes(container_name)
+    
+    console.print(f"\n[cyan bold]Volumes for: {container_name}[/cyan bold]\n")
+    
+    if not volumes_info:
+        console.print("[yellow]No volumes mounted[/yellow]")
+        return
+    
+    for path, info in volumes_info.items():
+        console.print(f"  [cyan]{path}[/cyan]")
+        console.print(f"    {info}\n")

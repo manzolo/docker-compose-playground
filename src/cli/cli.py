@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Docker Playground CLI - Main Entry Point
-Modular version with clean command structure
+Modular version with clean command structure and volume support
 """
 
 import typer
@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.cli.utils.display import show_banner, show_quick_help, console
-from src.cli.commands import containers, groups, system
+from src.cli.commands import containers, groups, system, debug
 
 # Main app
 app = typer.Typer(
@@ -34,9 +34,11 @@ app.command(name="restart")(containers.restart)
 app.command(name="logs")(containers.logs)
 app.command(name="exec")(containers.exec)
 app.command(name="info")(containers.info)
+app.command(name="volumes")(containers.volumes)
 
 # Register system commands
 app.command(name="ps")(system.ps)
+app.command(name="volumes-list")(system.volumes)
 app.command(name="stop-all")(system.stop_all)
 app.command(name="fix-conflicts")(system.fix_conflicts)
 app.command(name="cleanup")(system.cleanup)

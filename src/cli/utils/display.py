@@ -31,6 +31,8 @@ def show_quick_help():
   playground stop <name>       Stop a container
   playground logs <name>       Show container logs
   playground exec <name>       Open shell in container
+  playground info <name>       Show container info
+  playground volumes <name>    Show container volumes
   playground --help            Full help
 """)
 

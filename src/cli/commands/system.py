@@ -1,15 +1,18 @@
 """
-System management commands
-System-wide operations: ps, cleanup, categories, version
+System management commands with volume support
+System-wide operations: ps, cleanup, categories, volumes, version
 """
 
 import typer
+import json as json_lib
 from typing import Optional
 from rich.console import Console
+from rich.table import Table
 
 from ..core.config import load_config
 from ..core.docker_ops import (
-    get_playground_containers, docker_client, remove_all_containers
+    get_playground_containers, docker_client, remove_all_containers,
+    get_container_volumes
 )
 from ..utils.display import (
     console, create_ps_table, create_categories_table,
@@ -56,6 +59,64 @@ def ps(
 
 
 @app.command()
+def volumes(
+    all: bool = typer.Option(False, "--all", "-a", help="Show all volumes (including unused)"),
+    json: bool = typer.Option(False, "--json", help="Output as JSON")
+):
+    """📦 List Docker volumes used by playground containers"""
+    containers = get_playground_containers(all_containers=True)
+    
+    if not containers:
+        console.print("[yellow]No playground containers found[/yellow]")
+        return
+    
+    # Collect all volumes
+    all_volumes = {}
+    
+    for cont in containers:
+        mounts = cont.attrs.get('Mounts', [])
+        for mount in mounts:
+            mount_type = mount.get('Type', '')
+            if mount_type == 'volume':
+                vol_name = mount.get('Name', '')
+                if vol_name not in all_volumes:
+                    all_volumes[vol_name] = {
+                        'containers': [],
+                        'mount_point': mount.get('Destination', ''),
+                        'driver': mount.get('Driver', 'local')
+                    }
+                all_volumes[vol_name]['containers'].append(cont.name)
+    
+    if not all_volumes:
+        console.print("[yellow]No volumes found[/yellow]")
+        return
+    
+    if json:
+        console.print(json_lib.dumps(all_volumes, indent=2))
+    else:
+        table = Table(title="📦 Playground Volumes")
+        table.add_column("Volume Name", style="cyan")
+        table.add_column("Mount Point", style="blue")
+        table.add_column("Driver", style="magenta")
+        table.add_column("Containers", style="green")
+        
+        for vol_name, vol_info in sorted(all_volumes.items()):
+            containers_str = ", ".join(vol_info['containers'])
+            if len(containers_str) > 50:
+                containers_str = containers_str[:50] + "..."
+            
+            table.add_row(
+                vol_name,
+                vol_info['mount_point'],
+                vol_info['driver'],
+                f"{len(vol_info['containers'])} - {containers_str}"
+            )
+        
+        console.print(table)
+        console.print(f"\n[cyan]Total volumes: {len(all_volumes)}[/cyan]")
+
+
+@app.command()
 def stop_all(
     confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation")
 ):
@@ -92,7 +153,8 @@ def stop_all(
 @app.command()
 def cleanup(
     confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
-    remove_images: bool = typer.Option(False, "--images", help="Also remove Docker images")
+    remove_images: bool = typer.Option(False, "--images", help="Also remove Docker images"),
+    remove_volumes: bool = typer.Option(False, "--volumes", help="Also remove unused volumes")
 ):
     """🧹 Remove all playground containers"""
     containers = get_playground_containers(all_containers=True)
@@ -110,13 +172,23 @@ def cleanup(
             console.print("[yellow]Cancelled[/yellow]")
             return
     
-    # Collect image names before removal
+    # Collect image names and volumes before removal
     image_names = set()
+    used_volumes = set()
+    
     if remove_images:
         for c in containers:
             if c.image.tags:
                 image_names.add(c.image.tags[0])
     
+    if remove_volumes:
+        for c in containers:
+            mounts = c.attrs.get('Mounts', [])
+            for mount in mounts:
+                if mount.get('Type') == 'volume':
+                    used_volumes.add(mount.get('Name', ''))
+    
+    # Remove containers
     with create_progress_context(f"Removing {len(containers)} containers...") as progress:
         task = progress.add_task("Removing...", total=len(containers))
         
@@ -141,6 +213,23 @@ def cleanup(
                     console.print(f"[yellow]⚠ Could not remove {img_name}: {e}[/yellow]")
         
         console.print("[green]✓ Image cleanup complete[/green]")
+    
+    # Remove unused volumes if requested
+    if remove_volumes and used_volumes:
+        console.print(f"\n[yellow]Removing {len(used_volumes)} volumes...[/yellow]")
+        
+        with create_progress_context("Removing volumes...") as progress:
+            task = progress.add_task("Removing...", total=len(used_volumes))
+            
+            for vol_name in used_volumes:
+                try:
+                    docker_client.volumes.get(vol_name).remove()
+                    console.print(f"[green]✓ Removed volume: {vol_name}[/green]")
+                    progress.advance(task)
+                except Exception as e:
+                    console.print(f"[yellow]⚠ Could not remove {vol_name}: {e}[/yellow]")
+        
+        console.print("[green]✓ Volume cleanup complete[/green]")
 
 
 @app.command()
@@ -164,7 +253,6 @@ def clean_images(
             for tag in img.tags:
                 if tag in config_images:
                     if unused_only:
-                        # Check if image is used by any container
                         containers = docker_client.containers.list(all=True, filters={"ancestor": tag})
                         if not containers:
                             images_to_remove.append((tag, img))
@@ -203,12 +291,12 @@ def clean_images(
     
     console.print(f"[green]✓ Removed {removed}/{len(images_to_remove)} images ({total_size_mb:.2f} MB freed)[/green]")
 
+
 @app.command()
 def fix_conflicts(
     confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation")
 ):
     """🔧 Remove stopped containers that cause conflicts"""
-    # Get stopped playground containers
     stopped = docker_client.containers.list(
         all=True,
         filters={
@@ -245,6 +333,7 @@ def fix_conflicts(
     
     console.print(f"\n[green]✓ Removed {removed}/{len(stopped)} containers[/green]")
     console.print("[cyan]You can now start your containers without conflicts[/cyan]")
+
 
 @app.command()
 def categories():
