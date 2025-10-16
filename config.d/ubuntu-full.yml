@@ -1,7 +1,0 @@
-images:
-  ubuntu-full:
-    category: utility
-    description: Ubuntu 24.04 + build-essential & tools
-    image: ubuntu:24.04
-    keep_alive_cmd: sleep infinity
-    shell: /bin/bash

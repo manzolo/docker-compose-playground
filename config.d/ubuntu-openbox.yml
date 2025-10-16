@@ -1,0 +1,56 @@
+images:
+  ubuntu-openbox:
+    category: linux
+    description: Ubuntu 24.04 + Openbox Window Manager (RDP) | Image -> linuxserver/rdesktop:ubuntu-openbox
+    image: linuxserver/rdesktop:ubuntu-openbox
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    ports:
+      - 3395:3389
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    shm_size: 2g
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ Ubuntu 24.04 + Openbox Window Manager - RDP                 ║
+      ║ Source: linuxserver/rdesktop:ubuntu-openbox                 ║
+      ║ Ephemeral Container (Resets on restart)                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      📋 CONNECTION INFO
+      ─────────────────────────────────────────────────────────────
+      🌐 Address:  localhost:3395
+      👤 Username: abc
+      🔑 Password: abc
+      
+      📍 From host machine:
+         • Remmina: localhost:3395
+         • Windows RDP Client: localhost:3395
+         • FreeRDP: xfreerdp /v:localhost:3395 /u:abc /p:abc
+      
+      ⚙️  FEATURES
+      ─────────────────────────────────────────────────────────────
+      ✓ Openbox Stacking Window Manager (Minimal & Fast)
+      ✓ Auto-login enabled (user: abc)
+      ✓ Sudo access without password
+      ✓ Pre-configured RDP (xvfb-run + openbox)
+      ✓ Persistent package installation during session
+      ✓ Highly customizable environment
+      
+      ⚠️  IMPORTANT
+      ─────────────────────────────────────────────────────────────
+      • Data is EPHEMERAL - everything resets on container restart
+      • To persist changes: use volumes or rebuild the image
+      • Run 'apt-get update && apt-get install' for extra packages
+      
+      💡 TIPS
+      ─────────────────────────────────────────────────────────────
+      • Openbox is lightweight - excellent for remote sessions
+      • For better performance: increase resolution in RDP client
+      • Default resolution: 1280x720 (configurable via env vars)
+      • Port 3395 maps to container's 3389 (RDP standard port)
+      
+      🚀 READY TO USE - Connect now!
+      ╚══════════════════════════════════════════════════════════════╝
