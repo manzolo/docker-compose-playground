@@ -315,8 +315,67 @@ const FilterManager = {
     }
 };
 
+const FilterPersistenceManager = {
+    saveFilterState() {
+        const filterState = {
+            searchTerm: DOM.filterInput?.value || '',
+            selectedCategory: DOM.categoryFilter?.value || '',
+            activeStatusFilter: AppState.activeStatusFilter || 'all'
+        };
+        sessionStorage.setItem('filterState', JSON.stringify(filterState));
+    },
+
+    restoreFilterState() {
+        const savedState = sessionStorage.getItem('filterState');
+        if (savedState) {
+            try {
+                const filterState = JSON.parse(savedState);
+                
+                // Ripristina input di ricerca
+                if (DOM.filterInput && filterState.searchTerm) {
+                    DOM.filterInput.value = filterState.searchTerm;
+                }
+
+                // Ripristina filtro categoria
+                if (DOM.categoryFilter && filterState.selectedCategory) {
+                    DOM.categoryFilter.value = filterState.selectedCategory;
+                }
+
+                // Ripristina filtro status
+                if (filterState.activeStatusFilter) {
+                    AppState.activeStatusFilter = filterState.activeStatusFilter;
+                    DOM.filterButtons.forEach(btn => {
+                        btn.classList.toggle(
+                            'active',
+                            btn.getAttribute('data-filter') === filterState.activeStatusFilter
+                        );
+                    });
+                }
+
+                // Applica i filtri ripristinati
+                FilterManager.applyFilters();
+
+                // Scroll al grid se c'era una ricerca attiva
+                if (filterState.searchTerm) {
+                    setTimeout(() => {
+                        const imageGrid = document.querySelector('.image-grid');
+                        if (imageGrid) {
+                            imageGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
+                }
+
+                // Pulisci lo state dalla sessione dopo il ripristino
+                sessionStorage.removeItem('filterState');
+            } catch (error) {
+                console.error('Error restoring filter state:', error);
+            }
+        }
+    }
+};
+
 // =========================================================
-// Container Management - FIXED VERSION
+// Container Management
 // =========================================================
 const ContainerManager = {
     async startContainer(image) {
@@ -349,12 +408,10 @@ const ContainerManager = {
 
             const data = await response.json();
             
-            // ✅ FIXED: Ora aspettiamo sempre un operation_id
             if (data.operation_id) {
                 ToastManager.show(`Starting container ${image}...`, 'info');
                 await this.pollContainerStatus(data.operation_id, image, btn, originalHTML);
             } else {
-                // Fallback nel caso improbabile che non ci sia operation_id
                 throw new Error('No operation_id received from server');
             }
 
@@ -384,10 +441,11 @@ const ContainerManager = {
                     ToastManager.show(`ℹ️ Container ${image} was already running`, 'info');
                 }
                 
-                // Aggiorna UI
                 this.updateCardUI(image, true, statusData.container || `playground-${image}`);
                 
-                // Ricarica pagina dopo un breve delay
+                // IMPORTANTE: Salva i filtri prima del reload
+                FilterPersistenceManager.saveFilterState();
+                
                 setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
                 
             } else if (statusData.status === 'error') {
@@ -499,6 +557,10 @@ const ContainerManager = {
         if (response.ok) {
             ToastManager.show(`✅ Container ${containerName} stopped`, 'success');
             this.updateCardUI(imageName, false, '');
+            
+            // Salva i filtri prima del reload
+            FilterPersistenceManager.saveFilterState();
+            setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
         } else {
             const data = await response.json();
             const errorMsg = data.detail || 'Failed to stop container';
@@ -518,6 +580,7 @@ const ContainerManager = {
                 showSpinner: true
             });
 
+            FilterPersistenceManager.saveFilterState();
             setTimeout(() => {
                 ToastManager.show('🔄 Reloading to check status...', 'info');
                 location.reload();
@@ -917,6 +980,8 @@ const GroupManager = {
             ToastManager.showErrorsSequentially(statusData.errors, `Errors in group '${groupName}':`);
         }
 
+        // Salva i filtri prima del reload
+        FilterPersistenceManager.saveFilterState();
         setTimeout(() => location.reload(), isStart ? 5000 : 2000);
     }
 };
@@ -988,6 +1053,7 @@ const BulkOperations = {
                     ToastManager.show(`Stopped ${stopped} containers successfully!`, 'success');
                     hideLoader();
 
+                    FilterPersistenceManager.saveFilterState();
                     setTimeout(() => {
                         location.reload();
                     }, Constants.TOAST.DELAY_BEFORE_RELOAD);
@@ -1084,7 +1150,6 @@ const ContainerTagManager = {
 // Event Listeners & Initialization
 // =========================================================
 function initializeEventListeners() {
-    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (document.getElementById('consoleModal')?.classList.contains('modal-open')) {
@@ -1099,13 +1164,16 @@ function initializeEventListeners() {
         }
     });
 
-    // Initialize container tags
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             ContainerTagManager.init();
+            // Ripristina i filtri dopo il caricamento della pagina
+            FilterPersistenceManager.restoreFilterState();
         });
     } else {
         ContainerTagManager.init();
+        // Ripristina i filtri se la pagina è già caricata
+        FilterPersistenceManager.restoreFilterState();
     }
 }
 
@@ -1389,8 +1457,8 @@ window.GroupManager = GroupManager;
 window.BulkOperations = BulkOperations;
 window.FilterManager = FilterManager;
 window.LogsManager = LogsManager;
+window.FilterPersistenceManager = FilterPersistenceManager;
 
-// Funzioni globali per compatibilità con l'HTML esistente
 window.showLogs = LogsManager.show.bind(LogsManager);
 window.closeModal = ModalManager.close.bind(ModalManager);
 window.openModal = ModalManager.open.bind(ModalManager);
