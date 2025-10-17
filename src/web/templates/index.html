@@ -249,14 +249,15 @@
                         <span class="follow-icon">▶</span> Follow
                     </button>
                     <span id="followStatus" class="follow-status"></span>
+                    <button id="logFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⛶</button>
                 </div>
-                <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
+                <button class="modal-close" onclick="LogsManager.close()">&times;</button>
             </div>
             <div class="modal-body">
                 <pre id="logContent" class="log-content"></pre>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('logModal')">Close</button>
+                <button class="btn btn-secondary" onclick="LogsManager.close()">Close</button>
             </div>
         </div>
     </div>
@@ -267,6 +268,7 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>💻 Interactive Console</h2>
+                <button id="consoleFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleConsoleFullscreen()" title="Toggle fullscreen">⛶</button>
                 <button class="modal-close" onclick="ConsoleManager.close()">&times;</button>
             </div>
             <div class="modal-body">

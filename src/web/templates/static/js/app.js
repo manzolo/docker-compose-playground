@@ -7,7 +7,9 @@ const AppState = {
     fitAddon: null,
     webglAddon: null,
     activeStatusFilter: 'all',
-    groupStates: {} // Stato di apertura/chiusura dei gruppi
+    groupStates: {},
+    logFullscreenActive: false,
+    consoleFullscreenActive: false
 };
 
 // =========================================================
@@ -764,6 +766,49 @@ const ContainerManager = {
 };
 
 // =========================================================
+// Fullscreen Management
+// =========================================================
+const FullscreenManager = {
+    toggleLogFullscreen() {
+        const modal = document.getElementById('logModal');
+        const content = modal.querySelector('.modal-content');
+        
+        AppState.logFullscreenActive = !AppState.logFullscreenActive;
+        
+        if (AppState.logFullscreenActive) {
+            content.classList.add('fullscreen');
+            this.updateFullscreenButton('logFullscreenBtn', true);
+        } else {
+            content.classList.remove('fullscreen');
+            this.updateFullscreenButton('logFullscreenBtn', false);
+        }
+    },
+
+    toggleConsoleFullscreen() {
+        const modal = document.getElementById('consoleModal');
+        const content = modal.querySelector('.modal-content');
+        
+        AppState.consoleFullscreenActive = !AppState.consoleFullscreenActive;
+        
+        if (AppState.consoleFullscreenActive) {
+            content.classList.add('fullscreen');
+            this.updateFullscreenButton('consoleFullscreenBtn', true);
+        } else {
+            content.classList.remove('fullscreen');
+            this.updateFullscreenButton('consoleFullscreenBtn', false);
+        }
+    },
+
+    updateFullscreenButton(buttonId, isFullscreen) {
+        const btn = document.getElementById(buttonId);
+        if (btn) {
+            btn.textContent = isFullscreen ? '⛔' : '⛶';
+            btn.title = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+        }
+    }
+};
+
+// =========================================================
 // Console Management
 // =========================================================
 const ConsoleManager = {
@@ -839,7 +884,6 @@ const ConsoleManager = {
 
         AppState.ws.onmessage = (event) => {
             AppState.term.write(event.data);
-            // Auto-scroll SOLO se siamo già in fondo
             this.scrollToBottomIfAtBottom();
         };
 
@@ -869,13 +913,11 @@ const ConsoleManager = {
         const viewport = document.querySelector('.xterm-viewport');
         if (!viewport) return;
 
-        // Controlla se siamo già in fondo (con tolleranza di 10px)
         const isAtBottom = (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) < 10;
 
         if (isAtBottom) {
             AppState.term.scrollToBottom();
         }
-        // Se non sei in fondo, NON scrollare - lascia l'utente dove sta
     },
 
     close() {
@@ -899,6 +941,7 @@ const ConsoleManager = {
         }
 
         AppState.fitAddon = null;
+        AppState.consoleFullscreenActive = false;
         closeModal('consoleModal');
     }
 };
@@ -1432,6 +1475,13 @@ const ModalManager = {
         if (modal) {
             modal.classList.remove('modal-open');
             document.body.style.overflow = '';
+            
+            // Reset fullscreen states
+            if (modalId === 'logModal') {
+                AppState.logFullscreenActive = false;
+            } else if (modalId === 'consoleModal') {
+                AppState.consoleFullscreenActive = false;
+            }
         }
     }
 };
@@ -1645,6 +1695,7 @@ const LogsManager = {
     close() {
         this.stopFollowing();
         this.currentContainer = null;
+        AppState.logFullscreenActive = false;
         ModalManager.close('logModal');
     },
 
@@ -1715,6 +1766,7 @@ window.MOTDManager = MOTDManager;
 window.FilterPersistenceManager = FilterPersistenceManager;
 window.GroupPersistenceManager = GroupPersistenceManager;
 window.ReloadManager = ReloadManager;
+window.FullscreenManager = FullscreenManager;
 
 window.showLogs = LogsManager.show.bind(LogsManager);
 window.closeModal = ModalManager.close.bind(ModalManager);
