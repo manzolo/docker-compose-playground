@@ -818,6 +818,7 @@ const ConsoleManager = {
         window.addEventListener('resize', () => {
             if (AppState.fitAddon) AppState.fitAddon.fit();
         });
+        
         setTimeout(() => {
             if (AppState.fitAddon) {
                 AppState.fitAddon.fit();
@@ -833,63 +834,13 @@ const ConsoleManager = {
         AppState.ws.onopen = () => {
             this.updateConsoleUI(container, '● Connected', 'console-connected');
             AppState.term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
-
-            const scrollToBottomBoth = () => {
-                if (AppState.term) {
-                    AppState.term.scrollToBottom();
-                }
-
-                const modalBody = document.querySelector('#consoleModal .modal-body');
-                if (modalBody) {
-                    modalBody.scrollTop = modalBody.scrollHeight;
-                }
-
-                const viewport = document.querySelector('.xterm-viewport');
-                if (viewport) {
-                    viewport.scrollTop = viewport.scrollHeight;
-                }
-            };
-
-            const renderListener = AppState.term.onRender(() => {
-                scrollToBottomBoth();
-            });
-
-            setTimeout(() => scrollToBottomBoth(), 100);
-            setTimeout(() => scrollToBottomBoth(), 500);
-            setTimeout(() => {
-                if (renderListener && typeof renderListener.dispose === 'function') {
-                    renderListener.dispose();
-                }
-            }, 2000);
+            AppState.term.scrollToBottom();
         };
 
         AppState.ws.onmessage = (event) => {
             AppState.term.write(event.data);
-
-            const scrollToBottomBoth = () => {
-                if (AppState.term) {
-                    AppState.term.scrollToBottom();
-                }
-
-                const modalBody = document.querySelector('#consoleModal .modal-body');
-                if (modalBody) {
-                    modalBody.scrollTop = modalBody.scrollHeight;
-                }
-
-                const viewport = document.querySelector('.xterm-viewport');
-                if (viewport) {
-                    viewport.scrollTop = viewport.scrollHeight;
-                }
-            };
-
-            scrollToBottomBoth();
-
-            const renderListener = AppState.term.onRender(() => {
-                scrollToBottomBoth();
-                if (renderListener && typeof renderListener.dispose === 'function') {
-                    renderListener.dispose();
-                }
-            });
+            // Auto-scroll SOLO se siamo già in fondo
+            this.scrollToBottomIfAtBottom();
         };
 
         AppState.ws.onerror = (error) => {
@@ -910,6 +861,21 @@ const ConsoleManager = {
                 AppState.ws.send(data);
             }
         });
+    },
+
+    scrollToBottomIfAtBottom() {
+        if (!AppState.term) return;
+
+        const viewport = document.querySelector('.xterm-viewport');
+        if (!viewport) return;
+
+        // Controlla se siamo già in fondo (con tolleranza di 10px)
+        const isAtBottom = (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) < 10;
+
+        if (isAtBottom) {
+            AppState.term.scrollToBottom();
+        }
+        // Se non sei in fondo, NON scrollare - lascia l'utente dove sta
     },
 
     close() {
