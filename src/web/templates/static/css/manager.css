@@ -543,3 +543,151 @@
         flex: 1;
     }
 }
+
+/* ============================================
+   DARK MODE FIXES - MANAGER PAGE
+   ============================================ */
+
+html.dark-mode .manager-section h2 {
+    color: #e2e8f0;
+}
+
+html.dark-mode .section-title {
+    color: #e2e8f0;
+}
+
+html.dark-mode .action-card {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .action-card h3 {
+    color: #e2e8f0;
+    font-weight: 700;
+}
+
+html.dark-mode .action-card p {
+    color: #a0aec0;
+}
+
+html.dark-mode .action-card:hover {
+    background: #2d3748;
+    border-color: #667eea;
+}
+
+html.dark-mode .stat-card {
+    background: #1a202c;
+    border-color: #4a5568;
+}
+
+html.dark-mode .stat-value {
+    color: #667eea;
+}
+
+html.dark-mode .stat-label {
+    color: #a0aec0;
+}
+
+html.dark-mode .info-card {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .info-card h3 {
+    color: #e2e8f0;
+}
+
+html.dark-mode .info-card pre {
+    background: #0a0e13;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+html.dark-mode .category-item {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .category-item:hover {
+    background: #2d3748;
+    border-color: #667eea;
+}
+
+html.dark-mode .category-name {
+    color: #e2e8f0;
+}
+
+html.dark-mode .category-description {
+    color: #a0aec0;
+}
+
+html.dark-mode .category-count {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .group-item {
+    background: linear-gradient(135deg, #1f2937 0%, #1a202c 100%);
+    border-color: #4a5568;
+}
+
+html.dark-mode .browser-subsection {
+    border-bottom-color: #4a5568;
+}
+
+html.dark-mode .subsection-title {
+    color: #e2e8f0;
+    border-bottom-color: #4a5568;
+}
+
+html.dark-mode .category-icon {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+html.dark-mode .active-container-item {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .active-container-item:hover {
+    background: #374151;
+    border-color: #667eea;
+}
+
+html.dark-mode .backups-table th {
+    background: #2d3748;
+    color: #a0aec0;
+    border-color: #4a5568;
+}
+
+html.dark-mode .backups-table td {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .backups-table tbody tr:hover td {
+    background: #2d3748;
+}
+
+html.dark-mode #active-list {
+    color: #e2e8f0;
+}
+
+/* Manager section backgrounds */
+html.dark-mode .manager-section {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+/* Action grid improvements */
+html.dark-mode .action-grid {
+    color: #e2e8f0;
+}
