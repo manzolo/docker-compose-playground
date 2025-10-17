@@ -24,6 +24,93 @@ A professional tool for managing multiple Docker development environments. Choos
 - 🧹 **Bulk Operations** - Stop all, cleanup, category management
 - 🚀 **Container Groups** - Organize and manage related containers together (e.g., start/stop entire groups like a development stack)
 
+## 🗃️ Main Containers and Stacks
+
+<details>
+<summary>View the list of main containers and stacks</summary>
+
+The Docker Playground Manager includes over 100 pre-configured containers and stacks, organized by category. Below is a curated list of the most commonly used ones:
+
+### Linux Distributions
+- **Ubuntu** (12, 14, 16, 18, 20, 22, 24, icewm, kde, mate, openbox, xfce)
+- **Alpine** (3.19, 3.22, edge, tools)
+- **Debian** (7, 8, 9, 10, 11, 12)
+- **Fedora** (39)
+- **Rocky Linux** (9)
+- **Arch Linux**
+- **AlmaLinux** (9)
+- **openSUSE** (leap)
+- **Kali** (rolling)
+
+### Databases
+- **PostgreSQL** (15, 16, 17, alpine, latest)
+- **MySQL** (5.7, 8)
+- **MariaDB** (10, 11)
+- **MongoDB** (6, 7)
+- **Redis** (7, alpine, latest)
+- **Cassandra**
+- **CockroachDB**
+- **Neo4j**
+- **InfluxDB**
+
+### Programming Languages
+- **Python** (2.7, 3.9, 3.10, 3.11, 3.12, 3.13, alpine)
+- **Node.js** (16, 18, 20, 22, alpine)
+- **Golang** (1.22, alpine)
+- **Ruby** (3.3, alpine)
+- **PHP** (5.6, 7.2, 7.4, 8.2, 8.3, fpm)
+- **Java (OpenJDK)** (8, 11, 17, 21)
+- **Rust** (1.75, alpine)
+- **Elixir**
+- **Erlang**
+- **Haskell**
+- **Kotlin**
+- **Swift**
+- **Perl**
+- **Lua**
+
+### Web Servers
+- **Nginx** (latest, alpine)
+- **Apache** (latest, alpine)
+- **Caddy**
+- **Traefik**
+
+### Development Tools
+- **Code Server** (browser-based VS Code)
+- **Jupyter** (notebooks for Python, etc.)
+- **Jenkins** (CI/CD)
+- **Anaconda**
+- **Miniconda**
+- **Pytorch**
+- **Tensorflow**
+- **Gradle**
+- **Maven**
+- **Packer**
+- **Ansible**
+
+### Stacks
+- **PHP-MySQL** (PHP + MySQL + phpMyAdmin)
+- **Wordpress** (WordPress + MySQL)
+- **ELK** (Elasticsearch, Logstash, Kibana)
+- **MinIO** (object storage)
+- **PostgreSQL-pgAdmin** (PostgreSQL + pgAdmin)
+- **MySQL-phpMyAdmin** (MySQL + phpMyAdmin)
+
+### Other Services
+- **RabbitMQ** (message broker)
+- **ActiveMQ** (message broker)
+- **Prometheus** (monitoring)
+- **Grafana** (visualization)
+- **Vault** (secrets management)
+- **Consul** (service discovery)
+- **Memcached** (caching)
+- **Zipkin** (tracing)
+- **Selenium** (Chrome, Firefox for testing)
+
+This list covers key containers and stacks, but many more are available in `config.d/` and can be customized in `custom.d/`.
+
+</details>
+
 ## 📋 Requirements
 
 - **Docker** - [Install Docker](https://docs.docker.com/engine/install/ubuntu/)
