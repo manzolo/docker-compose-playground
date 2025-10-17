@@ -453,3 +453,108 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   DARK MODE INPUT FIXES
+   ============================================ */
+
+html.dark-mode .form-group input[type="text"],
+html.dark-mode .form-group textarea,
+html.dark-mode .form-group select {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .form-group input[type="text"]::placeholder,
+html.dark-mode .form-group textarea::placeholder {
+    color: #a0aec0;
+}
+
+html.dark-mode .form-group input[type="text"]:focus,
+html.dark-mode .form-group textarea:focus,
+html.dark-mode .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #2d3748;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+html.dark-mode .form-group input.error,
+html.dark-mode .form-group textarea.error,
+html.dark-mode .form-group select.error {
+    border-color: #f56565;
+    background: #3d2626;
+}
+
+html.dark-mode .form-group label {
+    color: #e2e8f0;
+}
+
+html.dark-mode .field-hint {
+    color: #a0aec0;
+}
+
+html.dark-mode .input-example {
+    background: #2d3748;
+    color: #a0aec0;
+    border-left-color: #667eea;
+}
+
+html.dark-mode .validation-result {
+    color: #e2e8f0;
+}
+
+html.dark-mode .validation-loading {
+    background: #1e3a5f;
+    color: #93c5fd;
+    border-left-color: #3b82f6;
+}
+
+html.dark-mode .validation-success {
+    background: #1d4a2c;
+    color: #86efac;
+    border-left-color: #48bb78;
+}
+
+html.dark-mode .validation-error {
+    background: #4a1f1f;
+    color: #fca5a5;
+    border-left-color: #f56565;
+}
+
+html.dark-mode .form-step h2 {
+    color: #e2e8f0;
+}
+
+html.dark-mode .step-indicator::before {
+    background: #4a5568;
+}
+
+html.dark-mode .step-number {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #a0aec0;
+}
+
+html.dark-mode .step-label {
+    color: #a0aec0;
+}
+
+html.dark-mode .form-container {
+    background: #1a202c;
+    border-color: #4a5568;
+}
+
+html.dark-mode .form-actions {
+    border-top-color: #4a5568;
+}
+
+html.dark-mode .preview-panel {
+    background: #1a202c;
+    border-color: #4a5568;
+}
+
+html.dark-mode .preview-panel h2 {
+    color: #e2e8f0;
+}
