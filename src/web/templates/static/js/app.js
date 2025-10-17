@@ -6,7 +6,8 @@ const AppState = {
     term: null,
     fitAddon: null,
     webglAddon: null,
-    activeStatusFilter: 'all'
+    activeStatusFilter: 'all',
+    groupStates: {} // Stato di apertura/chiusura dei gruppi
 };
 
 // =========================================================
@@ -18,7 +19,8 @@ const DOM = {
     get categoryFilter() { return document.getElementById('category-filter'); },
     get imageCards() { return document.querySelectorAll('.image-card'); },
     get filterButtons() { return document.querySelectorAll('.filter-btn'); },
-    get toastContainer() { return document.getElementById('toast-container'); }
+    get toastContainer() { return document.getElementById('toast-container'); },
+    get groupCards() { return document.querySelectorAll('.group-card'); }
 };
 
 // =========================================================
@@ -194,6 +196,78 @@ const ToastManager = {
 };
 
 // =========================================================
+// Group Management
+// =========================================================
+const GroupManager = {
+    toggleGroup(headerElement) {
+        const content = headerElement.nextElementSibling;
+        const icon = headerElement.querySelector('.group-toggle-icon');
+        const card = headerElement.closest('.group-card');
+        const groupName = card?.getAttribute('data-group');
+
+        if (!groupName) return;
+
+        const isCollapsed = content.classList.toggle('collapsed');
+        icon.classList.toggle('collapsed');
+
+        // Salva lo stato
+        AppState.groupStates[groupName] = !isCollapsed;
+        GroupPersistenceManager.saveGroupStates();
+    },
+
+    filterGroups(searchTerm, selectedCategory) {
+        DOM.groupCards.forEach(card => {
+            const groupName = card.getAttribute('data-group').toLowerCase();
+            const searchData = card.getAttribute('data-search').toLowerCase();
+            const categoryElement = card.querySelector('.badge:not(.group-status-badge)');
+            const category = categoryElement ? categoryElement.textContent.toLowerCase() : '';
+
+            const matchesSearch = !searchTerm ||
+                groupName.includes(searchTerm) ||
+                searchData.includes(searchTerm);
+
+            const matchesCategory = !selectedCategory ||
+                category === selectedCategory;
+
+            card.classList.toggle('hidden', !(matchesSearch && matchesCategory));
+        });
+    }
+};
+
+// =========================================================
+// Group Persistence Manager
+// =========================================================
+const GroupPersistenceManager = {
+    saveGroupStates() {
+        sessionStorage.setItem('groupStates', JSON.stringify(AppState.groupStates));
+    },
+
+    restoreGroupStates() {
+        const saved = sessionStorage.getItem('groupStates');
+        if (saved) {
+            try {
+                AppState.groupStates = JSON.parse(saved);
+
+                // Applica gli stati salvati
+                DOM.groupCards.forEach(card => {
+                    const groupName = card.getAttribute('data-group');
+                    const shouldBeOpen = AppState.groupStates[groupName] !== false;
+                    const content = card.querySelector('.group-card-content');
+                    const icon = card.querySelector('.group-toggle-icon');
+
+                    if (!shouldBeOpen) {
+                        content.classList.add('collapsed');
+                        icon.classList.add('collapsed');
+                    }
+                });
+            } catch (error) {
+                console.error('Error restoring group states:', error);
+            }
+        }
+    }
+};
+
+// =========================================================
 // Filter Management
 // =========================================================
 const FilterManager = {
@@ -212,9 +286,26 @@ const FilterManager = {
         const searchTerm = DOM.filterInput?.value.toLowerCase() || '';
         const selectedCategory = DOM.categoryFilter?.value.toLowerCase() || '';
 
+        // Filtra i container
         DOM.imageCards.forEach(card => {
             const matches = this.cardMatchesFilters(card, searchTerm, selectedCategory);
             card.style.display = matches ? '' : 'none';
+        });
+
+        // Filtra i gruppi
+        document.querySelectorAll('.group-card').forEach(card => {
+            const groupName = card.getAttribute('data-group').toLowerCase();
+            const searchData = card.getAttribute('data-search').toLowerCase();
+            const categoryBadge = card.querySelector('.badge-' + selectedCategory);
+
+            const matchesSearch = !searchTerm ||
+                groupName.includes(searchTerm) ||
+                searchData.includes(searchTerm);
+
+            const matchesCategory = !selectedCategory ||
+                card.classList.contains('badge-' + selectedCategory);
+
+            card.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
         });
 
         this.updateCounts();
@@ -241,11 +332,12 @@ const FilterManager = {
         let stoppedCount = 0;
 
         DOM.imageCards.forEach(card => {
-            const status = card.querySelector('.status-text').textContent.toLowerCase();
-            if (status === 'running') runningCount++;
-            else stoppedCount++;
-
-            if (card.style.display !== 'none') allCount++;
+            if (card.style.display !== 'none') {
+                const status = card.querySelector('.status-text').textContent.toLowerCase();
+                if (status === 'running') runningCount++;
+                else stoppedCount++;
+                allCount++;
+            }
         });
 
         this.updateCountElements(allCount, runningCount, stoppedCount);
@@ -443,7 +535,6 @@ const ContainerManager = {
 
                 this.updateCardUI(image, true, statusData.container || `playground-${image}`);
 
-                // IMPORTANTE: Salva i filtri prima del reload
                 FilterPersistenceManager.saveFilterState();
 
                 setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
@@ -558,7 +649,6 @@ const ContainerManager = {
             ToastManager.show(`✅ Container ${containerName} stopped`, 'success');
             this.updateCardUI(imageName, false, '');
 
-            // Salva i filtri prima del reload
             FilterPersistenceManager.saveFilterState();
             setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
         } else {
@@ -714,32 +804,26 @@ const ConsoleManager = {
             this.updateConsoleUI(container, '● Connected', 'console-connected');
             AppState.term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
 
-            // Scroll both the modal body and xterm viewport
             const scrollToBottomBoth = () => {
-                // Scroll xterm
                 if (AppState.term) {
                     AppState.term.scrollToBottom();
                 }
 
-                // Scroll modal body
                 const modalBody = document.querySelector('#consoleModal .modal-body');
                 if (modalBody) {
                     modalBody.scrollTop = modalBody.scrollHeight;
                 }
 
-                // Scroll xterm viewport directly
                 const viewport = document.querySelector('.xterm-viewport');
                 if (viewport) {
                     viewport.scrollTop = viewport.scrollHeight;
                 }
             };
 
-            // Scroll on render events
             const renderListener = AppState.term.onRender(() => {
                 scrollToBottomBoth();
             });
 
-            // Safety timeouts
             setTimeout(() => scrollToBottomBoth(), 100);
             setTimeout(() => scrollToBottomBoth(), 500);
             setTimeout(() => {
@@ -752,7 +836,6 @@ const ConsoleManager = {
         AppState.ws.onmessage = (event) => {
             AppState.term.write(event.data);
 
-            // Immediate scroll after message
             const scrollToBottomBoth = () => {
                 if (AppState.term) {
                     AppState.term.scrollToBottom();
@@ -771,7 +854,6 @@ const ConsoleManager = {
 
             scrollToBottomBoth();
 
-            // Render listener
             const renderListener = AppState.term.onRender(() => {
                 scrollToBottomBoth();
                 if (renderListener && typeof renderListener.dispose === 'function') {
@@ -826,9 +908,9 @@ const ConsoleManager = {
 };
 
 // =========================================================
-// Group Operations
+// Group Operations (Dashboard)
 // =========================================================
-const GroupManager = {
+const GroupOperations = {
     async startGroup(groupName) {
         const button = event.target;
         const originalText = button.textContent;
@@ -1046,7 +1128,6 @@ const GroupManager = {
             ToastManager.showErrorsSequentially(statusData.errors, `Errors in group '${groupName}':`);
         }
 
-        // Salva i filtri prima del reload
         FilterPersistenceManager.saveFilterState();
         setTimeout(() => location.reload(), isStart ? 5000 : 2000);
     }
@@ -1233,13 +1314,13 @@ function initializeEventListeners() {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             ContainerTagManager.init();
-            // Ripristina i filtri dopo il caricamento della pagina
             FilterPersistenceManager.restoreFilterState();
+            GroupPersistenceManager.restoreGroupStates();
         });
     } else {
         ContainerTagManager.init();
-        // Ripristina i filtri se la pagina è già caricata
         FilterPersistenceManager.restoreFilterState();
+        GroupPersistenceManager.restoreGroupStates();
     }
 }
 
@@ -1277,7 +1358,6 @@ const LoaderManager = {
         }
 
         if (loader) {
-            // USA 'active' INVECE DI RIMUOVERE 'hidden'
             loader.classList.add('active');
             document.body.style.overflow = 'hidden';
         } else {
@@ -1289,7 +1369,6 @@ const LoaderManager = {
     hide() {
         const loader = document.getElementById('global-loader');
         if (loader) {
-            // RIMUOVI 'active' INVECE DI AGGIUNGERE 'hidden'
             loader.classList.remove('active');
             document.body.style.overflow = '';
         } else {
@@ -1354,7 +1433,7 @@ const LogsManager = {
     currentContainer: null,
     refreshInterval: null,
     isFollowing: false,
-    refreshRate: 2000, // 2 secondi
+    refreshRate: 2000,
 
     async show(container, follow = false) {
         try {
@@ -1365,16 +1444,11 @@ const LogsManager = {
             document.getElementById('logContainerName').textContent = container;
             document.getElementById('logContent').textContent = data.logs || 'No logs available';
 
-            // Add follow controls
             this.addFollowControls();
 
-            // Open modal
             ModalManager.open('logModal');
 
-            // Scroll to bottom with proper timing
-            // First wait for modal to be rendered
             requestAnimationFrame(() => {
-                // Then wait one more frame for layout calculation
                 requestAnimationFrame(() => {
                     const logContent = document.getElementById('logContent');
                     if (logContent) {
@@ -1383,7 +1457,6 @@ const LogsManager = {
                 });
             });
 
-            // Start following if requested
             if (follow) {
                 this.startFollowing();
             }
@@ -1393,9 +1466,7 @@ const LogsManager = {
     },
 
     addFollowControls() {
-        // I controlli sono già nell'HTML, basta collegarli
         const followToggleBtn = document.getElementById('followToggleBtn');
-        const refreshLogBtn = document.getElementById('refreshLogBtn');
 
         if (followToggleBtn) {
             followToggleBtn.addEventListener('click', () => {
@@ -1416,7 +1487,6 @@ const LogsManager = {
             const logContent = document.getElementById('logContent');
             logContent.textContent = data.logs || 'No logs available';
 
-            // Se stiamo seguendo, scrolla in fondo
             if (this.isFollowing) {
                 logContent.scrollTop = logContent.scrollHeight;
             }
@@ -1445,7 +1515,6 @@ const LogsManager = {
         this.updateFollowButton();
         this.updateFollowStatus('Following logs...');
 
-        // Scrolla immediatamente in fondo
         const logContent = document.getElementById('logContent');
         logContent.scrollTop = logContent.scrollHeight;
     },
@@ -1463,16 +1532,14 @@ const LogsManager = {
 
     updateFollowButton() {
         const btn = document.getElementById('followToggleBtn');
-        const icon = btn.querySelector('.follow-icon');
+        const icon = btn?.querySelector('.follow-icon');
         if (btn) {
             if (this.isFollowing) {
                 btn.classList.add('active');
-                icon.textContent = '⏸';
-                btn.innerHTML = btn.innerHTML.replace('Segui log', 'Pausa');
+                if (icon) icon.textContent = '⏸';
             } else {
                 btn.classList.remove('active');
-                icon.textContent = '▶';
-                btn.innerHTML = btn.innerHTML.replace('Pausa', 'Segui log');
+                if (icon) icon.textContent = '▶';
             }
         }
     },
@@ -1490,7 +1557,6 @@ const LogsManager = {
         ModalManager.close('logModal');
     },
 
-    // Metodo per cambiare la frequenza di aggiornamento
     setRefreshRate(rate) {
         this.refreshRate = rate;
         if (this.isFollowing) {
@@ -1500,6 +1566,9 @@ const LogsManager = {
     }
 };
 
+// =========================================================
+// MOTD Manager
+// =========================================================
 const MOTDManager = {
     toggle(header) {
         const content = header.nextElementSibling;
@@ -1546,12 +1615,14 @@ const MOTDManager = {
 // =========================================================
 window.ContainerManager = ContainerManager;
 window.ConsoleManager = ConsoleManager;
+window.GroupOperations = GroupOperations;
 window.GroupManager = GroupManager;
 window.BulkOperations = BulkOperations;
 window.FilterManager = FilterManager;
 window.LogsManager = LogsManager;
 window.MOTDManager = MOTDManager;
 window.FilterPersistenceManager = FilterPersistenceManager;
+window.GroupPersistenceManager = GroupPersistenceManager;
 
 window.showLogs = LogsManager.show.bind(LogsManager);
 window.closeModal = ModalManager.close.bind(ModalManager);
@@ -1559,6 +1630,7 @@ window.openModal = ModalManager.open.bind(ModalManager);
 window.showConfirmModal = ConfirmModalManager.show.bind(ConfirmModalManager);
 window.showLoader = LoaderManager.show.bind(LoaderManager);
 window.hideLoader = LoaderManager.hide.bind(LoaderManager);
+window.toggleGroup = (headerElement) => GroupManager.toggleGroup(headerElement);
 
 // Initialize the application
 initializeEventListeners();

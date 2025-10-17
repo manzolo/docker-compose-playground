@@ -87,11 +87,14 @@
     <div class="container">
         <!-- Groups Section -->
         {% if groups %}
+        <!-- Groups Section - Card Style with Filters -->
         <div class="groups-section">
             <h2 class="section-title">🚀 Application Stacks</h2>
-            <div class="groups-grid">
+            <div class="groups-container" id="groupsContainer">
                 {% for group_name, group in groups.items() %}
-                <div class="group-card" data-group="{{ group_name }}">
+                <div class="group-card" data-group="{{ group_name }}"
+                    data-search="{{ group_name }} {{ group.description|lower }} {{ group.containers|join(' ') }}">
+
                     <div class="group-header">
                         <div class="group-title-area">
                             <h3 class="group-title">{{ group.name }}</h3>
@@ -117,11 +120,11 @@
                     </div>
 
                     <div class="group-actions">
-                        <button onclick="GroupManager.startGroup('{{ group_name }}')"
+                        <button onclick="GroupOperations.startGroup('{{ group_name }}')"
                             class="btn btn-success btn-block group-start-btn">
                             <span class="btn-icon">🚀</span> Start Stack
                         </button>
-                        <button onclick="GroupManager.stopGroup('{{ group_name }}')"
+                        <button onclick="GroupOperations.stopGroup('{{ group_name }}')"
                             class="btn btn-danger btn-sm group-stop-btn">
                             <span class="btn-icon">⏹</span> Stop All
                         </button>
@@ -135,8 +138,7 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
+        </div>{% endif %}
 
         <div id="images" class="image-grid">
             {% for name, data in images.items() %}
