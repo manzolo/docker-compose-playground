@@ -482,13 +482,14 @@ async def system_info():
     if SHARED_DIR.exists():
         try:
             total_size = sum(
-                os.path.getsize(os.path.join(dp, _, f))
+                os.path.getsize(os.path.join(dp, f))
                 for dp, _, fns in os.walk(SHARED_DIR)
                 for f in fns
             )
             volume_size = f"{total_size / (1024*1024):.2f} MB"
-        except:
-            pass
+        except Exception as e:
+            print(f"Error calculating volume size: {e}")
+            volume_size = "N/A"
     
     containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
     active = [{"name": c.name, "status": c.status} for c in containers]
@@ -503,7 +504,10 @@ async def system_info():
             "images": docker_info.get('Images', 0)
         },
         "network": network_data,
-        "volume": {"path": str(SHARED_DIR), "size": volume_size},
+        "volume": {
+            "path": str(SHARED_DIR), 
+            "size": volume_size
+        },
         "active_containers": active,
         "counts": {
             "total": total_containers,
