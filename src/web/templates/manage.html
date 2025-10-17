@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/modal.css">
     <link rel="stylesheet" href="/static/css/manager.css">
+    <link rel="stylesheet" href="/static/css/dark-mode.css">
 </head>
 
 <body>
@@ -24,11 +25,19 @@
     <!-- Header -->
     <header>
         <div class="container">
-            <h1>🛠️ Advanced Manager</h1>
-            <p class="subtitle">Bulk operations and system management</p>
+            <div class="header-top">
+                <div>
+                    <h1>🛠️ Advanced Manager</h1>
+                    <p class="subtitle">Bulk operations and system management</p>
+                </div>
+                <button id="darkModeToggle" class="dark-mode-btn" title="Toggle dark mode">
+                    <span class="dark-mode-icon">🌙</span>
+                </button>
+            </div>
+
             <nav class="header-nav">
                 <a href="/" class="nav-link">Dashboard</a>
-                <a href="/manage" class="nav-link">Advanced Manager</a>
+                <a href="/manage" class="nav-link active">Advanced Manager</a>
                 <a href="/add-container" class="nav-link">Add Container</a>
             </nav>
         </div>
@@ -258,6 +267,7 @@
     </div>
 
     <script src="/static/js/utils.js"></script>
+    <script src="/static/js/dark-mode.js"></script>
     <script src="/static/js/manager.js"></script>
 </body>
 

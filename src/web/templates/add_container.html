@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/modal.css">
     <link rel="stylesheet" href="/static/css/add-container.css">
+    <link rel="stylesheet" href="/static/css/dark-mode.css">
 </head>
 
 <body>
@@ -24,8 +25,16 @@
     <!-- Header -->
     <header>
         <div class="container">
-            <h1>➕ Add New Container</h1>
-            <p class="subtitle">Create a new container configuration</p>
+            <div class="header-top">
+                <div>
+                    <h1>➕ Add New Container</h1>
+                    <p class="subtitle">Create a new container configuration</p>
+                </div>
+                <button id="darkModeToggle" class="dark-mode-btn" title="Toggle dark mode">
+                    <span class="dark-mode-icon">🌙</span>
+                </button>
+            </div>
+
             <nav class="header-nav">
                 <a href="/" class="nav-link">Dashboard</a>
                 <a href="/manage" class="nav-link">Advanced Manager</a>
@@ -221,6 +230,7 @@
     <div id="confirmModal" class="modal"></div>
 
     <script src="/static/js/utils.js"></script>
+    <script src="/static/js/dark-mode.js"></script>
     <script src="/static/js/add-container.js"></script>
 </body>
 

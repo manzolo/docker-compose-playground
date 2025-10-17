@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/static/css/search.css">
     <link rel="stylesheet" href="/static/css/groups.css">
     <link rel="stylesheet" href="/static/css/motd.css">
+    <link rel="stylesheet" href="/static/css/dark-mode.css">
 </head>
 
 <body>
@@ -28,10 +29,18 @@
     <!-- Header -->
     <header>
         <div class="container">
-            <h1>🐳 Docker Playground</h1>
-            <p class="subtitle">Manage your containerized development environments</p>
+            <div class="header-top">
+                <div>
+                    <h1>🐳 Docker Playground</h1>
+                    <p class="subtitle">Manage your containerized development environments</p>
+                </div>
+                <button id="darkModeToggle" class="dark-mode-btn" title="Toggle dark mode">
+                    <span class="dark-mode-icon">🌙</span>
+                </button>
+            </div>
+
             <nav class="header-nav">
-                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/" class="nav-link active">Dashboard</a>
                 <a href="/manage" class="nav-link">Advanced Manager</a>
                 <a href="/add-container" class="nav-link">Add Container</a>
             </nav>
@@ -279,7 +288,9 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
     <script src="/static/js/utils.js"></script>
+    <script src="/static/js/dark-mode.js"></script>
     <script src="/static/js/app.js"></script>
+    
 
 </body>
 
