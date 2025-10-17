@@ -92,8 +92,8 @@ Main menu:
 ./start-webui.sh
 # Open http://localhost:8000
 ```
-<img width="1890" height="906" alt="image" src="https://github.com/user-attachments/assets/52b8f36d-e560-4acf-9117-9799ab8148a3" />
-<img width="1883" height="592" alt="image" src="https://github.com/user-attachments/assets/712a5e7a-ad92-4c30-b6dd-e9a472c819bb" />
+<img width="1208" height="894" alt="image" src="https://github.com/user-attachments/assets/707da583-f005-49cf-a3df-a9e1c64fc60d" />
+<img width="1208" height="894" alt="image" src="https://github.com/user-attachments/assets/2d8cefce-7e3c-4c4d-a66d-990d92450b5d" />
 <img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/a7e31b44-3fbb-4a0c-8069-2f5ca47ef886" />
 <img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/6af387f7-4f5e-462a-b907-8bf0ded13eb9" />
 
