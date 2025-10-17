@@ -286,26 +286,43 @@ const FilterManager = {
         const searchTerm = DOM.filterInput?.value.toLowerCase() || '';
         const selectedCategory = DOM.categoryFilter?.value.toLowerCase() || '';
 
-        // Filtra i container
+        // Filtra i container singoli
         DOM.imageCards.forEach(card => {
             const matches = this.cardMatchesFilters(card, searchTerm, selectedCategory);
             card.style.display = matches ? '' : 'none';
         });
 
         // Filtra i gruppi
-        document.querySelectorAll('.group-card').forEach(card => {
-            const groupName = card.getAttribute('data-group').toLowerCase();
-            const searchData = card.getAttribute('data-search').toLowerCase();
-            const categoryBadge = card.querySelector('.badge-' + selectedCategory);
+        document.querySelectorAll('.group-card').forEach(groupCard => {
+            const groupName = groupCard.getAttribute('data-group').toLowerCase();
+            const searchData = groupCard.getAttribute('data-search').toLowerCase();
 
+            // Match per ricerca e categoria
             const matchesSearch = !searchTerm ||
                 groupName.includes(searchTerm) ||
                 searchData.includes(searchTerm);
 
             const matchesCategory = !selectedCategory ||
-                card.classList.contains('badge-' + selectedCategory);
+                groupCard.querySelector('.badge').className.includes('badge-' + selectedCategory);
 
-            card.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
+            // Match per stato: verifica i container del gruppo
+            let matchesStatus = true;
+            if (AppState.activeStatusFilter !== 'all') {
+                const containerTags = groupCard.querySelectorAll('.container-tag');
+                const hasMatchingContainer = Array.from(containerTags).some(tag => {
+                    const containerName = tag.getAttribute('data-container');
+                    const containerCard = document.querySelector(`.image-card[data-name="${containerName}"]`);
+
+                    if (!containerCard) return false;
+
+                    const statusText = containerCard.querySelector('.status-text')?.textContent.toLowerCase() || '';
+                    return statusText === AppState.activeStatusFilter;
+                });
+
+                matchesStatus = hasMatchingContainer;
+            }
+
+            groupCard.style.display = (matchesSearch && matchesCategory && matchesStatus) ? '' : 'none';
         });
 
         this.updateCounts();
@@ -327,32 +344,45 @@ const FilterManager = {
     },
 
     updateCounts() {
-        let allCount = 0;
+        // Conta TUTTI i container (non solo visibili)
+        let totalCount = DOM.imageCards.length;
         let runningCount = 0;
         let stoppedCount = 0;
 
+        // Conta lo stato reale di TUTTI i container
         DOM.imageCards.forEach(card => {
-            if (card.style.display !== 'none') {
-                const status = card.querySelector('.status-text').textContent.toLowerCase();
-                if (status === 'running') runningCount++;
-                else stoppedCount++;
-                allCount++;
+            const status = card.querySelector('.status-text').textContent.toLowerCase();
+            if (status === 'running') {
+                runningCount++;
+            } else {
+                stoppedCount++;
             }
         });
 
-        this.updateCountElements(allCount, runningCount, stoppedCount);
+        // Conta solo i VISIBILI (quelli che passano il filtro)
+        let visibleCount = 0;
+        DOM.imageCards.forEach(card => {
+            if (card.style.display !== 'none') {
+                visibleCount++;
+            }
+        });
+
+        this.updateCountElements(totalCount, runningCount, stoppedCount, visibleCount);
     },
 
-    updateCountElements(allCount, runningCount, stoppedCount) {
+    updateCountElements(totalCount, runningCount, stoppedCount, visibleCount) {
         const allElement = document.getElementById('count-all');
         const runningElement = document.getElementById('count-running');
         const stoppedElement = document.getElementById('count-stopped');
 
-        if (allElement) allElement.textContent = allCount;
+        // I badge mostrano SEMPRE il totale reale
+        if (allElement) allElement.textContent = totalCount;
         if (runningElement) runningElement.textContent = runningCount;
         if (stoppedElement) stoppedElement.textContent = stoppedCount;
+
+        // Lo search count mostra quanti sono visibili rispetto al totale
         if (DOM.searchCount) {
-            DOM.searchCount.textContent = `${allCount} of ${DOM.imageCards.length} containers`;
+            DOM.searchCount.textContent = `${visibleCount} of ${totalCount} containers`;
         }
     },
 
