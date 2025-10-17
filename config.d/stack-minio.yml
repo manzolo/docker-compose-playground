@@ -1,0 +1,977 @@
+# Metadati del gruppo
+group:
+  name: "MinIO-S3-Stack"
+  description: "MinIO S3 storage with PHP application and MySQL database"
+  category: storage
+  containers:
+    - minio-s3-stack
+    - php-minio-stack
+    - mysql-minio-stack
+
+# Configurazioni dei container
+images:
+  mysql-minio-stack:
+    category: database
+    description: MySQL 8 Database Server for MinIO Stack
+    image: mysql:8
+    keep_alive_cmd: mysqld
+    shell: /bin/bash
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_DATABASE: minio_app
+      MYSQL_ROOT_PASSWORD: minio_pass
+      MYSQL_USER: minio_user
+      MYSQL_PASSWORD: minio_pass
+    volumes:
+      - name: mysql-minio-volume
+        path: /var/lib/mysql
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Initializing MySQL for MinIO app..."
+          MAX_WAIT=60
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER_NAME}" mysqladmin ping -u root -pminio_pass --silent 2>/dev/null; then
+              echo "✓ MySQL is ready!"
+              break
+            fi
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          sleep 5
+          docker exec "${CONTAINER_NAME}" mysql -u root -pminio_pass minio_app -e "
+          CREATE TABLE IF NOT EXISTS s3_uploads (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              filename VARCHAR(255) NOT NULL,
+              bucket_name VARCHAR(100) NOT NULL,
+              object_key VARCHAR(500) NOT NULL,
+              file_size BIGINT,
+              content_type VARCHAR(100),
+              uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              uploaded_by VARCHAR(100)
+          );
+          CREATE TABLE IF NOT EXISTS buckets (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              bucket_name VARCHAR(100) UNIQUE NOT NULL,
+              description TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              is_public BOOLEAN DEFAULT FALSE
+          );
+          CREATE TABLE IF NOT EXISTS users (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              username VARCHAR(50) UNIQUE NOT NULL,
+              email VARCHAR(100),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          INSERT IGNORE INTO users (id, username, email) VALUES 
+            (1, 'admin', 'admin@minio.local'),
+            (2, 'storage_user', 'storage@example.com');
+          INSERT IGNORE INTO buckets (id, bucket_name, description, is_public) VALUES 
+            (1, 'documents', 'Document storage', FALSE),
+            (2, 'images', 'Image gallery', TRUE),
+            (3, 'backups', 'System backups', FALSE);
+          " 2>/dev/null
+          echo "✓ MySQL initialized for MinIO app"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           MySQL 8 - MinIO Stack Database                   ║
+      ╚══════════════════════════════════════════════════════════════╝
+      🔐 Connection:
+         Host: mysql-minio-stack
+         Port: 3306
+         Root: root / minio_pass
+         Database: minio_app
+
+  minio-s3-stack:
+    category: storage
+    description: MinIO S3-compatible Object Storage
+    image: minio/minio
+    keep_alive_cmd: "minio server /minio --console-address ':9001'"
+    shell: /bin/bash
+    command: minio server /minio --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+      - MINIO_BROWSER=on
+    volumes:
+      - name: minio-s3-volume
+        path: /minio
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Setting up MinIO..."
+          sleep 5
+          echo "✓ MinIO initialized"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         MinIO - S3-Compatible Object Storage                ║
+      ╚══════════════════════════════════════════════════════════════╝
+      🌐 Console: http://localhost:9001
+      🔌 API: http://localhost:9000
+      🔐 Credentials:
+         Username: minioadmin
+         Password: minioadmin123
+
+  php-minio-stack:
+    category: web
+    description: "PHP 8.3 with Apache - MinIO S3 Application"
+    image: php:8.3-apache
+    keep_alive_cmd: apache2-foreground
+    shell: /bin/bash
+    ports:
+      - "8081:80"
+    environment:
+      MINIO_ENDPOINT: minio-s3-stack:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MYSQL_HOST: mysql-minio-stack
+      MYSQL_DATABASE: minio_app
+      MYSQL_USER: minio_user
+      MYSQL_PASSWORD: minio_pass
+    motd: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║        PHP 8.3 with Apache - MinIO S3 Application           ║
+          ║                                                              ║
+          ║          ✓ SETUP COMPLETE - Ready to use!                  ║
+          ╚══════════════════════════════════════════════════════════════╝
+          
+          🌐 MAIN APPLICATION:
+             📱 Dashboard: http://localhost:8081
+             
+          🔌 MINIO SERVICES:
+             🎛️  Console: http://localhost:9001
+             ⚙️  API Endpoint: http://localhost:9000
+             
+          📡 API ENDPOINTS:
+             ⬆️  Upload File: http://localhost:8081/api/upload.php (POST)
+             🗑️  Delete File: http://localhost:8081/api/delete.php (POST)
+             📋 List Files: http://localhost:8081/api/files.php (GET)
+             📊 Statistics: http://localhost:8081/api/stats.php (GET)
+             💚 Health Check: http://localhost:8081/api/health.php (GET)
+             
+          🔐 MINIO CREDENTIALS:
+             Endpoint: minio-s3-stack:9000
+             Access Key: minioadmin
+             Secret Key: minioadmin123
+             
+          💾 DATABASE CONNECTION:
+             Host: mysql-minio-stack
+             Port: 3306
+             Database: minio_app
+             Username: minio_user
+             Password: minio_pass
+             Root User: root / minio_pass
+             
+          📊 SUPPORTED BUCKETS:
+             📁 documents (private) - Document storage
+             🖼️  images (public) - Image gallery
+             💾 backups (private) - System backups
+             
+          ⚙️ ENVIRONMENT VARIABLES:
+             MINIO_ENDPOINT=minio-s3-stack:9000
+             MINIO_ACCESS_KEY=minioadmin
+             MINIO_SECRET_KEY=minioadmin123
+             MYSQL_HOST=mysql-minio-stack
+             MYSQL_DATABASE=minio_app
+             MYSQL_USER=minio_user
+             MYSQL_PASSWORD=minio_pass
+             
+          🚀 QUICK START:
+             1. Open: http://localhost:8081
+             2. Select a bucket from dropdown
+             3. Upload files via drag & drop or file selector
+             4. Manage files from the Recent Files table
+             5. Access MinIO Console: http://localhost:9001
+             
+          📚 API EXAMPLES:
+             Upload: POST /api/upload.php (multipart/form-data)
+             Delete: POST /api/delete.php (application/json)
+             Files: GET /api/files.php
+             Stats: GET /api/stats.php
+             Health: GET /api/health.php
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Setting up PHP MinIO application..."
+          docker exec "${CONTAINER_NAME}" docker-php-ext-install mysqli pdo_mysql > /dev/null 2>&1
+          docker exec "${CONTAINER_NAME}" docker-php-ext-enable mysqli pdo_mysql > /dev/null 2>&1
+          docker exec "${CONTAINER_NAME}" apt-get update -qq > /dev/null 2>&1
+          docker exec "${CONTAINER_NAME}" apt-get install -y curl git unzip > /dev/null 2>&1
+          
+          SHARED_DIR="${SHARED_DIR:-.}"
+          mkdir -p "${SHARED_DIR}/php-minio-files/api"
+          
+          cat > "${SHARED_DIR}/php-minio-files/index.php" << 'PHPEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>MinIO S3 Manager - Professional Storage</title>
+              <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body { 
+                      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      padding: 20px;
+                  }
+                  .container { 
+                      max-width: 1400px; 
+                      margin: 0 auto; 
+                      background: #fff;
+                      border-radius: 12px;
+                      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                      overflow: hidden;
+                  }
+                  .header { 
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white; 
+                      padding: 40px 30px;
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                  }
+                  .header h1 { font-size: 32px; font-weight: 600; }
+                  .header p { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+                  .status-badge {
+                      display: inline-block;
+                      background: rgba(255, 255, 255, 0.2);
+                      padding: 8px 16px;
+                      border-radius: 20px;
+                      font-size: 13px;
+                      backdrop-filter: blur(10px);
+                  }
+                  .status-badge.online { background: rgba(76, 175, 80, 0.3); }
+                  .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 30px; }
+                  @media (max-width: 1024px) { .main-content { grid-template-columns: 1fr; } }
+                  .section { 
+                      background: #f8f9fa;
+                      border-radius: 10px;
+                      padding: 25px;
+                      border: 1px solid #e9ecef;
+                  }
+                  .section h2 { 
+                      font-size: 18px; 
+                      margin-bottom: 20px; 
+                      color: #333;
+                      display: flex;
+                      align-items: center;
+                      gap: 10px;
+                  }
+                  .icon { font-size: 20px; }
+                  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+                  .stat-card { 
+                      background: white;
+                      padding: 15px;
+                      border-radius: 8px;
+                      border-left: 4px solid #667eea;
+                      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                  }
+                  .stat-card .label { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+                  .stat-card .value { font-size: 28px; font-weight: 700; color: #667eea; }
+                  .upload-area {
+                      border: 2px dashed #667eea;
+                      border-radius: 8px;
+                      padding: 30px;
+                      text-align: center;
+                      cursor: pointer;
+                      transition: all 0.3s ease;
+                      background: #f0f4ff;
+                  }
+                  .upload-area:hover { 
+                      border-color: #764ba2;
+                      background: #e8edff;
+                  }
+                  .upload-area.dragover { 
+                      border-color: #764ba2;
+                      background: #e8edff;
+                      box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+                  }
+                  .upload-area p { color: #666; margin-bottom: 10px; }
+                  .upload-area small { color: #999; display: block; }
+                  form { display: flex; flex-direction: column; gap: 15px; margin: 20px 0; }
+                  select, input[type="file"] { 
+                      padding: 10px 12px;
+                      border: 1px solid #ddd;
+                      border-radius: 6px;
+                      font-size: 14px;
+                      font-family: inherit;
+                  }
+                  select:focus, input[type="file"]:focus { 
+                      outline: none;
+                      border-color: #667eea;
+                      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                  }
+                  .btn { 
+                      padding: 12px 24px;
+                      border: none;
+                      border-radius: 6px;
+                      font-size: 14px;
+                      font-weight: 600;
+                      cursor: pointer;
+                      transition: all 0.3s ease;
+                  }
+                  .btn-primary { 
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                  }
+                  .btn-primary:hover { 
+                      transform: translateY(-2px);
+                      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+                  }
+                  .btn-danger {
+                      background: #ff6b6b;
+                      color: white;
+                      padding: 6px 12px;
+                      font-size: 12px;
+                  }
+                  .btn-danger:hover { 
+                      background: #ff5252;
+                  }
+                  .alert { 
+                      padding: 15px;
+                      border-radius: 6px;
+                      margin-bottom: 15px;
+                      display: none;
+                  }
+                  .alert.show { display: block; }
+                  .alert-success { 
+                      background: #d4edda;
+                      color: #155724;
+                      border: 1px solid #c3e6cb;
+                  }
+                  .alert-error { 
+                      background: #f8d7da;
+                      color: #721c24;
+                      border: 1px solid #f5c6cb;
+                  }
+                  .alert-loading { 
+                      background: #d1ecf1;
+                      color: #0c5460;
+                      border: 1px solid #bee5eb;
+                  }
+                  .files-section { grid-column: 1 / -1; }
+                  .files-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                  .files-table thead { background: white; }
+                  .files-table th { 
+                      padding: 15px; 
+                      text-align: left; 
+                      font-weight: 600;
+                      color: #333;
+                      border-bottom: 2px solid #e9ecef;
+                      font-size: 13px;
+                      text-transform: uppercase;
+                  }
+                  .files-table td { 
+                      padding: 15px;
+                      border-bottom: 1px solid #e9ecef;
+                      font-size: 14px;
+                  }
+                  .files-table tbody tr:hover { background: white; }
+                  .file-name { 
+                      color: #667eea;
+                      font-weight: 500;
+                      word-break: break-all;
+                  }
+                  .file-bucket { 
+                      display: inline-block;
+                      background: #f0f4ff;
+                      color: #667eea;
+                      padding: 4px 10px;
+                      border-radius: 4px;
+                      font-size: 12px;
+                      font-weight: 600;
+                  }
+                  .action-cell { display: flex; gap: 8px; align-items: center; }
+                  .loading { opacity: 0.6; pointer-events: none; }
+                  .spinner {
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      border: 2px solid #667eea;
+                      border-top-color: transparent;
+                      border-radius: 50%;
+                      animation: spin 0.8s linear infinite;
+                  }
+                  @keyframes spin { to { transform: rotate(360deg); } }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <div>
+                          <h1>📦 MinIO S3 Manager</h1>
+                          <p>Professional Object Storage Management</p>
+                      </div>
+                      <div style="display: flex; gap: 15px; align-items: center;">
+                          <a href="http://localhost:9001" target="_blank" style="color: white; text-decoration: none; padding: 10px 16px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 14px; font-weight: 600; backdrop-filter: blur(10px); transition: all 0.3s;">🎛️ MinIO Console</a>
+                          <a href="http://localhost:9000" target="_blank" style="color: white; text-decoration: none; padding: 10px 16px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 14px; font-weight: 600; backdrop-filter: blur(10px); transition: all 0.3s;">⚙️ MinIO API</a>
+                          <div class="status-badge online">
+                              <span>● Online</span>
+                          </div>
+                      </div>
+                  </div>
+          
+                  <div class="main-content">
+                      <!-- Upload Section -->
+                      <div class="section">
+                          <h2><span class="icon">⬆️</span>Upload File</h2>
+                          
+                          <div class="stats">
+                              <div class="stat-card">
+                                  <div class="label">Total Buckets</div>
+                                  <div class="value" id="bucketCount">0</div>
+                              </div>
+                              <div class="stat-card">
+                                  <div class="label">Total Files</div>
+                                  <div class="value" id="fileCount">0</div>
+                              </div>
+                          </div>
+          
+                          <div id="uploadAlert" class="alert"></div>
+          
+                          <form id="uploadForm">
+                              <select name="bucket" required>
+                                  <option value="">Select Bucket...</option>
+                                  <?php
+                                  $mysql_host = getenv("MYSQL_HOST") ?: "mysql-minio-stack";
+                                  $mysql_db = getenv("MYSQL_DATABASE") ?: "minio_app";
+                                  $mysql_user = getenv("MYSQL_USER") ?: "minio_user";
+                                  $mysql_pass = getenv("MYSQL_PASSWORD") ?: "minio_pass";
+                                  
+                                  if (extension_loaded("pdo_mysql")) {
+                                      try {
+                                          $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+                                          $buckets = $pdo->query("SELECT bucket_name FROM buckets ORDER BY bucket_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+                                          foreach ($buckets as $b) {
+                                              echo "<option value=\"" . htmlspecialchars($b["bucket_name"]) . "\">" . htmlspecialchars($b["bucket_name"]) . "</option>";
+                                          }
+                                      } catch (PDOException $e) {}
+                                  }
+                                  ?>
+                              </select>
+                              <div class="upload-area" id="uploadArea">
+                                  <p><strong>Drop files here or click to select</strong></p>
+                                  <small>Max size: 5MB</small>
+                                  <input type="file" id="fileInput" name="file" style="display: none;" required>
+                              </div>
+                              <button type="submit" class="btn btn-primary">Upload File</button>
+                          </form>
+                      </div>
+          
+                      <!-- System Status -->
+                      <div class="section">
+                          <h2><span class="icon">⚙️</span>System Status</h2>
+                          <?php
+                          echo "<div style='display: grid; gap: 12px;'>";
+                          echo "<div style='padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #667eea;'>";
+                          echo "<strong style='color: #333;'>PHP Version</strong><br>";
+                          echo "<span style='color: #666;'>" . phpversion() . "</span>";
+                          echo "</div>";
+                          
+                          if (extension_loaded("pdo_mysql")) {
+                              try {
+                                  $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+                                  echo "<div style='padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #4CAF50;'>";
+                                  echo "<strong style='color: #333;'>Database</strong><br>";
+                                  echo "<span style='color: #4CAF50;'>✓ Connected</span>";
+                                  echo "</div>";
+                              } catch (PDOException $e) {
+                                  echo "<div style='padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #ff6b6b;'>";
+                                  echo "<strong style='color: #333;'>Database</strong><br>";
+                                  echo "<span style='color: #ff6b6b;'>✗ Disconnected</span>";
+                                  echo "</div>";
+                              }
+                          }
+                          echo "</div>";
+                          ?>
+                      </div>
+          
+                      <!-- Files List -->
+                      <div class="section files-section">
+                          <h2><span class="icon">📄</span>Recent Files</h2>
+                          <table class="files-table">
+                              <thead>
+                                  <tr>
+                                      <th>Filename</th>
+                                      <th>Bucket</th>
+                                      <th>Size</th>
+                                      <th>Type</th>
+                                      <th>Uploaded</th>
+                                      <th>Action</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="filesTableBody">
+                                  <tr><td colspan="6" style="text-align: center; color: #999;">Loading...</td></tr>
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+          
+              <script>
+                  const uploadForm = document.getElementById('uploadForm');
+                  const uploadArea = document.getElementById('uploadArea');
+                  const fileInput = document.getElementById('fileInput');
+                  const uploadAlert = document.getElementById('uploadAlert');
+          
+                  // Load initial data
+                  loadStats();
+                  loadFiles();
+                  
+                  // Drag and drop
+                  uploadArea.addEventListener('click', () => fileInput.click());
+                  uploadArea.addEventListener('dragover', (e) => {
+                      e.preventDefault();
+                      uploadArea.classList.add('dragover');
+                  });
+                  uploadArea.addEventListener('dragleave', () => {
+                      uploadArea.classList.remove('dragover');
+                  });
+                  uploadArea.addEventListener('drop', (e) => {
+                      e.preventDefault();
+                      uploadArea.classList.remove('dragover');
+                      fileInput.files = e.dataTransfer.files;
+                  });
+          
+                  uploadForm.addEventListener('submit', async (e) => {
+                      e.preventDefault();
+                      const formData = new FormData(uploadForm);
+                      
+                      showAlert('Uploading...', 'loading');
+                      uploadForm.classList.add('loading');
+          
+                      try {
+                          const response = await fetch('/api/upload.php', {
+                              method: 'POST',
+                              body: formData
+                          });
+                          const data = await response.json();
+          
+                          if (data.success) {
+                              showAlert('✓ ' + data.message, 'success');
+                              uploadForm.reset();
+                              loadStats();
+                              loadFiles();
+                              setTimeout(() => loadFiles(), 1500);
+                          } else {
+                              showAlert('✗ ' + data.message, 'error');
+                          }
+                      } catch (error) {
+                          showAlert('✗ Error: ' + error.message, 'error');
+                      } finally {
+                          uploadForm.classList.remove('loading');
+                      }
+                  });
+          
+                  function showAlert(message, type) {
+                      uploadAlert.textContent = message;
+                      uploadAlert.className = 'alert show alert-' + type;
+                      if (type !== 'loading') {
+                          setTimeout(() => uploadAlert.classList.remove('show'), 5000);
+                      }
+                  }
+          
+                  function loadStats() {
+                      fetch('/api/stats.php')
+                          .then(r => r.json())
+                          .then(data => {
+                              document.getElementById('bucketCount').textContent = data.buckets;
+                              document.getElementById('fileCount').textContent = data.files;
+                          });
+                  }
+          
+                  function loadFiles() {
+                      fetch('/api/files.php')
+                          .then(r => r.json())
+                          .then(data => {
+                              const tbody = document.getElementById('filesTableBody');
+                              if (data.files.length === 0) {
+                                  tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No files yet</td></tr>';
+                                  return;
+                              }
+                              tbody.innerHTML = data.files.map(f => `
+                                  <tr>
+                                      <td><span class="file-name">${escapeHtml(f.filename)}</span></td>
+                                      <td><span class="file-bucket">${escapeHtml(f.bucket_name)}</span></td>
+                                      <td>${formatBytes(f.file_size)}</td>
+                                      <td>${escapeHtml(f.content_type)}</td>
+                                      <td>${new Date(f.uploaded_at).toLocaleString()}</td>
+                                      <td>
+                                          <div class="action-cell">
+                                              <button class="btn btn-danger" onclick="deleteFile(${f.id}, '${escapeHtml(f.bucket_name)}', '${escapeHtml(f.object_key)}')">Delete</button>
+                                          </div>
+                                      </td>
+                                  </tr>
+                              `).join('');
+                          });
+                  }
+          
+                  window.deleteFile = function(id, bucket, key) {
+                      if (!confirm('Delete this file permanently?')) return;
+                      
+                      fetch('/api/delete.php', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id, bucket, object_key: key })
+                      })
+                      .then(r => r.json())
+                      .then(data => {
+                          if (data.success) {
+                              showAlert('✓ File deleted successfully', 'success');
+                              loadStats();
+                              loadFiles();
+                          } else {
+                              showAlert('✗ ' + data.message, 'error');
+                          }
+                      });
+                  };
+          
+                  function formatBytes(bytes) {
+                      if (bytes === 0) return '0 B';
+                      const k = 1024;
+                      const sizes = ['B', 'KB', 'MB', 'GB'];
+                      const i = Math.floor(Math.log(bytes) / Math.log(k));
+                      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+                  }
+          
+                  function escapeHtml(text) {
+                      const map = {
+                          '&': '&amp;',
+                          '<': '&lt;',
+                          '>': '&gt;',
+                          '"': '&quot;',
+                          "'": '&#039;'
+                      };
+                      return text.replace(/[&<>"']/g, m => map[m]);
+                  }
+              </script>
+          </body>
+          </html>
+          PHPEOF
+          
+          cat > "${SHARED_DIR}/php-minio-files/api/upload.php" << 'UPLOADEOF'
+          <?php
+          header("Content-Type: application/json; charset=utf-8");
+          http_response_code(400);
+          
+          $response = [
+              "success" => false,
+              "message" => "",
+              "data" => null,
+              "error_code" => null,
+              "timestamp" => date("c")
+          ];
+          
+          try {
+              if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+                  throw new Exception("Metodo HTTP non supportato. Usa POST.");
+              }
+          
+              if (!isset($_FILES["file"])) {
+                  throw new Exception("Nessun file fornito.");
+              }
+          
+              if (!isset($_POST["bucket"])) {
+                  throw new Exception("Bucket non specificato.");
+              }
+          
+              $file = $_FILES["file"];
+              $bucket = trim($_POST["bucket"]);
+          
+              if ($file["error"] !== UPLOAD_ERR_OK) {
+                  $error_messages = [
+                      UPLOAD_ERR_INI_SIZE => "File troppo grande (limite INI)",
+                      UPLOAD_ERR_FORM_SIZE => "File troppo grande (limite form)",
+                      UPLOAD_ERR_PARTIAL => "Upload incompleto",
+                      UPLOAD_ERR_NO_FILE => "Nessun file selezionato",
+                      UPLOAD_ERR_NO_TMP_DIR => "Directory temporanea mancante",
+                      UPLOAD_ERR_CANT_WRITE => "Errore di scrittura",
+                      UPLOAD_ERR_EXTENSION => "Estensione non consentita"
+                  ];
+                  throw new Exception($error_messages[$file["error"]] ?? "Errore sconosciuto nell'upload");
+              }
+          
+              if (!is_uploaded_file($file["tmp_name"])) {
+                  throw new Exception("File upload non valido.");
+              }
+          
+              if (empty($bucket) || strlen($bucket) > 100) {
+                  throw new Exception("Nome bucket non valido.");
+              }
+          
+              $file_size = filesize($file["tmp_name"]);
+              $max_size = 5 * 1024 * 1024;
+              
+              if ($file_size > $max_size) {
+                  throw new Exception("File troppo grande. Massimo 5MB.");
+              }
+          
+              $minio_endpoint = getenv("MINIO_ENDPOINT") ?: "minio-s3-stack:9000";
+              $minio_key = getenv("MINIO_ACCESS_KEY") ?: "minioadmin";
+              $minio_secret = getenv("MINIO_SECRET_KEY") ?: "minioadmin123";
+              
+              $key = basename($file["name"]);
+              $file_content = file_get_contents($file["tmp_name"]);
+              $date = gmdate("Ymd\THis\Z");
+              $amz_date = gmdate("Ymd");
+              
+              $canonical_request = "PUT\n/$bucket/$key\n\nhost:$minio_endpoint\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:$date\n\nhost;x-amz-content-sha256;x-amz-date\nUNSIGNED-PAYLOAD";
+              $string_to_sign = "AWS4-HMAC-SHA256\n$date\n$amz_date/us-east-1/s3/aws4_request\n" . hash("sha256", $canonical_request);
+              $signature_key = hash_hmac("sha256", "aws4_request", hash_hmac("sha256", "s3", hash_hmac("sha256", "us-east-1", hash_hmac("sha256", $amz_date, "AWS4" . $minio_secret, true), true), true), true);
+              $signature = hash_hmac("sha256", $string_to_sign, $signature_key);
+              $authorization = "AWS4-HMAC-SHA256 Credential=$minio_key/$amz_date/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=$signature";
+              
+              $curl = curl_init();
+              curl_setopt_array($curl, [
+                  CURLOPT_URL => "http://$minio_endpoint/$bucket/$key",
+                  CURLOPT_RETURNTRANSFER => true,
+                  CURLOPT_CUSTOMREQUEST => "PUT",
+                  CURLOPT_BINARYTRANSFER => true,
+                  CURLOPT_POSTFIELDS => $file_content,
+                  CURLOPT_HTTPHEADER => [
+                      "Host: $minio_endpoint",
+                      "Content-Type: " . $file["type"],
+                      "Authorization: $authorization",
+                      "X-Amz-Date: $date",
+                      "X-Amz-Content-Sha256: UNSIGNED-PAYLOAD"
+                  ]
+              ]);
+              
+              $result = curl_exec($curl);
+              $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+              curl_close($curl);
+              
+              if ($http_code >= 200 && $http_code < 300) {
+                  $mysql_host = getenv("MYSQL_HOST") ?: "mysql-minio-stack";
+                  $mysql_db = getenv("MYSQL_DATABASE") ?: "minio_app";
+                  $mysql_user = getenv("MYSQL_USER") ?: "minio_user";
+                  $mysql_pass = getenv("MYSQL_PASSWORD") ?: "minio_pass";
+                  
+                  $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+                  $stmt = $pdo->prepare("INSERT INTO s3_uploads (filename, bucket_name, object_key, file_size, content_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)");
+                  $stmt->execute([$file["name"], $bucket, $key, $file["size"], $file["type"], "web_upload"]);
+                  
+                  http_response_code(200);
+                  $response["success"] = true;
+                  $response["message"] = "File caricato con successo!";
+                  $response["data"] = [
+                      "filename" => $file["name"],
+                      "bucket" => $bucket,
+                      "size" => $file_size,
+                      "type" => $file["type"]
+                  ];
+              } else {
+                  throw new Exception("Upload fallito (HTTP $http_code)");
+              }
+          } catch (Exception $e) {
+              $response["error_code"] = "UPLOAD_ERROR";
+              $response["message"] = $e->getMessage();
+          }
+          
+          echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+          ?>
+          UPLOADEOF
+          
+          cat > "${SHARED_DIR}/php-minio-files/api/delete.php" << 'DELETEEOF'
+          <?php
+          header("Content-Type: application/json; charset=utf-8");
+          http_response_code(400);
+          
+          $response = [
+              "success" => false,
+              "message" => "",
+              "error_code" => null,
+              "timestamp" => date("c")
+          ];
+          
+          try {
+              if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+                  throw new Exception("Metodo HTTP non supportato. Usa POST.");
+              }
+          
+              $input = json_decode(file_get_contents("php://input"), true);
+              
+              if (!isset($input["id"]) || !isset($input["bucket"]) || !isset($input["object_key"])) {
+                  throw new Exception("Parametri mancanti (id, bucket, object_key).");
+              }
+          
+              $id = intval($input["id"]);
+              $bucket = trim($input["bucket"]);
+              $object_key = trim($input["object_key"]);
+          
+              if (empty($bucket) || empty($object_key)) {
+                  throw new Exception("Bucket o chiave oggetto non validi.");
+              }
+          
+              $minio_endpoint = getenv("MINIO_ENDPOINT") ?: "minio-s3-stack:9000";
+              $minio_key = getenv("MINIO_ACCESS_KEY") ?: "minioadmin";
+              $minio_secret = getenv("MINIO_SECRET_KEY") ?: "minioadmin123";
+              
+              $date = gmdate("Ymd\THis\Z");
+              $amz_date = gmdate("Ymd");
+              
+              $canonical_request = "DELETE\n/$bucket/$object_key\n\nhost:$minio_endpoint\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:$date\n\nhost;x-amz-content-sha256;x-amz-date\nUNSIGNED-PAYLOAD";
+              $string_to_sign = "AWS4-HMAC-SHA256\n$date\n$amz_date/us-east-1/s3/aws4_request\n" . hash("sha256", $canonical_request);
+              $signature_key = hash_hmac("sha256", "aws4_request", hash_hmac("sha256", "s3", hash_hmac("sha256", "us-east-1", hash_hmac("sha256", $amz_date, "AWS4" . $minio_secret, true), true), true), true);
+              $signature = hash_hmac("sha256", $string_to_sign, $signature_key);
+              $authorization = "AWS4-HMAC-SHA256 Credential=$minio_key/$amz_date/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=$signature";
+              
+              $curl = curl_init();
+              curl_setopt_array($curl, [
+                  CURLOPT_URL => "http://$minio_endpoint/$bucket/$object_key",
+                  CURLOPT_RETURNTRANSFER => true,
+                  CURLOPT_CUSTOMREQUEST => "DELETE",
+                  CURLOPT_HTTPHEADER => [
+                      "Host: $minio_endpoint",
+                      "Authorization: $authorization",
+                      "X-Amz-Date: $date",
+                      "X-Amz-Content-Sha256: UNSIGNED-PAYLOAD"
+                  ]
+              ]);
+              
+              $result = curl_exec($curl);
+              $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+              curl_close($curl);
+              
+              if ($http_code >= 200 && $http_code < 300) {
+                  $mysql_host = getenv("MYSQL_HOST") ?: "mysql-minio-stack";
+                  $mysql_db = getenv("MYSQL_DATABASE") ?: "minio_app";
+                  $mysql_user = getenv("MYSQL_USER") ?: "minio_user";
+                  $mysql_pass = getenv("MYSQL_PASSWORD") ?: "minio_pass";
+                  
+                  $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+                  $stmt = $pdo->prepare("DELETE FROM s3_uploads WHERE id = ?");
+                  $stmt->execute([$id]);
+                  
+                  http_response_code(200);
+                  $response["success"] = true;
+                  $response["message"] = "File eliminato con successo!";
+              } else {
+                  throw new Exception("Eliminazione fallita (HTTP $http_code)");
+              }
+          } catch (Exception $e) {
+              $response["error_code"] = "DELETE_ERROR";
+              $response["message"] = $e->getMessage();
+          }
+          
+          echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+          ?>
+          DELETEEOF
+          
+          cat > "${SHARED_DIR}/php-minio-files/api/files.php" << 'FILESEOF'
+          <?php
+          header("Content-Type: application/json; charset=utf-8");
+          
+          $response = ["files" => []];
+          
+          try {
+              $mysql_host = getenv("MYSQL_HOST") ?: "mysql-minio-stack";
+              $mysql_db = getenv("MYSQL_DATABASE") ?: "minio_app";
+              $mysql_user = getenv("MYSQL_USER") ?: "minio_user";
+              $mysql_pass = getenv("MYSQL_PASSWORD") ?: "minio_pass";
+              
+              $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+              $files = $pdo->query("SELECT id, filename, bucket_name, object_key, file_size, content_type, uploaded_at FROM s3_uploads ORDER BY uploaded_at DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
+              
+              $response["files"] = $files;
+          } catch (Exception $e) {
+              http_response_code(500);
+          }
+          
+          echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+          ?>
+          FILESEOF
+          
+          cat > "${SHARED_DIR}/php-minio-files/api/stats.php" << 'STATSEOF'
+          <?php
+          header("Content-Type: application/json; charset=utf-8");
+          
+          $response = ["buckets" => 0, "files" => 0];
+          
+          try {
+              $mysql_host = getenv("MYSQL_HOST") ?: "mysql-minio-stack";
+              $mysql_db = getenv("MYSQL_DATABASE") ?: "minio_app";
+              $mysql_user = getenv("MYSQL_USER") ?: "minio_user";
+              $mysql_pass = getenv("MYSQL_PASSWORD") ?: "minio_pass";
+              
+              $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+              $response["buckets"] = $pdo->query("SELECT COUNT(*) FROM buckets")->fetchColumn();
+              $response["files"] = $pdo->query("SELECT COUNT(*) FROM s3_uploads")->fetchColumn();
+          } catch (Exception $e) {
+              http_response_code(500);
+          }
+          
+          echo json_encode($response);
+          ?>
+          STATSEOF
+          
+          cat > "${SHARED_DIR}/php-minio-files/api/health.php" << 'HEALTHEOF'
+          <?php
+          header("Content-Type: application/json; charset=utf-8");
+          
+          $health = [
+              "status" => "operational",
+              "service" => "MinIO S3 Stack",
+              "timestamp" => date("c"),
+              "components" => []
+          ];
+          
+          $mysql_host = getenv("MYSQL_HOST") ?: "mysql-minio-stack";
+          $mysql_db = getenv("MYSQL_DATABASE") ?: "minio_app";
+          $mysql_user = getenv("MYSQL_USER") ?: "minio_user";
+          $mysql_pass = getenv("MYSQL_PASSWORD") ?: "minio_pass";
+          
+          try {
+              $pdo = new PDO("mysql:host=$mysql_host;dbname=$mysql_db;charset=utf8mb4", $mysql_user, $mysql_pass);
+              $health["components"]["mysql"] = "connected";
+          } catch (Exception $e) {
+              $health["components"]["mysql"] = "disconnected";
+              $health["status"] = "degraded";
+          }
+          
+          $minio_endpoint = getenv("MINIO_ENDPOINT") ?: "minio-s3-stack:9000";
+          $curl = curl_init("http://$minio_endpoint/minio/health/live");
+          curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+          curl_setopt($curl, CURLOPT_TIMEOUT, 5);
+          $result = curl_exec($curl);
+          $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+          curl_close($curl);
+          
+          $health["components"]["minio"] = ($http_code === 200) ? "connected" : "disconnected";
+          if ($http_code !== 200) {
+              $health["status"] = "degraded";
+          }
+          
+          echo json_encode($health, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+          ?>
+          HEALTHEOF
+          
+          docker exec "${CONTAINER_NAME}" mkdir -p /var/www/html/api
+          docker cp "${SHARED_DIR}/php-minio-files/index.php" "${CONTAINER_NAME}:/var/www/html/" 2>/dev/null || true
+          docker cp "${SHARED_DIR}/php-minio-files/api/upload.php" "${CONTAINER_NAME}:/var/www/html/api/" 2>/dev/null || true
+          docker cp "${SHARED_DIR}/php-minio-files/api/delete.php" "${CONTAINER_NAME}:/var/www/html/api/" 2>/dev/null || true
+          docker cp "${SHARED_DIR}/php-minio-files/api/files.php" "${CONTAINER_NAME}:/var/www/html/api/" 2>/dev/null || true
+          docker cp "${SHARED_DIR}/php-minio-files/api/stats.php" "${CONTAINER_NAME}:/var/www/html/api/" 2>/dev/null || true
+          docker cp "${SHARED_DIR}/php-minio-files/api/health.php" "${CONTAINER_NAME}:/var/www/html/api/" 2>/dev/null || true
+          
+          docker exec "${CONTAINER_NAME}" chown -R www-data:www-data /var/www/html
+          docker exec "${CONTAINER_NAME}" chmod -R 755 /var/www/html
+          docker exec "${CONTAINER_NAME}" chmod 644 /var/www/html/*.php 2>/dev/null || true
+          docker exec "${CONTAINER_NAME}" chmod 644 /var/www/html/api/*.php 2>/dev/null || true
+          
+          docker restart "${CONTAINER_NAME}" > /dev/null 2>&1
+          sleep 5
+          
+          echo "✓ PHP MinIO application deployed"
