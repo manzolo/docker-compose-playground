@@ -1,13 +1,18 @@
-/* ========================================
-   MOTD COLLAPSE SECTION - Simplified
-   ======================================== */
+/* ============================================
+   MOTD COLLAPSE SECTION - Hybrid UI Theme
+   ============================================ */
 
 .motd-section {
     margin-bottom: 16px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
-    background: #f8fafc;
+    background: #f8f9fc;
+    transition: all 0.2s;
+}
+
+.motd-section:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .motd-header {
@@ -18,16 +23,18 @@
     cursor: pointer;
     user-select: none;
     transition: background 0.2s;
+    background: #fafbfc;
 }
 
 .motd-header:hover {
-    background: #f1f5f9;
+    background: #edf2f7;
 }
 
 .motd-header-content {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 1;
 }
 
 .motd-toggle-icon {
@@ -37,8 +44,9 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #64748b;
+    color: #667eea;
     transition: transform 0.2s;
+    flex-shrink: 0;
 }
 
 .motd-toggle-icon.open {
@@ -48,14 +56,14 @@
 .motd-label {
     font-size: 13px;
     font-weight: 600;
-    color: #475569;
+    color: #2d3748;
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
 
 .motd-preview {
     font-size: 12px;
-    color: #94a3b8;
+    color: #718096;
     margin-left: 8px;
 }
 
@@ -76,8 +84,8 @@
 }
 
 .motd-text {
-    background: #f8fafc;
-    color: #334155;
+    background: #f8f9fc;
+    color: #1a202c;
     padding: 12px;
     border-radius: 6px;
     font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
@@ -87,7 +95,7 @@
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-word;
-    border-left: 3px solid #0066ff;
+    border-left: 3px solid #667eea;
     margin-bottom: 12px;
 }
 
@@ -105,7 +113,7 @@
     align-items: center;
     gap: 6px;
     padding: 10px 14px;
-    background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
     color: white;
     text-decoration: none;
     border-radius: 6px;
@@ -118,57 +126,19 @@
 }
 
 .motd-link-btn:hover {
-    background: linear-gradient(135deg, #0052cc 0%, #003d99 100%);
+    background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .motd-link-btn:active {
     transform: translateY(0);
 }
 
-@media (max-width: 640px) {
-    .motd-links {
-        gap: 6px;
-    }
-    
-    .motd-link-btn {
-        font-size: 11px;
-        padding: 8px 12px;
-    }
-}
+/* ============================================
+   SCROLLBAR STYLING FOR MOTD
+   ============================================ */
 
-/* Normalize MOTD text - remove box drawing characters */
-.motd-text::first-line {
-    font-weight: 600;
-}
-
-/* Mobile responsiveness */
-@media (max-width: 640px) {
-    .motd-section {
-        margin-bottom: 12px;
-    }
-    
-    .motd-header {
-        padding: 10px 12px;
-    }
-    
-    .motd-body {
-        padding: 12px;
-    }
-    
-    .motd-text {
-        font-size: 11px;
-        padding: 10px;
-        max-height: 150px;
-    }
-    
-    .motd-preview {
-        display: none;
-    }
-}
-
-/* Scrollbar styling per MOTD */
 .motd-text::-webkit-scrollbar {
     width: 6px;
 }
@@ -179,10 +149,61 @@
 }
 
 .motd-text::-webkit-scrollbar-thumb {
-    background: #94a3b8;
+    background: #a0aec0;
     border-radius: 3px;
 }
 
 .motd-text::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #718096;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 640px) {
+    .motd-section {
+        margin-bottom: 12px;
+    }
+
+    .motd-header {
+        padding: 10px 12px;
+    }
+
+    .motd-body {
+        padding: 12px;
+    }
+
+    .motd-text {
+        font-size: 11px;
+        padding: 10px;
+        max-height: 150px;
+    }
+
+    .motd-preview {
+        display: none;
+    }
+
+    .motd-label {
+        font-size: 12px;
+    }
+
+    .motd-link-btn {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+
+    .motd-links {
+        gap: 6px;
+    }
+}
+
+/* ============================================
+   MOBILE MOTD TEXT
+   ============================================ */
+
+@media (max-width: 640px) {
+    .motd-text::first-line {
+        font-weight: 600;
+    }
 }

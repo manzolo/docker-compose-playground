@@ -1,6 +1,6 @@
-/* ========================================
-   MODAL SYSTEM - Modern & Beautiful
-   ======================================== */
+/* ============================================
+   MODAL SYSTEM - Hybrid UI Theme
+   ============================================ */
 
 .modal {
     display: none;
@@ -25,172 +25,11 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     animation: fadeIn 0.3s ease-out;
 }
 
-.modal-content {
-    position: relative;
-    background: white;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-    animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    overflow: hidden;
-}
-
-/* Confirm Modal - Compact Style */
-#confirmModal .modal-content {
-    max-width: 480px;
-    width: 90%;
-}
-
-#confirmModal .modal-content > div {
-    padding: 0;
-}
-
-.confirm-modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 24px 32px;
-    border-bottom: none;
-}
-
-.confirm-modal-header h2 {
-    color: white;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.confirm-modal-icon {
-    font-size: 32px;
-    animation: bounceIn 0.6s;
-}
-
-.confirm-modal-body {
-    padding: 32px;
-    background: white;
-}
-
-.confirm-modal-message {
-    color: #334155;
-    font-size: 16px;
-    line-height: 1.6;
-    margin: 0 0 24px 0;
-}
-
-/* Input Style */
-.confirm-input {
-    width: 100%;
-    padding: 14px 16px;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 15px;
-    font-family: inherit;
-    transition: all 0.3s ease;
-    background: #f8fafc;
-}
-
-.confirm-input:focus {
-    outline: none;
-    border-color: #667eea;
-    background: white;
-    box-shadow: 
-        0 0 0 4px rgba(102, 126, 234, 0.1),
-        0 4px 12px rgba(102, 126, 234, 0.15);
-    transform: translateY(-1px);
-}
-
-.confirm-input::placeholder {
-    color: #94a3b8;
-}
-
-.confirm-modal-footer {
-    padding: 20px 32px;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-}
-
-.confirm-modal-footer .btn {
-    min-width: 120px;
-    padding: 12px 24px;
-    font-size: 15px;
-    font-weight: 600;
-    border-radius: 10px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.btn-confirm-cancel {
-    background: white;
-    color: #64748b;
-    border: 2px solid #e2e8f0;
-}
-
-.btn-confirm-cancel:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-confirm-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.btn-confirm-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-confirm-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.btn-confirm-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-}
-
-.btn-confirm-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.btn-confirm-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-}
-
-/* Button Icons */
-.btn-icon-confirm {
-    font-size: 18px;
-}
-
-/* Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -198,6 +37,20 @@
     to {
         opacity: 1;
     }
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    overflow: hidden;
 }
 
 @keyframes modalSlideIn {
@@ -211,35 +64,13 @@
     }
 }
 
-@keyframes bounceIn {
-    0% {
-        opacity: 0;
-        transform: scale(0.3);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.1);
-    }
-    70% {
-        transform: scale(0.9);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-/* Large Modal Style (for logs/console) */
-.modal-large {
-    max-width: 1200px;
-}
-
-/* Standard Modal Header */
+/* Modal Header */
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 24px 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
     border-bottom: none;
 }
 
@@ -275,6 +106,7 @@
     transform: rotate(90deg);
 }
 
+/* Modal Body */
 .modal-body {
     padding: 24px 32px;
     overflow: auto;
@@ -288,48 +120,187 @@
     flex: 1;
 }
 
-.log-content {
-    background: #1e1e1e;
-    color: #d4d4d4;
-    padding: 20px;
-    border-radius: 8px;
-    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-    font-size: 13px;
-    line-height: 1.6;
-    overflow: auto;
-    max-height: 500px;
-}
-
+/* Modal Footer */
 .modal-footer {
     padding: 20px 32px;
-    background: #f8fafc;
+    background: #f8f9fc;
     border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
 }
 
-/* Input Label Enhancement */
-.input-label {
-    display: block;
+/* ============================================
+   CONFIRM MODAL
+   ============================================ */
+
+#confirmModal .modal-content {
+    max-width: 480px;
+    width: 90%;
+}
+
+.confirm-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    padding: 24px 32px;
+    border-bottom: none;
+}
+
+.confirm-modal-header h2 {
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.confirm-modal-icon {
+    font-size: 28px;
+    animation: bounceIn 0.6s;
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.confirm-modal-body {
+    padding: 32px;
+    background: white;
+}
+
+.confirm-modal-message {
+    color: #2d3748;
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.confirm-modal-footer {
+    padding: 20px 32px;
+    background: #f8f9fc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.confirm-modal-footer .btn {
+    min-width: 120px;
+    padding: 12px 24px;
     font-size: 14px;
     font-weight: 600;
-    color: #475569;
-    margin-bottom: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-confirm-cancel {
+    background: white;
+    color: #2d3748;
+    border: 2px solid #e2e8f0;
+}
+
+.btn-confirm-cancel:hover {
+    background: #f8f9fc;
+    border-color: #cbd5e1;
+}
+
+.btn-confirm-primary {
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    color: white;
+}
+
+.btn-confirm-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.btn-confirm-danger {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    color: white;
+}
+
+.btn-confirm-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(245, 101, 101, 0.3);
+}
+
+.btn-confirm-success {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.btn-confirm-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(72, 187, 120, 0.3);
+}
+
+/* ============================================
+   INPUT ELEMENTS IN MODAL
+   ============================================ */
+
+.confirm-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.3s;
+    background: #f8f9fc;
+    margin-top: 8px;
+}
+
+.confirm-input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.confirm-input::placeholder {
+    color: #a0aec0;
+}
+
+.input-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 4px;
     letter-spacing: 0.3px;
 }
 
 .input-hint {
     display: block;
-    font-size: 13px;
-    color: #94a3b8;
-    margin-top: 6px;
+    font-size: 12px;
+    color: #718096;
+    margin-top: 4px;
     font-style: italic;
 }
 
-/* ========================================
-   LOG MODAL SPECIFIC STYLES
-   ======================================== */
+/* ============================================
+   LOG MODAL SPECIFIC
+   ============================================ */
 
 #logModal .modal-header {
     display: flex;
@@ -346,14 +317,14 @@
 
 .modal-header-left h2 {
     color: white;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
     margin: 0 0 8px 0;
 }
 
 .log-info {
     color: rgba(255, 255, 255, 0.9);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     background: none;
     padding: 0;
@@ -378,9 +349,9 @@
     color: white;
     border: 2px solid rgba(255, 255, 255, 0.3);
     padding: 8px 14px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
     display: inline-flex;
@@ -391,7 +362,6 @@
 .btn-outline:hover {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-1px);
 }
 
 .btn-outline.active {
@@ -416,60 +386,186 @@
     font-weight: 500;
 }
 
-/* ========================================
-   RESPONSIVE DESIGN
-   ======================================== */
+/* ============================================
+   CONTENT STYLES
+   ============================================ */
+
+.log-content {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow: auto;
+    max-height: 500px;
+}
+
+.config-preview {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    max-height: 500px;
+}
+
+.console-info {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: #f8f9fc;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #2d3748;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.console-status {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+.console-connected {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.console-disconnected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.console-error {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.console-connecting {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.terminal-wrapper {
+    background: #1e1e1e;
+    border-radius: 8px;
+    padding: 16px;
+    height: 600px;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
+.log-content::-webkit-scrollbar,
+.config-preview::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.log-content::-webkit-scrollbar-track,
+.config-preview::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+    background: #f8f9fc;
+    border-radius: 4px;
+}
+
+.log-content::-webkit-scrollbar-thumb,
+.config-preview::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.log-content::-webkit-scrollbar-thumb:hover,
+.config-preview::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* xterm scrollbar */
+.xterm-viewport::-webkit-scrollbar {
+    width: 8px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 4px;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 
 @media (max-width: 768px) {
     .modal-content {
         width: 95%;
-        border-radius: 16px;
+        border-radius: 12px;
     }
-    
+
     #confirmModal .modal-content {
         width: 95%;
     }
-    
-    .confirm-modal-header,
+
     .modal-header {
         padding: 20px 24px;
     }
-    
-    .confirm-modal-header h2,
+
     .modal-header h2 {
-        font-size: 1.25rem;
+        font-size: 1.1rem;
     }
-    
-    .confirm-modal-body,
+
     .modal-body {
-        padding: 24px;
+        padding: 20px;
     }
-    
-    .confirm-modal-footer,
+
     .modal-footer {
-        padding: 16px 24px;
+        padding: 16px 20px;
         flex-direction: column;
     }
-    
-    .confirm-modal-footer .btn {
+
+    .modal-footer .btn {
         width: 100%;
-        min-width: auto;
     }
-    
+
+    .confirm-modal-header,
+    .confirm-modal-body,
+    .confirm-modal-footer {
+        padding: 16px 20px;
+    }
+
+    .confirm-modal-header h2 {
+        font-size: 1.1rem;
+    }
+
     #logModal .modal-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
     }
-    
+
     .log-follow-controls {
         width: 100%;
         justify-content: space-between;
     }
-    
-    .modal-close {
-        position: absolute;
-        top: 12px;
-        right: 12px;
+
+    .terminal-wrapper {
+        height: 400px;
     }
 }

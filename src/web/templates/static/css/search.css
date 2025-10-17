@@ -1,29 +1,261 @@
-/* Search Clear Button */
+/* ============================================
+   SEARCH & FILTER STYLES - Hybrid UI Theme
+   ============================================ */
+
 .search-section {
     position: relative;
+    flex: 1;
+    min-width: 250px;
 }
 
+.search-section input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.3s;
+    background: white;
+    color: #1a202c;
+}
+
+.search-section input::placeholder {
+    color: #a0aec0;
+}
+
+.search-section input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Search Count Badge */
+.search-count {
+    position: absolute;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #718096;
+    background: #edf2f7;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 1;
+    transition: right 0.2s;
+}
+
+/* Search Clear Button */
 .search-clear-btn {
     position: absolute;
-    right: 150px; /* Space for the search count */
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     font-size: 18px;
-    color: #94a3b8;
+    color: #a0aec0;
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 6px;
     transition: all 0.2s;
-    display: none; /* Hidden by default */
+    display: none;
+    z-index: 2;
 }
 
 .search-clear-btn:hover {
     background: #fee2e2;
-    color: #ef4444;
+    color: #f56565;
 }
 
 .search-section input:not(:placeholder-shown) ~ .search-clear-btn {
-    display: block; /* Show only when input has text */
+    display: block;
+}
+
+/* ============================================
+   FILTER BUTTONS
+   ============================================ */
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 10px 16px;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #2d3748;
+}
+
+.filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f4ff;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    color: white;
+    border: none;
+}
+
+.filter-btn.active:hover {
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.filter-icon {
+    font-size: 16px;
+}
+
+/* Filter Badge */
+.filter-badge {
+    background: #edf2f7;
+    color: #2d3748;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+.filter-btn.active .filter-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.badge-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-success .filter-badge {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-secondary {
+    background: #e2e8f0;
+    color: #2d3748;
+}
+
+.badge-secondary .filter-badge {
+    background: #cbd5e1;
+    color: #2d3748;
+}
+
+/* ============================================
+   CATEGORY FILTER
+   ============================================ */
+
+.category-filter {
+    display: flex;
+    align-items: center;
+}
+
+.category-filter select {
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3748;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 200px;
+}
+
+.category-filter select:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.category-filter select:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.category-filter select option {
+    background: white;
+    color: #1a202c;
+    padding: 8px 12px;
+}
+
+/* ============================================
+   BULK ACTIONS
+   ============================================ */
+
+.bulk-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 10px 16px;
+    font-size: 13px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .search-section {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .filter-buttons {
+        width: 100%;
+        gap: 6px;
+    }
+
+    .filter-btn {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .filter-icon {
+        display: none;
+    }
+
+    .category-filter select {
+        width: 100%;
+        min-width: unset;
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+
+    .bulk-actions {
+        width: 100%;
+    }
+
+    .bulk-actions .btn {
+        flex: 1;
+    }
+
+    .search-clear-btn {
+        right: 12px;
+    }
+
+    .search-count {
+        display: none;
+    }
 }

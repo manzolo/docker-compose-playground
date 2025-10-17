@@ -38,7 +38,7 @@ const Constants = {
     },
     TOAST: {
         DISPLAY_TIME: 4000,
-        DELAY_BEFORE_RELOAD: 2500
+        DELAY_BEFORE_RELOAD: 4500
     },
     ICONS: {
         success: '✓',
@@ -567,7 +567,7 @@ const ContainerManager = {
 
                 FilterPersistenceManager.saveFilterState();
 
-                setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
+                ReloadManager.showReloadToast(Constants.TOAST.DELAY_BEFORE_RELOAD);
 
             } else if (statusData.status === 'error') {
                 const errorMsg = statusData.error || 'Unknown error';
@@ -680,7 +680,7 @@ const ContainerManager = {
             this.updateCardUI(imageName, false, '');
 
             FilterPersistenceManager.saveFilterState();
-            setTimeout(() => location.reload(), Constants.TOAST.DELAY_BEFORE_RELOAD);
+            ReloadManager.showReloadToast(Constants.TOAST.DELAY_BEFORE_RELOAD);
         } else {
             const data = await response.json();
             const errorMsg = data.detail || 'Failed to stop container';
@@ -900,6 +900,101 @@ const ConsoleManager = {
 
         AppState.fitAddon = null;
         closeModal('consoleModal');
+    }
+};
+
+const ReloadManager = {
+    reloadTimeoutId: null,
+    reloadToastId: null,
+    countdownInterval: null,
+
+    /**
+     * Mostra un toast con countdown per il reload
+     * @param {number} delayMs - Delay prima del reload in millisecondi
+     */
+    showReloadToast(delayMs = 5000) {
+        const delaySeconds = Math.ceil(delayMs / 1000);
+        let secondsLeft = delaySeconds;
+
+        // Crea il toast
+        const container = DOM.toastContainer;
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-info reload-toast';
+        toast.innerHTML = `
+            <span class="toast-icon">↻</span>
+            <div class="toast-content">
+                <span class="toast-message">Page reloading in <strong id="countdown">${secondsLeft}s</strong></span>
+                <button class="toast-cancel-btn" onclick="ReloadManager.cancelReload()">Cancel</button>
+            </div>
+        `;
+
+        container.appendChild(toast);
+
+        // Animazione entrata
+        setTimeout(() => toast.classList.add('toast-show'), 10);
+
+        // Countdown
+        this.countdownInterval = setInterval(() => {
+            secondsLeft--;
+            const countdownEl = toast.querySelector('#countdown');
+            if (countdownEl) {
+                countdownEl.textContent = `${secondsLeft}s`;
+            }
+
+            if (secondsLeft <= 0) {
+                clearInterval(this.countdownInterval);
+            }
+        }, 1000);
+
+        // Timeout per il reload
+        this.reloadTimeoutId = setTimeout(() => {
+            this.performReload(toast);
+        }, delayMs);
+
+        this.reloadToastId = toast;
+    },
+
+    /**
+     * Cancella il reload programmato
+     */
+    cancelReload() {
+        // Pulisci i timeout e interval
+        if (this.reloadTimeoutId) {
+            clearTimeout(this.reloadTimeoutId);
+            this.reloadTimeoutId = null;
+        }
+
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+
+        // Rimuovi il toast
+        if (this.reloadToastId) {
+            const toast = this.reloadToastId;
+            toast.classList.remove('toast-show');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 300);
+            this.reloadToastId = null;
+        }
+
+        ToastManager.show('✓ Reload cancelled', 'info');
+    },
+
+    /**
+     * Esegui il reload effettivo
+     */
+    performReload(toast) {
+        if (toast && toast.parentElement) {
+            toast.remove();
+        }
+        FilterPersistenceManager.saveFilterState();
+        location.reload();
     }
 };
 
@@ -1125,7 +1220,7 @@ const GroupOperations = {
         }
 
         FilterPersistenceManager.saveFilterState();
-        setTimeout(() => location.reload(), isStart ? 5000 : 2000);
+        ReloadManager.showReloadToast(isStart ? 7000 : 2000);
     }
 };
 
@@ -1619,6 +1714,7 @@ window.LogsManager = LogsManager;
 window.MOTDManager = MOTDManager;
 window.FilterPersistenceManager = FilterPersistenceManager;
 window.GroupPersistenceManager = GroupPersistenceManager;
+window.ReloadManager = ReloadManager;
 
 window.showLogs = LogsManager.show.bind(LogsManager);
 window.closeModal = ModalManager.close.bind(ModalManager);

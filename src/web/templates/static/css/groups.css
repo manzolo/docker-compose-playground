@@ -1,19 +1,15 @@
-
-/* ========================================
-   GROUPS SECTION STYLES
-   ======================================== */
-/* ========================================
-   GROUPS SECTION STYLES
-   ======================================== */
+/* ============================================
+   GROUPS SECTION STYLES - Hybrid UI
+   ============================================ */
 
 .groups-section {
     margin-bottom: 40px;
 }
 
 .section-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #1a202c;
     margin-bottom: 24px;
     display: flex;
     align-items: center;
@@ -22,28 +18,51 @@
 
 .groups-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 24px;
-    margin-bottom: 40px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
 }
 
-/* Group Card */
+/* ============================================
+   GROUP CARD
+   ============================================ */
+
 .group-card {
     background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 2px solid #e0f2fe;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.group-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #5a67d8);
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
 .group-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    border-color: #0ea5e9;
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.12);
+    border-color: #cbd5e1;
 }
 
-/* Group Header */
+.group-card:hover::before {
+    opacity: 1;
+}
+
+/* ============================================
+   GROUP HEADER
+   ============================================ */
+
 .group-header {
     display: flex;
     justify-content: space-between;
@@ -57,39 +76,46 @@
 }
 
 .group-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #0369a1;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #667eea;
     margin: 0 0 8px 0;
 }
 
 .group-badge {
     display: inline-block;
-    background: #e0f2fe;
-    color: #0369a1;
-    padding: 4px 12px;
-    border-radius: 12px;
+    background: #edf2f7;
+    color: #2d3748;
+    padding: 6px 12px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
+    border: 1px solid #e2e8f0;
 }
 
 .group-category-badge {
     flex-shrink: 0;
 }
 
-/* Group Description */
+/* ============================================
+   GROUP DESCRIPTION
+   ============================================ */
+
 .group-description {
-    color: #64748b;
+    color: #718096;
     font-size: 14px;
     line-height: 1.6;
     margin-bottom: 16px;
 }
 
-/* Group Containers */
+/* ============================================
+   GROUP CONTAINERS
+   ============================================ */
+
 .group-containers {
     margin-bottom: 16px;
     padding: 12px;
-    background: #f8fafc;
+    background: #f8f9fc;
     border-radius: 8px;
 }
 
@@ -97,7 +123,7 @@
     display: block;
     font-size: 12px;
     font-weight: 600;
-    color: #64748b;
+    color: #718096;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 8px;
@@ -109,75 +135,77 @@
     gap: 8px;
 }
 
-/* Container Tag */
+/* ============================================
+   CONTAINER TAG
+   ============================================ */
+
 .container-tag {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background: white;
-    color: #475569;
+    color: #2d3748;
     padding: 6px 12px;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
-    border: 2px solid #e2e8f0;
+    border: 1px solid #e2e8f0;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
-    position: relative;
 }
 
 .container-tag:hover {
     border-color: #667eea;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .container-tag:active {
     transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
 }
 
-/* Status Indicator */
 .container-status-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #94a3b8;
+    background: #cbd5e1;
     transition: all 0.3s ease;
     flex-shrink: 0;
 }
 
 .container-tag[data-running="true"] .container-status-dot {
-    background: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
-    animation: pulse 2s ease-in-out infinite;
+    background: #48bb78;
+    box-shadow: 0 0 8px rgba(72, 187, 120, 0.5);
+    animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .container-tag[data-running="true"] {
-    border-color: #d1fae5;
+    border-color: #c6f6d5;
     background: #f0fdf4;
 }
 
 .container-tag[data-running="true"]:hover {
-    border-color: #10b981;
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-color: #48bb78;
+    background: linear-gradient(135deg, #c6f6d5 0%, #f0fdf4 100%);
 }
 
-/* Pulse Animation */
-@keyframes pulse {
+@keyframes pulse-dot {
     0%, 100% { 
         opacity: 1; 
         transform: scale(1);
     }
     50% { 
         opacity: 0.6; 
-        transform: scale(0.9);
+        transform: scale(0.85);
     }
 }
 
-/* Group Actions */
+/* ============================================
+   GROUP ACTIONS
+   ============================================ */
+
 .group-actions {
     display: flex;
     gap: 8px;
@@ -185,10 +213,10 @@
 }
 
 .btn {
-    padding: 10px 16px;
+    padding: 11px 16px;
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -200,11 +228,7 @@
 
 .btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.btn:active:not(:disabled) {
-    transform: translateY(0);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
 }
 
 .btn:disabled {
@@ -213,45 +237,36 @@
 }
 
 .btn-success {
-    background: #10b981;
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
     color: white;
     flex: 1;
 }
 
-.btn-success:hover {
-    background: #059669;
+.btn-success:hover:not(:disabled) {
+    box-shadow: 0 12px 24px rgba(72, 187, 120, 0.25);
 }
 
 .btn-danger {
-    background: #ef4444;
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
     color: white;
 }
 
-.btn-danger:hover {
-    background: #dc2626;
+.btn-danger:hover:not(:disabled) {
+    box-shadow: 0 12px 24px rgba(245, 101, 101, 0.25);
 }
 
 .btn-primary {
-    background: #0066ff;
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
     color: white;
 }
 
-.btn-primary:hover {
-    background: #0052cc;
-}
-
-.btn-secondary {
-    background: #6b7280;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #4b5563;
+.btn-primary:hover:not(:disabled) {
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.25);
 }
 
 .btn-sm {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .btn-block {
@@ -262,75 +277,87 @@
     font-size: 16px;
 }
 
-/* Group Source */
+/* ============================================
+   GROUP SOURCE
+   ============================================ */
+
 .group-source {
     font-size: 12px;
-    color: #94a3b8;
+    color: #a0aec0;
     padding-top: 8px;
-    border-top: 1px solid #e0f2fe;
+    border-top: 1px solid #e2e8f0;
 }
 
-/* Hidden State */
-.group-card.hidden {
-    display: none;
-}
+/* ============================================
+   BADGE COLORS
+   ============================================ */
 
-/* Badge Colors */
 .badge {
     display: inline-block;
     padding: 4px 12px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
     text-transform: capitalize;
 }
 
-.badge-linux { 
-    background: #e0f2fe; 
-    color: #0369a1; 
+.badge-linux {
+    background: #e0f2fe;
+    color: #0369a1;
 }
 
-.badge-programming { 
-    background: #fef3c7; 
-    color: #92400e; 
+.badge-programming {
+    background: #fef3c7;
+    color: #92400e;
 }
 
-.badge-database { 
-    background: #dcfce7; 
-    color: #166534; 
+.badge-database {
+    background: #dcfce7;
+    color: #166534;
 }
 
-.badge-webserver { 
-    background: #fce7f3; 
-    color: #9f1239; 
+.badge-webserver {
+    background: #fce7f3;
+    color: #9f1239;
 }
 
-.badge-devops { 
-    background: #e0e7ff; 
-    color: #3730a3; 
+.badge-devops {
+    background: #e0e7ff;
+    color: #3730a3;
 }
 
-.badge-messaging { 
-    background: #fef08a; 
-    color: #854d0e; 
+.badge-messaging {
+    background: #fef08a;
+    color: #854d0e;
 }
 
-.badge-monitoring { 
-    background: #dbeafe; 
-    color: #1e40af; 
+.badge-monitoring {
+    background: #dbeafe;
+    color: #1e40af;
 }
 
-.badge-ml { 
-    background: #f3e8ff; 
-    color: #6b21a8; 
+.badge-ml {
+    background: #f3e8ff;
+    color: #6b21a8;
 }
 
-.badge-utility { 
-    background: #f1f5f9; 
-    color: #334155; 
+.badge-utility {
+    background: #f1f5f9;
+    color: #334155;
 }
 
-/* Responsive */
+/* ============================================
+   HIDDEN STATE
+   ============================================ */
+
+.group-card.hidden {
+    display: none;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 768px) {
     .groups-container {
         grid-template-columns: 1fr;
@@ -342,7 +369,7 @@
     }
 
     .group-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
     .group-header {
