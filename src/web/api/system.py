@@ -84,11 +84,13 @@ async def start_container(image_name: str):
             "status": "started",
             "message": f"Starting container {container_name}..."
         }
-        
+    
+    except HTTPException:
+        # Re-raise HTTPException (404, 403, etc.)
+        raise
     except Exception as e:
         logger.error(f"Failed to start {image_name}: {str(e)}")
         raise HTTPException(500, f"Failed to start container: {str(e)}")
-
 
 async def start_container_background(operation_id: str, image_name: str, img_data: dict, container_name: str):
     """Background task to start a single container with volume support"""
@@ -211,13 +213,15 @@ async def stop_container(container_name: str):
             "container": container_name,
             "message": f"Container {container_name} stopped successfully"
         }
-        
+    
+    except HTTPException:
+        # Re-raise HTTPException (404, 403, etc.)
+        raise
     except docker.errors.NotFound:
         raise HTTPException(404, f"Container {container_name} not found")
     except Exception as e:
         logger.error(f"Failed to stop {container_name}: {str(e)}")
         raise HTTPException(500, f"Failed to stop container: {str(e)}")
-
 
 @router.post("/api/start-category/{category}")
 async def start_category(category: str):
