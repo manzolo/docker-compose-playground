@@ -19,6 +19,9 @@ CLI="./playground"
 TEST_CONTAINER="alpine-3.22"  # Should exist in config
 TEST_GROUP="MySQL-Stack"      # Should exist in config
 
+# Flag per modalità non interattiva
+NON_INTERACTIVE=false
+
 # Test counters
 TOTAL_TESTS=0
 PASSED_TESTS=0
@@ -69,6 +72,27 @@ run_test() {
     fi
 }
 
+# Parsing degli argomenti
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --non-interactive)
+            NON_INTERACTIVE=true
+            shift
+            ;;
+        --help)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  --non-interactive    Run all tests without user interaction"
+            echo "  --help               Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
 # Banner
 cat << 'EOF'
 ╔══════════════════════════════════════════╗
@@ -77,6 +101,10 @@ cat << 'EOF'
 ╚══════════════════════════════════════════╝
 
 EOF
+
+if [ "$NON_INTERACTIVE" = true ]; then
+    echo -e "${CYAN}Running in NON-INTERACTIVE mode${NC}\n"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLI="${SCRIPT_DIR}/playground"
@@ -155,12 +183,20 @@ fi
 # ========================================
 # CONTAINER LIFECYCLE TESTS
 # ========================================
-echo -e "${YELLOW}━━━ Container Lifecycle Tests ━━━${NC}"
-echo -e "${YELLOW}(These tests require confirmation)${NC}\n"
+echo -e "${YELLOW}━━━ Container Lifecycle Tests ━━━${NC}\n"
 
-read -p "Run container lifecycle tests? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [ "$NON_INTERACTIVE" = true ]; then
+    echo -e "${CYAN}Running container lifecycle tests (non-interactive mode)...${NC}\n"
+    RUN_LIFECYCLE=true
+else
+    echo -e "${YELLOW}(These tests require confirmation)${NC}\n"
+    read -p "Run container lifecycle tests? [y/N] " -n 1 -r
+    echo
+    RUN_LIFECYCLE=false
+    [[ $REPLY =~ ^[Yy]$ ]] && RUN_LIFECYCLE=true
+fi
+
+if [ "$RUN_LIFECYCLE" = true ]; then
     echo ""
     
     # Check if test container exists in config
@@ -168,62 +204,72 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         log_error "Test container '$TEST_CONTAINER' not found in config"
         echo -e "${YELLOW}Available containers:${NC}"
         $CLI list
-        exit 1
-    fi
-    
-    # Start container
-    log_test "Starting container: $TEST_CONTAINER"
-    if $CLI start "$TEST_CONTAINER" 2>&1 | tee /tmp/start_output.txt | grep -q "started successfully"; then
-        log_success "Container started"
-        sleep 2
-        
-        # Info command
-        run_test "Info command" "$CLI info $TEST_CONTAINER" "Status"
-        echo ""
-        
-        # Logs command
-        run_test "Logs command" "$CLI logs $TEST_CONTAINER --tail 5" ""
-        echo ""
-        
-        # Check if running
-        run_test "Container appears in ps" "$CLI ps" "$TEST_CONTAINER"
-        echo ""
-        
-        # Restart container
-        log_test "Restarting container"
-        if $CLI restart "$TEST_CONTAINER" 2>&1 | grep -q "restarted"; then
-            log_success "Container restarted"
-        else
-            log_error "Failed to restart container"
+        if [ "$NON_INTERACTIVE" = false ]; then
+            exit 1
         fi
-        echo ""
-        sleep 1
-        
-        # Stop container
-        log_test "Stopping container"
-        if $CLI stop "$TEST_CONTAINER" 2>&1 | grep -q "stopped"; then
-            log_success "Container stopped"
-        else
-            log_error "Failed to stop container"
-        fi
-        echo ""
-        
     else
-        log_error "Failed to start container"
-        cat /tmp/start_output.txt
-        echo ""
+        # Start container
+        log_test "Starting container: $TEST_CONTAINER"
+        if $CLI start "$TEST_CONTAINER" 2>&1 | tee /tmp/start_output.txt | grep -q "started successfully"; then
+            log_success "Container started"
+            sleep 2
+            
+            # Info command
+            run_test "Info command" "$CLI info $TEST_CONTAINER" "Status"
+            echo ""
+            
+            # Logs command
+            run_test "Logs command" "$CLI logs $TEST_CONTAINER --tail 5" ""
+            echo ""
+            
+            # Check if running
+            run_test "Container appears in ps" "$CLI ps" "$TEST_CONTAINER"
+            echo ""
+            
+            # Restart container
+            log_test "Restarting container"
+            if $CLI restart "$TEST_CONTAINER" 2>&1 | grep -q "restarted"; then
+                log_success "Container restarted"
+            else
+                log_error "Failed to restart container"
+            fi
+            echo ""
+            sleep 1
+            
+            # Stop container
+            log_test "Stopping container"
+            if $CLI stop "$TEST_CONTAINER" 2>&1 | grep -q "stopped"; then
+                log_success "Container stopped"
+            else
+                log_error "Failed to stop container"
+            fi
+            echo ""
+            
+        else
+            log_error "Failed to start container"
+            cat /tmp/start_output.txt
+            echo ""
+        fi
     fi
 fi
 
 # ========================================
 # GROUP LIFECYCLE TESTS
 # ========================================
-echo -e "${YELLOW}━━━ Group Lifecycle Tests ━━━${NC}"
-echo -e "${YELLOW}(These tests start/stop multiple containers)${NC}\n"
+echo -e "${YELLOW}━━━ Group Lifecycle Tests ━━━${NC}\n"
 
-read -p "Run group lifecycle tests? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [ "$NON_INTERACTIVE" = true ]; then
+    echo -e "${CYAN}Running group lifecycle tests (non-interactive mode)...${NC}\n"
+    RUN_GROUP_LIFECYCLE=true
+else
+    echo -e "${YELLOW}(These tests start/stop multiple containers)${NC}\n"
+    read -p "Run group lifecycle tests? [y/N] " -n 1 -r
+    echo
+    RUN_GROUP_LIFECYCLE=false
+    [[ $REPLY =~ ^[Yy]$ ]] && RUN_GROUP_LIFECYCLE=true
+fi
+
+if [ "$RUN_GROUP_LIFECYCLE" = true ]; then
     echo ""
     
     # Check if test group exists
