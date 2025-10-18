@@ -3,7 +3,9 @@ name: CI - Test CLI, TUI, and WebUI
 on:
   push:
     branches: [develop, main]
-    tags: [v*]  # Trigger su tag che iniziano con 'v' (es. v1.0.0)
+    tags: [v*]  # Trigger on tags starting with 'v' (e.g., v1.0.0)
+  schedule:
+    - cron: '0 0 * * *'  # Optional: Run nightly at midnight UTC for long tests
 
 jobs:
   test:
@@ -13,19 +15,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Utile per tag e storia completa
+          fetch-depth: 0  # Useful for tags and full history
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'  # Come richiesto da server-webui.sh
+          python-version: '3.10'  # As required by server-webui.sh
 
       - name: Setup Docker
-        uses: docker/setup-buildx-action@v3  # Abilita Buildx per Docker avanzato
+        uses: docker/setup-buildx-action@v3  # Enable Buildx for advanced Docker
 
       - name: Install dependencies
         run: |
-          # Installa dipendenze per TUI e WebUI
+          # Install dependencies for TUI and WebUI
           sudo apt-get update
           sudo apt-get install -y whiptail expect lsof curl
 
@@ -38,3 +40,33 @@ jobs:
         run: |
           chmod +x ./test-webui.sh
           ./test-webui.sh
+
+  test-all:
+    runs-on: ubuntu-latest
+    # Run this job only for tags or scheduled runs to avoid slowing down every push
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+    timeout-minutes: 150  # Set timeout to 2.5 hours to accommodate long test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y whiptail expect lsof curl
+
+      - name: Run comprehensive tests
+        run: |
+          chmod +x ./test-all.sh
+          ./test-all.sh
