@@ -27,12 +27,12 @@ jobs:
           sudo apt-get install -y whiptail expect lsof curl
       - name: Run CLI tests
         run: |
-          chmod +x ./test-cli.sh
-          ./test-cli.sh --non-interactive
+          chmod +x ./tests/test-cli.sh
+          ./tests/test-cli.sh --non-interactive
       - name: Run WebUI tests
         run: |
-          chmod +x ./test-webui.sh
-          ./test-webui.sh
+          chmod +x ./tests/test-webui.sh
+          ./tests/test-webui.sh
 
   test-all:
     runs-on: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
           sudo apt-get install -y whiptail expect lsof curl
       - name: Run comprehensive tests
         run: |
-          chmod +x ./test-all.sh
+          chmod +x ./tests/test-all.sh
           chmod +x ./playground
           ./playground list
-          ./test-all.sh
+          ./tests/test-all.sh
