@@ -2,7 +2,7 @@
 set -uo pipefail
 
 # Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_SCRIPT="${SCRIPT_DIR}/start-webui.sh"
 PORT=8000
 API_URL="http://localhost:${PORT}/api"

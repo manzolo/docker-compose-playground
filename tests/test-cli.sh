@@ -130,7 +130,7 @@ if [ "$NON_INTERACTIVE" = true ]; then
     echo -e "${CYAN}Running in NON-INTERACTIVE mode${NC}\n" | tee -a "$LOG_FILE"
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="${SCRIPT_DIR}/playground"
 
 # Verify CLI
