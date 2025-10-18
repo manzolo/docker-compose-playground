@@ -1,0 +1,26 @@
+name: CI - Test CLI
+
+on:
+  push:
+    branches: [develop, main]
+    tags: [v*]  # Trigger su tag che iniziano con 'v' (es. v1.0.0)
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Utile per tag e storia completa
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3  # Abilita Buildx per Docker avanzato, se serve build di immagini
+
+      - name: Run CLI tests
+        run: |
+          # Rendi lo script eseguibile (se non lo è già)
+          chmod +x ./test-cli.sh
+          # Esegui i test non-interattivi
+          ./test-cli.sh --non-interactive
