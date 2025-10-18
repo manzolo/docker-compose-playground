@@ -25,9 +25,10 @@ SKIPPED=0
 HEALTH_CHECK_TIMEOUT=30
 HEALTH_CHECK_INTERVAL=2
 
-declare -a SUCCESS_CONTAINERS
-declare -a FAILED_CONTAINERS
-declare -a STOP_FAILED_CONTAINERS
+# Inizializza gli array esplicitamente
+declare -a SUCCESS_CONTAINERS=()
+declare -a FAILED_CONTAINERS=()
+declare -a STOP_FAILED_CONTAINERS=()
 
 echo -e "${BLUE}🐳 Docker Playground Test Script${NC}"
 echo -e "${BLUE}================================${NC}"
@@ -48,7 +49,6 @@ get_containers_from_yaml() {
     fi
     
     # Estrai tutti i nomi delle immagini usando grep e awk
-    # Cerca linee che possono essere indentate (con spazi) e terminano con :
     grep -E "^[[:space:]]*[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]:[[:space:]]*$" "$yaml_file" | \
     sed 's/^[[:space:]]*//g' | \
     sed 's/:.*//g' | \
@@ -62,13 +62,11 @@ get_containers_list() {
     
     local containers=""
     
-    # Cerca config.yml nella root
     if [ -f "config.yml" ]; then
         log "Trovato config.yml"
         containers="$(get_containers_from_yaml config.yml)"
     fi
     
-    # Cerca file in config.d/
     if [ -d "config.d" ]; then
         for file in config.d/*.yml config.d/*.yaml; do
             if [ -f "$file" ]; then
@@ -78,7 +76,6 @@ get_containers_list() {
         done
     fi
     
-    # Cerca file in custom.d/
     if [ -d "custom.d" ]; then
         for file in custom.d/*.yml custom.d/*.yaml; do
             if [ -f "$file" ]; then
@@ -88,7 +85,6 @@ get_containers_list() {
         done
     fi
     
-    # Rimuovi linee vuote e duplicati
     echo "$containers" | sort -u | grep -v '^$'
 }
 
@@ -107,7 +103,6 @@ check_container_health() {
     log "Health check per: $container_name"
     
     while [ $elapsed -lt $timeout ]; do
-        # Verifica stato Docker
         local status
         status=$(docker inspect "$container_name" --format='{{.State.Status}}' 2>/dev/null || echo "")
         
@@ -138,11 +133,9 @@ test_container() {
     
     local container_name="playground-$container"
     
-    # Pulizia preliminare
     docker rm -f "$container_name" >/dev/null 2>&1 || true
     sleep 1
     
-    # START TEST
     echo -e "  ${YELLOW}Starting container...${NC}"
     log "Starting: $container"
     
@@ -158,7 +151,7 @@ test_container() {
     local container_id=$start_output
     echo "$start_output" | tee -a "$LOG_FILE"
     
-    if [ -z "$container_id" ] || [ "$container_id" = "Error response from daemon"* ]; then
+    if [ -z "$container_id" ] || [[ "$start_output" == "Error response from daemon"* ]]; then
         echo -e "  ${RED}START FAILED: $container${NC}"
         log "START FAILED: $container"
         ((START_FAILED++))
@@ -166,7 +159,6 @@ test_container() {
         return 1
     fi
     
-    # Health check
     sleep 2
     if check_container_health "$container_name"; then
         echo -e "  ${GREEN}START SUCCESS: $container${NC}"
@@ -174,7 +166,6 @@ test_container() {
         ((START_SUCCESS++))
         SUCCESS_CONTAINERS+=("$container")
         
-        # STOP TEST
         echo -e "  ${YELLOW}Stopping container...${NC}"
         log "Stopping: $container"
         
@@ -206,7 +197,6 @@ test_container() {
         ((START_FAILED++))
         FAILED_CONTAINERS+=("$container")
         
-        # Log diagnostici
         docker logs "$container_name" 2>&1 | tail -5 | tee -a "$LOG_FILE"
         docker rm -f "$container_name" >/dev/null 2>&1 || true
     fi
@@ -245,17 +235,14 @@ $(if [ ${#STOP_FAILED_CONTAINERS[@]} -gt 0 ]; then printf '  - %s\n' "${STOP_FAI
 main() {
     log "Inizio test Docker Playground"
     
-    # Verifica Docker
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}ERROR: Docker non trovato${NC}"
         exit 1
     fi
     
-    # Crea network se non esiste
     docker network create playground-network 2>/dev/null || true
     log "Network playground-network verificato/creato"
     
-    # Recupera container da testare
     echo -e "${YELLOW}Recupero lista container...${NC}"
     mapfile -t CONTAINERS < <(get_containers_list)
     
@@ -266,7 +253,6 @@ main() {
         echo "2. Contiene sezione 'images'?"
         echo "3. Contiene file in config.d/ o custom.d/?"
         
-        # Lista file trovati
         echo -e "\n${YELLOW}File trovati:${NC}"
         ls -la *.yml 2>/dev/null || echo "  Nessun config.yml trovato"
         ls -la config.d/*.yml 2>/dev/null || echo "  Nessun file in config.d/"
@@ -281,7 +267,6 @@ main() {
     printf '  - %s\n' "${CONTAINERS[@]}"
     echo
     
-    # Test container
     local index=1
     for container in "${CONTAINERS[@]}"; do
         if [ -z "$container" ] || [[ "$container" =~ ^[[:space:]]*$ ]]; then
@@ -295,7 +280,6 @@ main() {
     
     generate_report
     
-    # Exit code
     if [ $START_FAILED -eq 0 ] && [ $STOP_FAILED -eq 0 ]; then
         echo -e "\n${GREEN}✅ TUTTI I TEST PASSATI!${NC}"
         exit 0
