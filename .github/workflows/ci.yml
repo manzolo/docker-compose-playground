@@ -1,26 +1,141 @@
-name: CI - Test CLI
+name: CI - Test CLI, TUI, and WebUI
 
 on:
   push:
     branches: [develop, main]
-    tags: [v*]  # Trigger su tag che iniziano con 'v' (es. v1.0.0)
+    tags: [v*]
+  pull_request:
+    branches: [develop, main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    
+    # Necessario per Docker-in-Docker
+    services:
+      docker:
+        image: docker:dind
+        options: >-
+          --privileged
+          --health-cmd "docker info"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Utile per tag e storia completa
+          fetch-depth: 0
 
-      - name: Setup Docker
-        uses: docker/setup-buildx-action@v3  # Abilita Buildx per Docker avanzato, se serve build di immagini
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            docker.io \
+            whiptail \
+            expect \
+            lsof \
+            curl \
+            jq
+
+      - name: Verify Docker installation
+        run: docker --version && docker info
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Installa le dipendenze dal requirements.txt se esiste
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Create test logs directory
+        run: mkdir -p ./test-logs
 
       - name: Run CLI tests
+        id: cli-tests
+        continue-on-error: true
         run: |
-          # Rendi lo script eseguibile (se non lo è già)
           chmod +x ./test-cli.sh
-          # Esegui i test non-interattivi
-          ./test-cli.sh --non-interactive
+          ./test-cli.sh --non-interactive 2>&1 | tee ./test-logs/cli-test.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Run WebUI tests
+        id: webui-tests
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          chmod +x ./test-webui.sh
+          ./test-webui.sh 2>&1 | tee ./test-logs/webui-test.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Check test results
+        if: always()
+        run: |
+          CLI_RESULT=${{ steps.cli-tests.outcome }}
+          WEBUI_RESULT=${{ steps.webui-tests.outcome }}
+          
+          echo "CLI Tests: $CLI_RESULT"
+          echo "WebUI Tests: $WEBUI_RESULT"
+          
+          if [ "$CLI_RESULT" = "failure" ] || [ "$WEBUI_RESULT" = "failure" ]; then
+            exit 1
+          fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: ./test-logs/
+          retention-days: 30
+
+      - name: Upload WebUI logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webui-logs
+          path: venv/web.log
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Test Results 📊" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f ./test-logs/cli-test.log ]; then
+            echo "### CLI Tests" >> $GITHUB_STEP_SUMMARY
+            tail -20 ./test-logs/cli-test.log >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f ./test-logs/webui-test.log ]; then
+            echo "### WebUI Tests" >> $GITHUB_STEP_SUMMARY
+            tail -30 ./test-logs/webui-test.log >> $GITHUB_STEP_SUMMARY
+          fi
+
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
