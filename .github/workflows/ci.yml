@@ -58,4 +58,5 @@ jobs:
         run: |
           chmod +x ./test-all.sh
           chmod +x ./playground
+          ./playground list
           ./test-all.sh
