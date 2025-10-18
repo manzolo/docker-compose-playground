@@ -34,6 +34,32 @@ const DashboardInit = {
                 if (filterInput) filterInput.focus();
             }
         });
+
+        // Save filter state whenever it changes
+        const filterInput = DOM.get('filter');
+        const categoryFilter = DOM.get('category-filter');
+
+        if (filterInput) {
+            DOM.on(filterInput, 'input', () => {
+                FilterPersistenceManager.saveFilterState();
+            });
+        }
+
+        if (categoryFilter) {
+            DOM.on(categoryFilter, 'change', () => {
+                FilterPersistenceManager.saveFilterState();
+            });
+        }
+
+        // Save filter state when status filter buttons are clicked
+        DOM.queryAll('.filter-btn').forEach(btn => {
+            DOM.on(btn, 'click', () => {
+                // Delay to ensure FilterManager.activeStatusFilter is updated
+                setTimeout(() => {
+                    FilterPersistenceManager.saveFilterState();
+                }, 100);
+            });
+        });
     },
 
     /**
@@ -50,16 +76,22 @@ const DashboardInit = {
     },
 
     /**
-     * Restore filter and group states
+     * Restore filter and group states with proper timing
      */
     restoreState() {
-        ContainerTagManager.init();
-        FilterPersistenceManager.restoreFilterState();
-        GroupPersistenceManager.restoreGroupStates();
+        // Garantisci che FilterManager sia inizializzato
+        FilterManager.init();
+        
+        // Aspetta un tick per garantire che il DOM sia totalmente pronto
+        setTimeout(() => {
+            ContainerTagManager.init();
+            FilterPersistenceManager.restoreFilterState();
+            GroupPersistenceManager.restoreGroupStates();
+        }, 50);
     }
 };
 
-// Initialize on page load
+// Initialize on page load with proper sequencing
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         FilterManager.init();

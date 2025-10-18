@@ -3,8 +3,10 @@
 // =========================================================
 
 const FilterPersistenceManager = {
+    STORAGE_KEY: 'filterState',
+
     /**
-     * Save current filter state to session storage
+     * Save current filter state to local storage
      */
     saveFilterState() {
         const filterState = {
@@ -12,14 +14,14 @@ const FilterPersistenceManager = {
             selectedCategory: DOM.get('category-filter')?.value || '',
             activeStatusFilter: FilterManager.activeStatusFilter || 'all'
         };
-        sessionStorage.setItem('filterState', JSON.stringify(filterState));
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filterState));
     },
 
     /**
-     * Restore filter state from session storage
+     * Restore filter state from local storage
      */
     restoreFilterState() {
-        const savedState = sessionStorage.getItem('filterState');
+        const savedState = localStorage.getItem(this.STORAGE_KEY);
         if (savedState) {
             try {
                 const filterState = JSON.parse(savedState);
@@ -55,12 +57,69 @@ const FilterPersistenceManager = {
                         }
                     }, 100);
                 }
-
-                sessionStorage.removeItem('filterState');
             } catch (error) {
                 console.error('Error restoring filter state:', error);
             }
         }
+    },
+
+    /**
+     * Clear saved filter state
+     */
+    clearSavedFilterState() {
+        localStorage.removeItem(this.STORAGE_KEY);
+        
+        // Reset UI
+        const filterInput = DOM.get('filter');
+        const categoryFilter = DOM.get('category-filter');
+        
+        if (filterInput) {
+            filterInput.value = '';
+        }
+        
+        if (categoryFilter) {
+            categoryFilter.value = '';
+        }
+        
+        FilterManager.activeStatusFilter = 'all';
+        DOM.queryAll('.filter-btn').forEach(btn => {
+            DOM.toggleClass(
+                btn,
+                'active',
+                btn.getAttribute('data-filter') === 'all'
+            );
+        });
+        
+        FilterManager.applyFilters();
+        ToastManager.show('Filtri salvati cancellati', 'info');
+    },
+
+    /**
+     * Get saved filter state (without restoring)
+     */
+    getSavedFilterState() {
+        const savedState = localStorage.getItem(this.STORAGE_KEY);
+        if (savedState) {
+            try {
+                return JSON.parse(savedState);
+            } catch (error) {
+                console.error('Error parsing saved filter state:', error);
+                return null;
+            }
+        }
+        return null;
+    },
+
+    /**
+     * Check if there are saved filters
+     */
+    hasSavedFilters() {
+        const savedState = this.getSavedFilterState();
+        return savedState && (
+            savedState.searchTerm || 
+            savedState.selectedCategory || 
+            (savedState.activeStatusFilter && savedState.activeStatusFilter !== 'all')
+        );
     }
 };
 
