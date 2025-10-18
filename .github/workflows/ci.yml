@@ -2,41 +2,40 @@ name: CI - Test CLI, TUI, and WebUI
 
 on:
   push:
-    branches: [develop, main, 'release/*']  # Matches release/1.0.1
-    tags: [v*]  # Matches tags like v1.0.1
+    branches: [develop, main, 'release/*']
+    tags: [v*]
   schedule:
-    - cron: '0 0 * * *'  # Nightly runs
+    - cron: '0 0 * * *'
 
 jobs:
-  test:
+  test-quick:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y whiptail expect lsof curl
-      - name: Run CLI tests
+          sudo apt-get install -y whiptail expect lsof curl make
+
+      - name: Run CLI and WebUI tests
         run: |
-          chmod +x ./test-cli.sh
-          ./test-cli.sh --non-interactive
-      - name: Run WebUI tests
-        run: |
-          chmod +x ./test-webui.sh
-          ./test-webui.sh
+          make test-cli
+          make test-webui
 
   test-all:
     runs-on: ubuntu-latest
-    # Run for tags, scheduled runs, or release/* branches
     if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/')
     timeout-minutes: 150
     steps:
@@ -44,19 +43,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y whiptail expect lsof curl
+          sudo apt-get install -y whiptail expect lsof curl make
+
       - name: Run comprehensive tests
-        run: |
-          chmod +x ./test-all.sh
-          chmod +x ./playground
-          ./playground list
-          ./test-all.sh
+        run: make test-all
