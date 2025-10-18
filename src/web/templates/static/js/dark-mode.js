@@ -1,5 +1,5 @@
 // =========================================================
-// Dark Mode Manager
+// DARK MODE MANAGER - Shared across all pages
 // =========================================================
 
 const DarkModeManager = {
@@ -7,7 +7,7 @@ const DarkModeManager = {
     DARK_CLASS: 'dark-mode',
 
     /**
-     * Inizializza il dark mode
+     * Initialize dark mode
      */
     init() {
         this.loadPreference();
@@ -16,32 +16,29 @@ const DarkModeManager = {
     },
 
     /**
-     * Carica la preferenza salvata o usa la preferenza di sistema
+     * Load saved preference or use system preference
      */
     loadPreference() {
         const saved = localStorage.getItem(this.STORAGE_KEY);
 
         if (saved !== null) {
-            // Usa la preferenza salvata
             this.setDarkMode(saved === 'true');
         } else {
-            // Usa la preferenza di sistema
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             this.setDarkMode(prefersDark);
         }
     },
 
     /**
-     * Abilita/disabilita il dark mode
+     * Enable/disable dark mode
      */
     setDarkMode(enabled) {
         if (enabled) {
-            document.documentElement.classList.add(this.DARK_CLASS);
+            DOM.addClass(document.documentElement, this.DARK_CLASS);
         } else {
-            document.documentElement.classList.remove(this.DARK_CLASS);
+            DOM.removeClass(document.documentElement, this.DARK_CLASS);
         }
 
-        // Salva la preferenza
         localStorage.setItem(this.STORAGE_KEY, enabled);
         this.updateToggleButton(enabled);
     },
@@ -50,25 +47,25 @@ const DarkModeManager = {
      * Toggle dark mode
      */
     toggle() {
-        const isDark = document.documentElement.classList.contains(this.DARK_CLASS);
+        const isDark = DOM.hasClass(document.documentElement, this.DARK_CLASS);
         this.setDarkMode(!isDark);
     },
 
     /**
-     * Setup il pulsante di toggle
+     * Setup toggle button
      */
     setupToggleButton() {
-        const button = document.getElementById('darkModeToggle');
+        const button = DOM.get('darkModeToggle');
         if (button) {
-            button.addEventListener('click', () => this.toggle());
+            DOM.on(button, 'click', () => this.toggle());
         }
     },
 
     /**
-     * Aggiorna il visual del bottone
+     * Update toggle button visual
      */
     updateToggleButton(isDark) {
-        const button = document.getElementById('darkModeToggle');
+        const button = DOM.get('darkModeToggle');
         if (button) {
             const icon = button.querySelector('.dark-mode-icon');
             if (icon) {
@@ -79,13 +76,12 @@ const DarkModeManager = {
     },
 
     /**
-     * Ascolta i cambiamenti della preferenza di sistema
+     * Listen for system preference changes
      */
     setupSystemPreference() {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.addEventListener('change', (e) => {
             const saved = localStorage.getItem(this.STORAGE_KEY);
-            // Solo se l'utente non ha salvato una preferenza
             if (saved === null) {
                 this.setDarkMode(e.matches);
             }
@@ -93,7 +89,7 @@ const DarkModeManager = {
     }
 };
 
-// Inizializza quando il DOM è pronto
+// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         DarkModeManager.init();
@@ -102,5 +98,4 @@ if (document.readyState === 'loading') {
     DarkModeManager.init();
 }
 
-// Esporta globalmente
 window.DarkModeManager = DarkModeManager;

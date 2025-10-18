@@ -1,0 +1,175 @@
+/* ============================================
+   HEADER STYLES - Shared across all pages
+   ============================================ */
+
+header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 32px 0;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 32px;
+}
+
+header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+header .subtitle {
+    font-size: 1rem;
+    opacity: 0.95;
+}
+
+/* ============================================
+   HEADER TOP - Flex layout
+   ============================================ */
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.header-top > div:first-child {
+    flex: 1;
+}
+
+/* ============================================
+   HEADER NAVIGATION
+   ============================================ */
+
+.header-nav {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.nav-link {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: white;
+}
+
+/* ============================================
+   DARK MODE BUTTON
+   ============================================ */
+
+.dark-mode-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+}
+
+.dark-mode-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.dark-mode-btn:active {
+    transform: scale(0.95);
+}
+
+.dark-mode-icon {
+    display: inline-block;
+    transition: transform 0.3s;
+}
+
+.dark-mode-btn:hover .dark-mode-icon {
+    transform: rotate(20deg);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    header {
+        padding: 20px 0;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .header-top {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .dark-mode-btn {
+        width: 40px;
+        height: 40px;
+        padding: 6px 10px;
+    }
+
+    .header-nav {
+        gap: 12px;
+    }
+
+    .nav-link {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode header {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+}
+
+html.dark-mode .nav-link {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+html.dark-mode .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+html.dark-mode .nav-link.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-color: transparent;
+}
+
+html.dark-mode header h1 {
+    color: white;
+}
+
+html.dark-mode header .subtitle {
+    color: rgba(255, 255, 255, 0.9);
+}

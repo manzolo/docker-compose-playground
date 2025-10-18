@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>➕ Add Container - Docker Playground</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
-    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- CSS Modulari -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/header.css">
     <link rel="stylesheet" href="/static/css/modal.css">
     <link rel="stylesheet" href="/static/css/add-container.css">
     <link rel="stylesheet" href="/static/css/dark-mode.css">
@@ -17,7 +20,7 @@
     <div id="toast-container"></div>
 
     <!-- Loader Overlay -->
-    <div id="global-loader" class="loader-overlay hidden">
+    <div id="global-loader" class="loader-overlay">
         <div class="loader-spinner"></div>
         <p id="loader-message" class="loader-message">Please wait...</p>
     </div>
@@ -46,7 +49,7 @@
     <div class="container">
         <!-- Add Container Form -->
         <div class="form-container">
-            <form id="addContainerForm" novalidate>
+            <form id="addContainerForm" method="POST" novalidate>
                 
                 <!-- Step Indicator -->
                 <div class="step-indicator">
@@ -76,7 +79,7 @@
                         <div class="input-with-button">
                             <input type="text" id="imageName" name="image" required 
                                    placeholder="nginx:latest" autocomplete="off">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="validateImage()">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="AddContainerManager.validateImage()">
                                 🔍 Validate
                             </button>
                         </div>
@@ -102,7 +105,7 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn btn-primary btn-lg" onclick="nextStep()">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="AddContainerManager.nextStep()">
                             Next Step →
                         </button>
                     </div>
@@ -118,7 +121,7 @@
                             <span class="field-hint">Select or create a new category</span>
                         </label>
                         <div class="category-input-group">
-                            <select id="categorySelect" onchange="handleCategoryChange()">
+                            <select id="categorySelect" onchange="AddContainerManager.handleCategoryChange()">
                                 <option value="">-- Select Category --</option>
                                 {% for cat in existing_categories %}
                                 <option value="{{ cat }}">{{ cat|title }}</option>
@@ -153,10 +156,10 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">
+                        <button type="button" class="btn btn-secondary" onclick="AddContainerManager.previousStep()">
                             ← Previous
                         </button>
-                        <button type="button" class="btn btn-primary btn-lg" onclick="nextStep()">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="AddContainerManager.nextStep()">
                             Next Step →
                         </button>
                     </div>
@@ -178,7 +181,7 @@
                                 <option value="/bin/ash">/bin/ash (Alpine)</option>
                                 <option value="/usr/bin/bash">/usr/bin/bash</option>
                             </select>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="detectShell()">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="AddContainerManager.detectShell()">
                                 🔍 Auto-detect
                             </button>
                         </div>
@@ -203,10 +206,10 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">
+                        <button type="button" class="btn btn-secondary" onclick="AddContainerManager.previousStep()">
                             ← Previous
                         </button>
-                        <button type="button" class="btn btn-primary btn-lg" onclick="previewConfig()">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="AddContainerManager.previewConfig()">
                             👁 Preview Config
                         </button>
                         <button type="submit" class="btn btn-success btn-lg">
@@ -222,16 +225,35 @@
         <div id="previewPanel" class="preview-panel" style="display: none;">
             <h2>📄 Configuration Preview</h2>
             <pre id="previewContent" class="config-preview"></pre>
-            <button class="btn btn-secondary btn-sm" onclick="closePreview()">Close Preview</button>
+            <button class="btn btn-secondary btn-sm" onclick="AddContainerManager.closePreview()">Close Preview</button>
         </div>
     </div>
 
     <!-- Confirm Modal -->
     <div id="confirmModal" class="modal"></div>
 
-    <script src="/static/js/utils.js"></script>
+    <!-- Shared Modules -->
+    <script src="/static/js/core-modules.js"></script>
+    <script src="/static/js/api-service.js"></script>
     <script src="/static/js/dark-mode.js"></script>
-    <script src="/static/js/add-container.js"></script>
+    <script src="/static/js/reload-manager.js"></script>
+    <script src="/static/js/filter-manager.js"></script>
+    <script src="/static/js/container-manager.js"></script>
+    <script src="/static/js/logs-manager.js"></script>
+    <script src="/static/js/console-manager.js"></script>
+    <script src="/static/js/group-manager.js"></script>
+    <script src="/static/js/bulk-operations.js"></script>
+    <script src="/static/js/manager-operations.js"></script>
+    <script src="/static/js/system-info-manager.js"></script>
+    <script src="/static/js/backup-export-manager.js"></script>
+    <script src="/static/js/add-container-manager.js"></script>
+    <script src="/static/js/fullscreen-manager.js"></script>
+    <script src="/static/js/motd-manager.js"></script>
+    <script src="/static/js/container-tag-manager.js"></script>
+    <script src="/static/js/filter-persistence-manager.js"></script>
+
+    <!-- Page-Specific Initialization -->
+    <script src="/static/js/page-init-add-container.js"></script>
 </body>
 
 </html>

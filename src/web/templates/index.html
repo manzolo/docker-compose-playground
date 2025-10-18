@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🐳 Docker Playground Dashboard</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/vendor/xterm-5.3.0.css">
+    
+    <!-- CSS Modulari -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/header.css">
+    <link rel="stylesheet" href="/static/css/filters.css">
     <link rel="stylesheet" href="/static/css/modal.css">
-    <link rel="stylesheet" href="/static/css/container.css">
-    <link rel="stylesheet" href="/static/css/search.css">
-    <link rel="stylesheet" href="/static/css/groups.css">
-    <link rel="stylesheet" href="/static/css/motd.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
     <link rel="stylesheet" href="/static/css/dark-mode.css">
 </head>
 
@@ -21,7 +22,7 @@
     <div id="toast-container"></div>
 
     <!-- Loader Overlay -->
-    <div id="global-loader" class="loader-overlay hidden">
+    <div id="global-loader" class="loader-overlay">
         <div class="loader-spinner"></div>
         <p id="loader-message" class="loader-message">Please wait...</p>
     </div>
@@ -70,12 +71,12 @@
                 </button>
                 <button class="filter-btn" data-filter="stopped" onclick="FilterManager.filterByStatus('stopped')">
                     <span class="filter-icon">⏹</span> Stopped
-                    <span class="filter-badge badge-secondary" id="count-stopped">0</span>
+                    <span class="filter-badge badge-primary" id="count-stopped">0</span>
                 </button>
             </div>
 
             <div class="category-filter">
-                <select id="category-filter" onchange="FilterManager.filterByCategory(this.value)">
+                <select id="category-filter" onchange="FilterManager.applyFilters()">
                     <option value="">All Categories</option>
                     {% for category in categories %}
                     <option value="{{ category }}">{{ category|title }} ({{ category_counts[category] }})</option>
@@ -96,7 +97,6 @@
     <div class="container">
         <!-- Groups Section -->
         {% if groups %}
-        <!-- Groups Section - Card Style with Filters -->
         <div class="groups-section">
             <h2 class="section-title">🚀 Application Stacks</h2>
             <div class="groups-container" id="groupsContainer">
@@ -147,7 +147,8 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>{% endif %}
+        </div>
+        {% endif %}
 
         <div class="section-title">📦 Containers</div>
 
@@ -163,7 +164,6 @@
                     <div class="header-badges">
                         <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
 
-                        <!-- Icone compatte -->
                         {% if feature.get('has_motd') %}
                         <span class="feature-icon feature-motd" title="Has MOTD">📋</span>
                         {% endif %}
@@ -249,7 +249,7 @@
                         <span class="follow-icon">▶</span> Follow
                     </button>
                     <span id="followStatus" class="follow-status"></span>
-                    <button id="logFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⛶</button>
+                    <button id="logFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⊡</button>
                 </div>
                 <button class="modal-close" onclick="LogsManager.close()">&times;</button>
             </div>
@@ -268,7 +268,7 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>💻 Interactive Console</h2>
-                <button id="consoleFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleConsoleFullscreen()" title="Toggle fullscreen">⛶</button>
+                <button id="consoleFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleConsoleFullscreen()" title="Toggle fullscreen">⊡</button>
                 <button class="modal-close" onclick="ConsoleManager.close()">&times;</button>
             </div>
             <div class="modal-body">
@@ -286,14 +286,33 @@
 
     <div id="confirmModal" class="modal"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
-    <script src="/static/js/utils.js"></script>
-    <script src="/static/js/dark-mode.js"></script>
-    <script src="/static/js/app.js"></script>
-    
+    <!-- Core Libraries -->
+    <script src="/static/js/vendor/xterm-5.3.0.js"></script>
+    <script src="/static/js/vendor/xterm-addon-fit-0.8.0.js"></script>
+    <script src="/static/js/vendor/xterm-addon-webgl-0.16.0.js"></script>
 
+    <!-- Shared Modules -->
+    <script src="/static/js/core-modules.js"></script>
+    <script src="/static/js/api-service.js"></script>
+    <script src="/static/js/dark-mode.js"></script>
+    <script src="/static/js/reload-manager.js"></script>
+    <script src="/static/js/filter-manager.js"></script>
+    <script src="/static/js/container-manager.js"></script>
+    <script src="/static/js/logs-manager.js"></script>
+    <script src="/static/js/console-manager.js"></script>
+    <script src="/static/js/group-manager.js"></script>
+    <script src="/static/js/bulk-operations.js"></script>
+    <script src="/static/js/manager-operations.js"></script>
+    <script src="/static/js/system-info-manager.js"></script>
+    <script src="/static/js/backup-export-manager.js"></script>
+    <script src="/static/js/add-container-manager.js"></script>
+    <script src="/static/js/fullscreen-manager.js"></script>
+    <script src="/static/js/motd-manager.js"></script>
+    <script src="/static/js/container-tag-manager.js"></script>
+    <script src="/static/js/filter-persistence-manager.js"></script>
+
+    <!-- Page-Specific Initialization -->
+    <script src="/static/js/page-init-dashboard.js"></script>
 </body>
 
 </html>

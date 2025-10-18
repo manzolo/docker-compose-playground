@@ -6,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛠️ Advanced Manager - Docker Playground</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
-    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- CSS Modulari -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/header.css">
+    <link rel="stylesheet" href="/static/css/filters.css">
     <link rel="stylesheet" href="/static/css/modal.css">
     <link rel="stylesheet" href="/static/css/manager.css">
     <link rel="stylesheet" href="/static/css/dark-mode.css">
@@ -17,7 +21,7 @@
     <div id="toast-container"></div>
 
     <!-- Loader Overlay -->
-    <div id="global-loader" class="loader-overlay hidden">
+    <div id="global-loader" class="loader-overlay">
         <div class="loader-spinner"></div>
         <p id="loader-message" class="loader-message">Please wait...</p>
     </div>
@@ -61,7 +65,7 @@
                 </div>
             </div>
             <div class="stat-card stat-warning">
-                <div class="stat-icon">⏸</div>
+                <div class="stat-icon">⏹</div>
                 <div class="stat-content">
                     <div class="stat-value" id="stat-stopped">{{ stopped_count }}</div>
                     <div class="stat-label">Stopped</div>
@@ -86,19 +90,19 @@
                     <p>Start multiple containers from a specific category</p>
                 </button>
 
-                <button class="action-card action-danger" onclick="OperationHandlers.stopAll()">
+                <button class="action-card action-danger" onclick="ManagerOperations.stopAll()">
                     <span class="action-icon">⏹</span>
                     <h3>Stop All</h3>
                     <p>Stop all running containers at once</p>
                 </button>
 
-                <button class="action-card action-warning" onclick="OperationHandlers.restartAll()">
+                <button class="action-card action-warning" onclick="ManagerOperations.restartAll()">
                     <span class="action-icon">🔄</span>
                     <h3>Restart All</h3>
                     <p>Restart all running containers</p>
                 </button>
 
-                <button class="action-card action-danger" onclick="OperationHandlers.cleanupAll()">
+                <button class="action-card action-danger" onclick="ManagerOperations.cleanupAll()">
                     <span class="action-icon">🧹</span>
                     <h3>Cleanup All</h3>
                     <p>Stop and remove ALL containers</p>
@@ -150,10 +154,10 @@
                             <span class="category-count">{{ group.containers|length }} containers</span>
                         </div>
                         <div class="category-actions">
-                            <button class="btn btn-sm btn-success" onclick="GroupOperations.startGroup('{{ group_name }}', true)">
+                            <button class="btn btn-sm btn-success" onclick="GroupOperations.startGroup('{{ group_name }}')">
                                 <span class="btn-icon">▶</span> Start Stack
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="GroupOperations.stopGroup('{{ group_name }}', true)">
+                            <button class="btn btn-sm btn-danger" onclick="GroupOperations.stopGroup('{{ group_name }}')">
                                 <span class="btn-icon">⏹</span> Stop Stack
                             </button>
                             <button class="btn btn-sm btn-primary" onclick="viewGroup('{{ group_name }}')">
@@ -175,7 +179,7 @@
                         <div class="category-header">
                             <div class="category-info">
                                 <span class="category-icon">
-                                    {% if category == 'linux' %}🐧
+                                    {% if category == 'linux' %}🧠
                                     {% elif category == 'programming' %}💻
                                     {% elif category == 'database' %}🗄️
                                     {% elif category == 'webserver' %}🌐
@@ -206,21 +210,21 @@
 
         <!-- Export & Logs -->
         <div class="manager-section">
-            <h2>📤 Export & Logs</h2>
+            <h2>🔤 Export & Logs</h2>
             <div class="action-grid">
-                <button class="action-card action-info" onclick="exportConfig()">
+                <button class="action-card action-info" onclick="BackupExportManager.exportConfig()">
                     <span class="action-icon">📄</span>
                     <h3>Export Configuration</h3>
                     <p>Download current configuration as YAML</p>
                 </button>
 
-                <button class="action-card action-info" onclick="showServerLogs()">
+                <button class="action-card action-info" onclick="BackupExportManager.showServerLogs()">
                     <span class="action-icon">📋</span>
                     <h3>View Server Logs</h3>
                     <p>Check application logs</p>
                 </button>
 
-                <button class="action-card action-info" onclick="showBackups()">
+                <button class="action-card action-info" onclick="BackupExportManager.showBackups()">
                     <span class="action-icon">💾</span>
                     <h3>Manage Backups</h3>
                     <p>View and manage container backups</p>
@@ -266,9 +270,28 @@
         </div>
     </div>
 
-    <script src="/static/js/utils.js"></script>
+    <!-- Shared Modules -->
+    <script src="/static/js/core-modules.js"></script>
+    <script src="/static/js/api-service.js"></script>
     <script src="/static/js/dark-mode.js"></script>
-    <script src="/static/js/manager.js"></script>
+    <script src="/static/js/reload-manager.js"></script>
+    <script src="/static/js/filter-manager.js"></script>
+    <script src="/static/js/container-manager.js"></script>
+    <script src="/static/js/logs-manager.js"></script>
+    <script src="/static/js/console-manager.js"></script>
+    <script src="/static/js/group-manager.js"></script>
+    <script src="/static/js/bulk-operations.js"></script>
+    <script src="/static/js/manager-operations.js"></script>
+    <script src="/static/js/system-info-manager.js"></script>
+    <script src="/static/js/backup-export-manager.js"></script>
+    <script src="/static/js/add-container-manager.js"></script>
+    <script src="/static/js/fullscreen-manager.js"></script>
+    <script src="/static/js/motd-manager.js"></script>
+    <script src="/static/js/container-tag-manager.js"></script>
+    <script src="/static/js/filter-persistence-manager.js"></script>
+
+    <!-- Page-Specific Initialization -->
+    <script src="/static/js/page-init-manager.js"></script>
 </body>
 
 </html>

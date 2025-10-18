@@ -1,8 +1,7 @@
 /* ============================================
-   DARK MODE VARIABLES & STYLES
+   DARK MODE - Global styles
    ============================================ */
 
-/* Dark Mode Colors */
 html.dark-mode {
     --primary: #667eea;
     --primary-dark: #5a67d8;
@@ -24,286 +23,6 @@ html.dark-mode {
 html.dark-mode body {
     background: #0f1419;
     color: var(--dark);
-}
-
-html.dark-mode header {
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-}
-
-html.dark-mode .header-nav {
-    flex-wrap: wrap;
-}
-
-html.dark-mode .nav-link {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-}
-
-html.dark-mode .nav-link:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-html.dark-mode .nav-link.active {
-    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
-    border-color: transparent;
-}
-
-html.dark-mode .filters-bar {
-    background: #1a202c;
-    border: 1px solid #4a5568;
-}
-
-html.dark-mode .search-section input {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .search-section input::placeholder {
-    color: #a0aec0;
-}
-
-html.dark-mode .search-section input:focus {
-    border-color: #667eea;
-    background: #2d3748;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-}
-
-html.dark-mode .search-count {
-    background: #2d3748;
-    color: #a0aec0;
-}
-
-html.dark-mode .filter-btn {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .filter-btn:hover {
-    border-color: #667eea;
-    color: #667eea;
-    background: #374151;
-}
-
-html.dark-mode .category-filter select {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .category-filter select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-}
-
-html.dark-mode .image-card,
-html.dark-mode .group-card,
-html.dark-mode .manager-section,
-html.dark-mode .form-container,
-html.dark-mode .preview-panel {
-    background: #1a202c;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .image-card:hover,
-html.dark-mode .group-card:hover {
-    border-color: #667eea;
-    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
-}
-
-html.dark-mode .card-header h3,
-html.dark-mode .group-title {
-    color: #e2e8f0;
-}
-
-html.dark-mode .card-description,
-html.dark-mode .group-description {
-    color: #a0aec0;
-}
-
-html.dark-mode .card-status,
-html.dark-mode .info-card {
-    background: #2d3748;
-    border-color: #4a5568;
-}
-
-html.dark-mode .badge {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-color: #4a5568;
-}
-
-html.dark-mode .motd-section {
-    background: #2d3748;
-    border-color: #4a5568;
-}
-
-html.dark-mode .motd-header {
-    background: #1a202c;
-}
-
-html.dark-mode .motd-text {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-left-color: #667eea;
-}
-
-html.dark-mode .modal-content {
-    background: #1a202c;
-    border-color: #4a5568;
-}
-
-html.dark-mode .modal-body {
-    background: #0f1419;
-}
-
-html.dark-mode .modal-footer {
-    background: #2d3748;
-    border-top-color: #4a5568;
-}
-
-html.dark-mode .log-content,
-html.dark-mode .config-preview {
-    background: #0a0e13;
-    color: #e2e8f0;
-}
-
-html.dark-mode #logModal .modal-header {
-    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-}
-
-html.dark-mode .confirm-modal-body {
-    background: #1a202c;
-}
-
-html.dark-mode .confirm-modal-footer {
-    background: #2d3748;
-    border-top-color: #4a5568;
-}
-
-html.dark-mode .confirm-input {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .confirm-input::placeholder {
-    color: #a0aec0;
-}
-
-html.dark-mode .form-group input,
-html.dark-mode .form-group textarea,
-html.dark-mode .form-group select {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .form-group label {
-    color: #e2e8f0;
-}
-
-html.dark-mode .field-hint {
-    color: #a0aec0;
-}
-
-html.dark-mode .info-grid {
-    background: #2d3748;
-    border-color: #4a5568;
-}
-
-html.dark-mode .stat-value {
-    color: #667eea;
-}
-
-html.dark-mode .stat-label {
-    color: #a0aec0;
-}
-
-html.dark-mode .action-card {
-    background: #1a202c;
-    border-color: #4a5568;
-}
-
-html.dark-mode .action-card h3 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .action-card p {
-    color: #a0aec0;
-}
-
-html.dark-mode .backups-table th {
-    background: #2d3748;
-    color: #a0aec0;
-}
-
-html.dark-mode .backups-table td {
-    background: #1a202c;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .toast {
-    background: #1a202c;
-    border-left-color: #667eea;
-}
-
-html.dark-mode .toast-message {
-    color: #e2e8f0;
-}
-
-html.dark-mode .loader-message {
-    color: white;
-}
-
-/* ============================================
-   DARK MODE BUTTON
-   ============================================ */
-
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
-}
-
-.dark-mode-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-}
-
-.dark-mode-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
-}
-
-.dark-mode-btn:active {
-    transform: scale(0.95);
-}
-
-.dark-mode-icon {
-    display: inline-block;
-    transition: transform 0.3s;
-}
-
-.dark-mode-btn:hover .dark-mode-icon {
-    transform: rotate(20deg);
 }
 
 /* ============================================
@@ -335,279 +54,24 @@ html.dark-mode ::-webkit-scrollbar-thumb:hover {
 }
 
 /* ============================================
-   RESPONSIVE
+   BASE ELEMENTS - DARK MODE
    ============================================ */
 
-@media (max-width: 768px) {
-    .header-top {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .dark-mode-btn {
-        width: 40px;
-        height: 40px;
-        padding: 6px 10px;
-    }
-}
-
-/* ============================================
-   DARK MODE - FIXES CONTRASTO GROUPS & MODAL
-   ============================================ */
-
-/* GROUP CARD IN DARK MODE */
-html.dark-mode .group-card {
+html.dark-mode .toast {
     background: #1a202c;
-    border-color: #4a5568;
+    border-left-color: var(--primary);
+}
+
+html.dark-mode .toast-message {
     color: #e2e8f0;
 }
 
-html.dark-mode .group-title {
-    color: #667eea;
-    font-weight: 700;
-}
-
-html.dark-mode .group-description {
-    color: #cbd5e1;
-}
-
-html.dark-mode .group-badge {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-color: #4a5568;
-}
-
-html.dark-mode .group-category-badge {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-color: #667eea;
-}
-
-html.dark-mode .containers-label {
-    color: #a0aec0;
-}
-
-/* CONTAINER TAGS IN DARK MODE */
-html.dark-mode .container-tag {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-color: #4a5568;
-}
-
-html.dark-mode .container-tag:hover {
-    border-color: #667eea;
-    background: #374151;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-}
-
-html.dark-mode .container-tag[data-running="true"] {
-    border-color: #48bb78;
-    background: #1f4d2d;
-}
-
-html.dark-mode .container-tag[data-running="true"]:hover {
-    background: #28663a;
-}
-
-/* GROUP ACTIONS BUTTONS IN DARK MODE */
-html.dark-mode .group-actions {
-    margin-bottom: 12px;
-}
-
-html.dark-mode .group-start-btn {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+html.dark-mode .loader-message {
     color: white;
 }
 
-html.dark-mode .group-start-btn:hover:not(:disabled) {
-    box-shadow: 0 12px 24px rgba(72, 187, 120, 0.3);
-}
-
-html.dark-mode .group-stop-btn {
-    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-    color: white;
-}
-
-html.dark-mode .group-stop-btn:hover:not(:disabled) {
-    box-shadow: 0 12px 24px rgba(245, 101, 101, 0.3);
-}
-
-html.dark-mode .group-source {
-    color: #718096;
-    border-top-color: #4a5568;
-}
-
 /* ============================================
-   MODAL MANAGER PAGE - DARK MODE FIX
-   ============================================ */
-
-html.dark-mode .modal-content {
-    background: #1a202c;
-    color: #e2e8f0;
-}
-
-html.dark-mode .modal-header {
-    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-    color: #e2e8f0;
-}
-
-html.dark-mode .modal-header h2 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .modal-header-left h2 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .modal-body {
-    background: #0f1419;
-    color: #e2e8f0;
-}
-
-html.dark-mode .modal-footer {
-    background: #2d3748;
-    border-top-color: #4a5568;
-}
-
-/* LOG MODAL DARK MODE */
-html.dark-mode #logModal .modal-header {
-    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-}
-
-html.dark-mode .log-info {
-    color: #cbd5e1;
-}
-
-html.dark-mode .log-info strong {
-    color: #e2e8f0;
-}
-
-html.dark-mode .follow-status {
-    color: #a0aec0;
-}
-
-html.dark-mode .log-content {
-    background: #0a0e13;
-    color: #d4d4d4;
-    border: 1px solid #4a5568;
-}
-
-/* CONSOLE INFO DARK MODE */
-html.dark-mode .console-info {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-bottom: 1px solid #4a5568;
-}
-
-html.dark-mode .console-info strong {
-    color: #e2e8f0;
-}
-
-/* CONFIRM MODAL DARK MODE */
-html.dark-mode .confirm-modal-header {
-    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-}
-
-html.dark-mode .confirm-modal-header h2 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .confirm-modal-icon {
-    color: #667eea;
-}
-
-html.dark-mode .confirm-modal-body {
-    background: #1a202c;
-}
-
-html.dark-mode .confirm-modal-message {
-    color: #cbd5e1;
-}
-
-html.dark-mode .confirm-modal-footer {
-    background: #2d3748;
-    border-top-color: #4a5568;
-}
-
-/* INPUT IN MODAL DARK MODE */
-html.dark-mode .confirm-input {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .confirm-input:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-}
-
-html.dark-mode .confirm-input::placeholder {
-    color: #718096;
-}
-
-html.dark-mode .input-label {
-    color: #e2e8f0;
-}
-
-html.dark-mode .input-hint {
-    color: #a0aec0;
-}
-
-/* ============================================
-   ACTION CARDS MANAGER - DARK MODE
-   ============================================ */
-
-html.dark-mode .action-card {
-    background: #1a202c;
-    border-color: #4a5568;
-}
-
-html.dark-mode .action-card h3 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .action-card p {
-    color: #a0aec0;
-}
-
-html.dark-mode .action-card:hover {
-    background: #2d3748;
-    border-color: #667eea;
-}
-
-/* STAT CARDS DARK MODE */
-html.dark-mode .stat-card {
-    background: #1a202c;
-    border-color: #4a5568;
-}
-
-html.dark-mode .stat-value {
-    color: #667eea;
-}
-
-html.dark-mode .stat-label {
-    color: #a0aec0;
-}
-
-/* INFO CARDS DARK MODE */
-html.dark-mode .info-card {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .info-card h3 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .info-card pre {
-    background: #0a0e13;
-    color: #d4d4d4;
-    border: 1px solid #4a5568;
-}
-
-/* ============================================
-   BUTTONS IN DARK MODE
+   BUTTONS - DARK MODE
    ============================================ */
 
 html.dark-mode .btn-primary {
@@ -666,82 +130,217 @@ html.dark-mode .btn-outline.active {
 }
 
 /* ============================================
-   MANAGER PAGE ELEMENTS - DARK MODE
+   BADGES - DARK MODE
    ============================================ */
 
-html.dark-mode .category-item {
-    background: #1a202c;
-    border-color: #4a5568;
-}
-
-html.dark-mode .category-item:hover {
-    background: #2d3748;
-    border-color: #667eea;
-}
-
-html.dark-mode .category-name {
-    color: #e2e8f0;
-}
-
-html.dark-mode .category-description {
-    color: #a0aec0;
-}
-
-html.dark-mode .category-count {
+html.dark-mode .badge {
     background: #2d3748;
     color: #e2e8f0;
     border-color: #4a5568;
 }
 
-html.dark-mode .category-icon {
-    background: #2d3748;
-    border-color: #4a5568;
-}
-
-html.dark-mode .group-item {
-    background: linear-gradient(135deg, #1a3a4d 0%, #1a2a3a 100%);
-    border-color: #4a5568;
-}
-
-html.dark-mode .group-item:hover {
-    background: linear-gradient(135deg, #2d4d5f 0%, #2d3f4f 100%);
-    border-color: #667eea;
-}
-
-html.dark-mode .backups-table th {
-    background: #2d3748;
-    color: #a0aec0;
-    border-bottom-color: #4a5568;
-}
-
-html.dark-mode .backups-table td {
-    background: #1a202c;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .backups-table tbody tr:hover td {
-    background: #2d3748;
-}
-
-html.dark-mode .active-container-item {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .active-container-item:hover {
-    background: #374151;
-    border-color: #667eea;
-}
-
-html.dark-mode .container-status {
-    background: #48bb78;
+html.dark-mode .badge-accent {
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
     color: white;
+    border: none;
 }
 
 /* ============================================
-   XTERM TERMINAL DARK MODE
+   CARDS & SECTIONS - DARK MODE
+   ============================================ */
+
+html.dark-mode .filters-bar {
+    background: #1a202c;
+    border: 1px solid #4a5568;
+}
+
+html.dark-mode .search-section input {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .search-section input::placeholder {
+    color: #a0aec0;
+}
+
+html.dark-mode .search-section input:focus {
+    border-color: #667eea;
+    background: #2d3748;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+html.dark-mode .search-count {
+    background: #2d3748;
+    color: #a0aec0;
+}
+
+html.dark-mode .filter-btn {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #374151;
+}
+
+html.dark-mode .category-filter select {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .category-filter select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+html.dark-mode .category-filter select option {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
+/* ============================================
+   MODALS - DARK MODE
+   ============================================ */
+
+html.dark-mode .modal-content {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .modal-body {
+    background: #0f1419;
+}
+
+html.dark-mode .modal-footer {
+    background: #2d3748;
+    border-top-color: #4a5568;
+}
+
+html.dark-mode .confirm-modal-body {
+    background: #1a202c;
+}
+
+html.dark-mode .confirm-modal-footer {
+    background: #2d3748;
+    border-top-color: #4a5568;
+}
+
+html.dark-mode .confirm-modal-header {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+}
+
+html.dark-mode .confirm-modal-header h2 {
+    color: #e2e8f0;
+}
+
+html.dark-mode .confirm-modal-icon {
+    color: #667eea;
+}
+
+html.dark-mode .confirm-modal-message {
+    color: #cbd5e1;
+}
+
+html.dark-mode .confirm-input {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .confirm-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+html.dark-mode .confirm-input::placeholder {
+    color: #718096;
+}
+
+html.dark-mode .input-label {
+    color: #e2e8f0;
+}
+
+html.dark-mode .input-hint {
+    color: #a0aec0;
+}
+
+html.dark-mode .log-content,
+html.dark-mode .config-preview {
+    background: #0a0e13;
+    color: #e2e8f0;
+}
+
+html.dark-mode #logModal .modal-header {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+}
+
+html.dark-mode .console-info {
+    background: #2d3748;
+    color: #e2e8f0;
+    border-bottom: 1px solid #4a5568;
+}
+
+html.dark-mode .console-info strong {
+    color: #e2e8f0;
+}
+
+html.dark-mode .log-info {
+    color: #cbd5e1;
+}
+
+html.dark-mode .log-info strong {
+    color: #e2e8f0;
+}
+
+html.dark-mode .follow-status {
+    color: #a0aec0;
+}
+
+/* ============================================
+   FORMS - DARK MODE
+   ============================================ */
+
+html.dark-mode input,
+html.dark-mode textarea,
+html.dark-mode select {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+    color: #a0aec0;
+}
+
+html.dark-mode input:focus,
+html.dark-mode textarea:focus,
+html.dark-mode select:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #2d3748;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+html.dark-mode input.error,
+html.dark-mode textarea.error,
+html.dark-mode select.error {
+    border-color: #f56565;
+    background: #3d2626;
+}
+
+html.dark-mode label {
+    color: #e2e8f0;
+}
+
+/* ============================================
+   XTERM TERMINAL - DARK MODE
    ============================================ */
 
 html.dark-mode .xterm {
@@ -758,28 +357,18 @@ html.dark-mode .terminal-wrapper {
 }
 
 /* ============================================
-   MANAGER SECTION DARK MODE
+   RESPONSIVE - DARK MODE
    ============================================ */
 
-html.dark-mode .manager-section {
-    background: #1a202c;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
+@media (max-width: 768px) {
+    html.dark-mode .modal-content {
+        background: #1a202c;
+    }
 
-html.dark-mode .manager-section h2 {
-    color: #e2e8f0;
-}
-
-html.dark-mode .section-title {
-    color: #e2e8f0;
-}
-
-html.dark-mode .browser-subsection {
-    border-bottom-color: #4a5568;
-}
-
-html.dark-mode .subsection-title {
-    color: #e2e8f0;
-    border-bottom-color: #4a5568;
+    html.dark-mode input,
+    html.dark-mode textarea,
+    html.dark-mode select {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
 }

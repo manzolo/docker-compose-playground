@@ -1,5 +1,5 @@
 /* ============================================
-   MODAL SYSTEM - Hybrid UI Theme
+   MODAL SYSTEM - Shared across all pages
    ============================================ */
 
 .modal {
@@ -28,15 +28,6 @@
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
 }
 
 .modal-content {
@@ -73,13 +64,16 @@
     }
 }
 
-/* Modal Header */
+/* ============================================
+   MODAL HEADER
+   ============================================ */
+
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 24px 32px;
-    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     border-bottom: none;
 }
 
@@ -91,6 +85,33 @@
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.modal-header-left {
+    flex: 1;
+    min-width: 250px;
+}
+
+.modal-header-left h2 {
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+}
+
+.log-info {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    font-weight: 400;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    margin: 0;
+}
+
+.log-info strong {
+    color: white;
+    font-weight: 600;
 }
 
 .modal-header-buttons {
@@ -131,7 +152,10 @@
     transform: rotate(90deg);
 }
 
-/* Modal Body */
+/* ============================================
+   MODAL BODY
+   ============================================ */
+
 .modal-body {
     padding: 24px 32px;
     overflow: auto;
@@ -149,11 +173,14 @@
     flex: 1;
 }
 
-/* Modal Footer */
+/* ============================================
+   MODAL FOOTER
+   ============================================ */
+
 .modal-footer {
     padding: 20px 32px;
-    background: #f8f9fc;
-    border-top: 1px solid #e2e8f0;
+    background: var(--light);
+    border-top: 1px solid var(--border);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -169,7 +196,7 @@
 }
 
 .confirm-modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     padding: 24px 32px;
     border-bottom: none;
 }
@@ -212,7 +239,7 @@
 }
 
 .confirm-modal-message {
-    color: #2d3748;
+    color: var(--dark);
     font-size: 15px;
     line-height: 1.6;
     margin: 0;
@@ -220,8 +247,8 @@
 
 .confirm-modal-footer {
     padding: 20px 32px;
-    background: #f8f9fc;
-    border-top: 1px solid #e2e8f0;
+    background: var(--light);
+    border-top: 1px solid var(--border);
     display: flex;
     gap: 12px;
     justify-content: flex-end;
@@ -244,17 +271,17 @@
 
 .btn-confirm-cancel {
     background: white;
-    color: #2d3748;
-    border: 2px solid #e2e8f0;
+    color: var(--dark);
+    border: 2px solid var(--border);
 }
 
 .btn-confirm-cancel:hover {
-    background: #f8f9fc;
+    background: var(--light);
     border-color: #cbd5e1;
 }
 
 .btn-confirm-primary {
-    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
 }
 
@@ -264,7 +291,7 @@
 }
 
 .btn-confirm-danger {
-    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    background: linear-gradient(135deg, var(--danger) 0%, #e53e3e 100%);
     color: white;
 }
 
@@ -274,7 +301,7 @@
 }
 
 .btn-confirm-success {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    background: linear-gradient(135deg, var(--success) 0%, #38a169 100%);
     color: white;
 }
 
@@ -290,18 +317,18 @@
 .confirm-input {
     width: 100%;
     padding: 12px 16px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border);
     border-radius: 8px;
     font-size: 14px;
     font-family: inherit;
     transition: all 0.3s;
-    background: #f8f9fc;
+    background: var(--light);
     margin-top: 8px;
 }
 
 .confirm-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--primary);
     background: white;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
@@ -314,7 +341,7 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--dark);
     margin-bottom: 4px;
     letter-spacing: 0.3px;
 }
@@ -322,7 +349,7 @@
 .input-hint {
     display: block;
     font-size: 12px;
-    color: #718096;
+    color: var(--text-muted);
     margin-top: 4px;
     font-style: italic;
 }
@@ -337,33 +364,6 @@
     justify-content: space-between;
     gap: 24px;
     flex-wrap: wrap;
-}
-
-.modal-header-left {
-    flex: 1;
-    min-width: 250px;
-}
-
-.modal-header-left h2 {
-    color: white;
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin: 0 0 8px 0;
-}
-
-.log-info {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    font-weight: 400;
-    background: none;
-    padding: 0;
-    border-radius: 0;
-    margin: 0;
-}
-
-.log-info strong {
-    color: white;
-    font-weight: 600;
 }
 
 .log-follow-controls {
@@ -451,10 +451,10 @@
 .console-info {
     margin-bottom: 16px;
     padding: 12px 16px;
-    background: #f8f9fc;
+    background: var(--light);
     border-radius: 8px;
     font-size: 13px;
-    color: #2d3748;
+    color: var(--dark);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -490,17 +490,30 @@
 .terminal-wrapper {
     background: #1e1e1e;
     border-radius: 8px;
-    padding: 16px;
+    /*padding: 16px;*/
     height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+.terminal-wrapper #terminal {
+    flex: 1;
+    width: 100%;
 }
 
 .modal-content.fullscreen .terminal-wrapper {
     height: 100%;
-    border-radius: 0;
+    border-radius: 8;
+    padding: 0;
+}
+
+.modal-content.fullscreen .terminal-wrapper #terminal {
+    width: 100%;
+    height: 100%;
 }
 
 /* ============================================
-   SCROLLBAR
+   SCROLLBAR IN MODAL
    ============================================ */
 
 .log-content::-webkit-scrollbar,
@@ -513,7 +526,7 @@
 .log-content::-webkit-scrollbar-track,
 .config-preview::-webkit-scrollbar-track,
 .modal-body::-webkit-scrollbar-track {
-    background: #f8f9fc;
+    background: var(--light);
     border-radius: 4px;
 }
 
@@ -530,7 +543,6 @@
     background: #a0aec0;
 }
 
-/* xterm scrollbar */
 .xterm-viewport::-webkit-scrollbar {
     width: 8px;
 }
@@ -546,59 +558,6 @@
 
 .xterm-viewport::-webkit-scrollbar-thumb:hover {
     background: #555;
-}
-
-/* ============================================
-   DARK MODE SUPPORT
-   ============================================ */
-
-html.dark-mode .modal-content {
-    background: #1a202c;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .modal-body {
-    background: #0f1419;
-}
-
-html.dark-mode .modal-footer {
-    background: #2d3748;
-    border-top-color: #4a5568;
-}
-
-html.dark-mode .confirm-modal-body {
-    background: #1a202c;
-}
-
-html.dark-mode .confirm-modal-footer {
-    background: #2d3748;
-    border-top-color: #4a5568;
-}
-
-html.dark-mode .confirm-input {
-    background: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .confirm-input::placeholder {
-    color: #a0aec0;
-}
-
-html.dark-mode .log-content,
-html.dark-mode .config-preview {
-    background: #0a0e13;
-    color: #e2e8f0;
-}
-
-html.dark-mode #logModal .modal-header {
-    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-}
-
-html.dark-mode .console-info {
-    background: #2d3748;
-    color: #e2e8f0;
 }
 
 /* ============================================
@@ -680,4 +639,102 @@ html.dark-mode .console-info {
     .modal-content.fullscreen .terminal-wrapper {
         height: 100%;
     }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode .modal-content {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .modal-body {
+    background: #0f1419;
+}
+
+html.dark-mode .modal-footer {
+    background: #2d3748;
+    border-top-color: #4a5568;
+}
+
+html.dark-mode .confirm-modal-body {
+    background: #1a202c;
+}
+
+html.dark-mode .confirm-modal-footer {
+    background: #2d3748;
+    border-top-color: #4a5568;
+}
+
+html.dark-mode .confirm-input {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .confirm-input::placeholder {
+    color: #a0aec0;
+}
+
+html.dark-mode .log-content,
+html.dark-mode .config-preview {
+    background: #0a0e13;
+    color: #e2e8f0;
+}
+
+html.dark-mode #logModal .modal-header {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+}
+
+html.dark-mode .console-info {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
+html.dark-mode .console-info strong {
+    color: #e2e8f0;
+}
+
+html.dark-mode .log-info {
+    color: #cbd5e1;
+}
+
+html.dark-mode .log-info strong {
+    color: #e2e8f0;
+}
+
+html.dark-mode .follow-status {
+    color: #a0aec0;
+}
+
+html.dark-mode .btn-outline {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    border-color: #667eea;
+}
+
+html.dark-mode .btn-outline:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: #667eea;
+}
+
+html.dark-mode .btn-outline.active {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: #667eea;
+    box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+}
+
+html.dark-mode .confirm-modal-header {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+}
+
+html.dark-mode .confirm-modal-header h2 {
+    color: #e2e8f0;
+}
+
+html.dark-mode .confirm-modal-message {
+    color: #cbd5e1;
 }

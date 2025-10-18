@@ -1,7 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import asyncio
 import logging
-import docker  # Docker client library for container operations
+import docker
+import json
 
 from src.web.core.config import load_config, get_motd
 from src.web.core.docker import docker_client
@@ -141,7 +142,24 @@ async def websocket_console(websocket: WebSocket, container: str):
                     data = await websocket.receive_text()
                     if data:
                         try:
-                            # Encode and send to container socket
+                            # Try to parse as JSON for control messages
+                            try:
+                                json_data = json.loads(data)
+                                if json_data.get("type") == "resize":
+                                    cols = int(json_data.get("cols", 80))
+                                    rows = int(json_data.get("rows", 24))
+                                    # Resize the exec instance
+                                    docker_client.api.exec_resize(
+                                        exec_instance['Id'],
+                                        height=rows,
+                                        width=cols
+                                    )
+                                    logger.debug("Resized terminal for %s: %dx%d", container, cols, rows)
+                                    continue  # Skip sending resize to container
+                            except json.JSONDecodeError:
+                                pass  # Not a JSON message, treat as regular input
+                            
+                            # Send regular input to container
                             sock.send(data.encode('utf-8'))
                         except OSError as e:
                             logger.error("Socket error writing to container %s: %s", container, str(e))
