@@ -57,4 +57,5 @@ jobs:
       - name: Run comprehensive tests
         run: |
           chmod +x ./test-all.sh
+          chmod +x ./playground
           ./test-all.sh
