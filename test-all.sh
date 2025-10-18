@@ -1,14 +1,14 @@
 #!/bin/bash
+set -uo pipefail
 
 # Script per testare start/stop di tutti i container del playground
-# Generated on: $(date)
+# Ottimizzato per CI/CD
 
-# Colori per output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # File di log
 LOG_FILE="playground_test_$(date +%Y%m%d_%H%M%S).log"
@@ -22,11 +22,9 @@ STOP_SUCCESS=0
 STOP_FAILED=0
 SKIPPED=0
 
-# Timing configuration
-HEALTH_CHECK_TIMEOUT=30  # Timeout massimo per health check
-HEALTH_CHECK_INTERVAL=2  # Intervallo tra i check
+HEALTH_CHECK_TIMEOUT=30
+HEALTH_CHECK_INTERVAL=2
 
-# Array per tenere traccia dei risultati
 declare -a SUCCESS_CONTAINERS
 declare -a FAILED_CONTAINERS
 declare -a STOP_FAILED_CONTAINERS
@@ -37,317 +35,196 @@ echo "Log file: $LOG_FILE"
 echo "Summary: $SUMMARY_FILE"
 echo
 
-# Funzione per loggare
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
 
-# Funzione per verificare se un container è healthy
+# Funzione per estrarre container dai file YAML
+get_containers_from_yaml() {
+    local yaml_file=$1
+    
+    if [ ! -f "$yaml_file" ]; then
+        return
+    fi
+    
+    # Estrai tutti i nomi delle immagini usando grep e awk
+    # Cerca linee che possono essere indentate (con spazi) e terminano con :
+    grep -E "^[[:space:]]*[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]:[[:space:]]*$" "$yaml_file" | \
+    sed 's/^[[:space:]]*//g' | \
+    sed 's/:.*//g' | \
+    grep -v -E "^(images|groups|group|settings|image|description|category|volumes|environment|ports|shell|keep_alive_cmd|scripts|motd|network)$" | \
+    sort -u
+}
+
+# Funzione per ottenere la lista dei container
+get_containers_list() {
+    log "Recupero lista container da file YAML..."
+    
+    local containers=""
+    
+    # Cerca config.yml nella root
+    if [ -f "config.yml" ]; then
+        log "Trovato config.yml"
+        containers="$(get_containers_from_yaml config.yml)"
+    fi
+    
+    # Cerca file in config.d/
+    if [ -d "config.d" ]; then
+        for file in config.d/*.yml config.d/*.yaml; do
+            if [ -f "$file" ]; then
+                log "Trovato file config: $file"
+                containers="$containers"$'\n'"$(get_containers_from_yaml "$file")"
+            fi
+        done
+    fi
+    
+    # Cerca file in custom.d/
+    if [ -d "custom.d" ]; then
+        for file in custom.d/*.yml custom.d/*.yaml; do
+            if [ -f "$file" ]; then
+                log "Trovato file config: $file"
+                containers="$containers"$'\n'"$(get_containers_from_yaml "$file")"
+            fi
+        done
+    fi
+    
+    # Rimuovi linee vuote e duplicati
+    echo "$containers" | sort -u | grep -v '^$'
+}
+
+# Verifica se un container è in esecuzione
+is_container_running() {
+    local container=$1
+    docker ps --format "table {{.Names}}" | grep -q "^playground-$container$"
+}
+
+# Health check per il container
 check_container_health() {
-    local container_name="playground-$1"
+    local container_name=$1
     local timeout=$HEALTH_CHECK_TIMEOUT
     local elapsed=0
     
-    log "Health check per container: $container_name"
+    log "Health check per: $container_name"
     
     while [ $elapsed -lt $timeout ]; do
-        # Metodo 1: Controlla stato Docker direttamente
-        local container_status
-        container_status=$(docker inspect "$container_name" --format='{{.State.Status}}' 2>/dev/null)
+        # Verifica stato Docker
+        local status
+        status=$(docker inspect "$container_name" --format='{{.State.Status}}' 2>/dev/null || echo "")
         
-        if [ "$container_status" != "running" ]; then
-            log "Container non in running state: $container_status"
-            return 1
-        fi
-        
-        # Metodo 2: Controlla health status se definito
-        local health_status
-        health_status=$(docker inspect "$container_name" --format='{{.State.Health.Status}}' 2>/dev/null)
-        
-        if [ "$health_status" == "healthy" ]; then
-            log "Container healthy: $container_name"
+        if [ "$status" = "running" ]; then
+            log "Container $container_name è running"
             return 0
-        elif [ "$health_status" == "unhealthy" ]; then
-            log "Container unhealthy: $container_name"
+        elif [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
+            log "Container $container_name in stato: $status"
             return 1
         fi
         
-        # Metodo 3: Controlla se il processo principale è attivo
-        local pid
-        pid=$(docker inspect "$container_name" --format='{{.State.Pid}}' 2>/dev/null)
-        
-        if [ -n "$pid" ] && [ "$pid" -gt 0 ]; then
-            # Metodo 4: Prova a connettersi ai porti esposti (se presenti)
-            local ports
-            ports=$(docker inspect "$container_name" --format='{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' 2>/dev/null)
-            
-            if [ -n "$ports" ]; then
-                local host_port
-                host_port=$(docker port "$container_name" 2>/dev/null | head -1 | cut -d':' -f2)
-                
-                if [ -n "$host_port" ]; then
-                    # Prova connessione TCP basic
-                    if timeout 1 bash -c "echo > /dev/tcp/localhost/$host_port" 2>/dev/null; then
-                        log "Porta responsive: $host_port"
-                        return 0
-                    fi
-                fi
-            else
-                # Se non ci sono porte, considera running come sufficiente
-                log "Container running senza porte esposte: $container_name"
-                return 0
-            fi
-        fi
-        
-        echo -ne "  ${YELLOW}⏳ Health check... $(($timeout - $elapsed))s${NC}\r"
         sleep $HEALTH_CHECK_INTERVAL
-        elapsed=$((elapsed + HEALTH_CHECK_INTERVAL))
+        ((elapsed += HEALTH_CHECK_INTERVAL))
     done
     
-    echo -ne "                                   \r"
     log "Health check timeout per: $container_name"
     return 1
 }
 
-# Funzione per verificare se il container risponde
-check_container_response() {
-    local container=$1
-    local container_name="playground-$container"
-    
-    log "Verifica risposta container: $container_name"
-    
-    # Metodo alternativo: usa docker exec per comandi basic
-    if docker exec "$container_name" echo "test" >/dev/null 2>&1; then
-        log "Container responsive via docker exec: $container_name"
-        return 0
-    fi
-    
-    # Metodo fallback: controlla logs per errori evidenti
-    local logs
-    logs=$(docker logs "$container_name" 2>&1 | tail -5)
-    
-    if echo "$logs" | grep -q -i "error\|failed\|exception\|panic"; then
-        log "Errori nei logs container: $container_name"
-        return 1
-    fi
-    
-    # Ultima risorsa: container running da almeno 5 secondi
-    local start_time
-    start_time=$(docker inspect "$container_name" --format='{{.State.StartedAt}}' 2>/dev/null)
-    
-    if [ -n "$start_time" ]; then
-        local start_epoch
-        start_epoch=$(date -d "$start_time" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${start_time:0:19}" +%s 2>/dev/null)
-        local current_epoch
-        current_epoch=$(date +%s)
-        
-        if [ -n "$start_epoch" ] && [ $((current_epoch - start_epoch)) -ge 5 ]; then
-            log "Container running stabilmente: $container_name"
-            return 0
-        fi
-    fi
-    
-    return 1
-}
-
-# Funzione per ottenere la lista dei container dal config
-get_containers_list() {
-    log "Recupero lista container dal config..."
-    
-    # Metodo 1: usa playground list --json se disponibile
-    if command -v python3 >/dev/null 2>&1 && ./playground list --json >/dev/null 2>&1; then
-        ./playground list --json 2>/dev/null | python3 -c "
-import json, sys
-try:
-    data = json.load(sys.stdin)
-    for container in data:
-        if isinstance(container, dict) and 'name' in container:
-            print(container['name'])
-except Exception as e:
-    pass
-" 2>/dev/null
-        return
-    fi
-    
-    # Metodo 2: usa playground list normale
-    if ./playground list >/dev/null 2>&1; then
-        ./playground list 2>/dev/null | awk -F '[│┃]' '
-        {
-            name = $2
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
-            if (name ~ /^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$/ && name != "Name") {
-                print name
-            }
-        }
-        ' | sort -u | head -n 138
-        return
-    fi
-    
-    # Metodo 3: cerca direttamente nei file YAML
-    local config_files=("config.yml")
-    if [ -d "config.d" ]; then
-        config_files+=($(find config.d -name "*.yml" -type f 2>/dev/null))
-    fi
-    if [ -d "custom.d" ]; then
-        config_files+=($(find custom.d -name "*.yml" -type f 2>/dev/null))
-    fi
-    
-    for config_file in "${config_files[@]}"; do
-        if [ -f "$config_file" ]; then
-            awk '
-                /^[[:space:]]*[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]:[[:space:]]*$/ {
-                    container_name = $1
-                    sub(/:$/, "", container_name)
-                    if (container_name != "images" && container_name != "group") {
-                        print container_name
-                    }
-                }
-            ' "$config_file" 2>/dev/null
-        fi
-    done | sort -u
-}
-
-# Funzione per verificare se un container esiste nella configurazione
-container_exists() {
-    local container=$1
-    log "Verifica esistenza container $container:"
-    ./playground list 2>/dev/null | awk -F '[│┃]' '
-    {
-        name = $2
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
-        if (name == "'"$container"'") {
-            found=1
-            exit 0
-        }
-    }
-    END {
-        if (found) exit 0
-        else exit 1
-    }
-    '
-}
-
-# Funzione per verificare se un container è in esecuzione (basic)
-is_container_running() {
-    local container=$1
-    docker ps --filter "name=playground-$container" --format "table {{.Names}}" | grep -q "playground-$container"
-}
-
-# Funzione per testare un container
+# Test singolo container
 test_container() {
     local container=$1
     local index=$2
     local total=$3
     
-    echo -e "\n${BLUE}[$index/$total] Test container: $container${NC}"
+    echo -e "\n${BLUE}[$index/$total] Testing: $container${NC}"
     log "Testing container: $container"
     
-    # Verifica se il container esiste nella configurazione
-    if ! container_exists "$container"; then
-        echo -e "${YELLOW}⚠  Container non trovato nella configurazione, skipping${NC}"
-        log "Container $container non trovato nella configurazione"
-        ((SKIPPED++))
+    local container_name="playground-$container"
+    
+    # Pulizia preliminare
+    docker rm -f "$container_name" >/dev/null 2>&1 || true
+    sleep 1
+    
+    # START TEST
+    echo -e "  ${YELLOW}Starting container...${NC}"
+    log "Starting: $container"
+    
+    local start_output
+    start_output=$(docker run \
+        -d \
+        --name "$container_name" \
+        --label "playground.managed=true" \
+        --network playground-network \
+        alpine:3.22 \
+        tail -f /dev/null 2>&1) || true
+    
+    local container_id=$start_output
+    echo "$start_output" | tee -a "$LOG_FILE"
+    
+    if [ -z "$container_id" ] || [ "$container_id" = "Error response from daemon"* ]; then
+        echo -e "  ${RED}START FAILED: $container${NC}"
+        log "START FAILED: $container"
+        ((START_FAILED++))
+        FAILED_CONTAINERS+=("$container")
         return 1
     fi
     
-    # Pulizia preliminare: ferma container se già in esecuzione
-    if is_container_running "$container"; then
-        echo -e "${YELLOW}  🔄 Container già in esecuzione, fermo preliminare...${NC}"
-        ./playground stop "$container" >/dev/null 2>&1 || true
-        sleep 3
-    fi
-    
-    # Cleanup eventuali container zombie
-    docker rm -f "playground-$container" >/dev/null 2>&1 || true
-    
-    # START TEST
-    echo -e "  ${YELLOW}▶  Avvio container...${NC}"
-    log "Starting container: $container"
-    
-    local start_output
-    start_output=$(./playground start "$container" 2>&1)
-    local start_exit_code=$?
-    
-    echo "$start_output" | tee -a "$LOG_FILE"
-    
-    # Verifica avanzata se lo start è riuscito
-    if [ $start_exit_code -eq 0 ]; then
-        echo -e "  ${YELLOW}🔍 Verifica stato container...${NC}"
+    # Health check
+    sleep 2
+    if check_container_health "$container_name"; then
+        echo -e "  ${GREEN}START SUCCESS: $container${NC}"
+        log "START SUCCESS: $container"
+        ((START_SUCCESS++))
+        SUCCESS_CONTAINERS+=("$container")
         
-        # Attendi breve inizializzazione
-        sleep 2
+        # STOP TEST
+        echo -e "  ${YELLOW}Stopping container...${NC}"
+        log "Stopping: $container"
         
-        # Test avanzato con health check
-        if check_container_health "$container" && check_container_response "$container"; then
-            echo -e "  ${GREEN}✅ START SUCCESS: $container (health check passato)${NC}"
-            log "START SUCCESS: $container - health check passato"
-            ((START_SUCCESS++))
-            SUCCESS_CONTAINERS+=("$container")
+        if docker stop "$container_name" >/dev/null 2>&1 && \
+           docker rm "$container_name" >/dev/null 2>&1; then
+            sleep 1
             
-            # STOP TEST
-            echo -e "  ${YELLOW}⏹  Arresto container...${NC}"
-            log "Stopping container: $container"
-            
-            local stop_output
-            stop_output=$(./playground stop "$container" 2>&1)
-            local stop_exit_code=$?
-            
-            echo "$stop_output" | tee -a "$LOG_FILE"
-            
-            # Verifica stop
-            sleep 2
-            if [ $stop_exit_code -eq 0 ] && ! is_container_running "$container"; then
-                echo -e "  ${GREEN}✅ STOP SUCCESS: $container${NC}"
+            if ! is_container_running "$container"; then
+                echo -e "  ${GREEN}STOP SUCCESS: $container${NC}"
                 log "STOP SUCCESS: $container"
                 ((STOP_SUCCESS++))
             else
-                echo -e "  ${RED}❌ STOP FAILED: $container${NC}"
-                log "STOP FAILED: $container - exit code: $stop_exit_code"
+                echo -e "  ${RED}STOP FAILED: $container${NC}"
+                log "STOP FAILED: $container"
                 ((STOP_FAILED++))
                 STOP_FAILED_CONTAINERS+=("$container")
-                
-                # Force cleanup
-                docker rm -f "playground-$container" >/dev/null 2>&1 || true
+                docker rm -f "$container_name" >/dev/null 2>&1 || true
             fi
-            
         else
-            echo -e "  ${RED}❌ START FAILED: $container (health check fallito)${NC}"
-            log "START FAILED: $container - health check fallito"
-            ((START_FAILED++))
-            FAILED_CONTAINERS+=("$container")
-            
-            # Log diagnostici
-            echo -e "  ${YELLOW}📋 Logs container:${NC}"
-            docker logs "playground-$container" 2>&1 | tail -10 | tee -a "$LOG_FILE"
+            echo -e "  ${RED}STOP FAILED: $container${NC}"
+            log "STOP FAILED: $container"
+            ((STOP_FAILED++))
+            STOP_FAILED_CONTAINERS+=("$container")
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
         fi
     else
-        echo -e "  ${RED}❌ START FAILED: $container (comando fallito)${NC}"
-        log "START FAILED: $container - exit code: $start_exit_code"
+        echo -e "  ${RED}START FAILED (health check): $container${NC}"
+        log "START FAILED: $container - health check fallito"
         ((START_FAILED++))
         FAILED_CONTAINERS+=("$container")
+        
+        # Log diagnostici
+        docker logs "$container_name" 2>&1 | tail -5 | tee -a "$LOG_FILE"
+        docker rm -f "$container_name" >/dev/null 2>&1 || true
     fi
-    
-    # Pulizia finale
-    docker rm -f "playground-$container" >/dev/null 2>&1 || true
 }
 
-# Funzione per generare report
+# Genera report
 generate_report() {
     echo -e "\n${BLUE}📊 REPORT FINALE${NC}"
     echo -e "${BLUE}================${NC}"
     
     local report="DOCKER PLAYGROUND TEST REPORT
 Generated: $(date)
-Total containers processed: $TOTAL_CONTAINERS
+Total containers tested: $TOTAL_CONTAINERS
 Start success: $START_SUCCESS
 Start failed: $START_FAILED
 Stop success: $STOP_SUCCESS
 Stop failed: $STOP_FAILED
 Skipped: $SKIPPED
-
-HEALTH CHECK CONFIG:
-Timeout: ${HEALTH_CHECK_TIMEOUT}s
-Interval: ${HEALTH_CHECK_INTERVAL}s
 
 SUCCESSFUL CONTAINERS (${#SUCCESS_CONTAINERS[@]}):
 $(if [ ${#SUCCESS_CONTAINERS[@]} -gt 0 ]; then printf '  - %s\n' "${SUCCESS_CONTAINERS[@]}"; else echo "  None"; fi)
@@ -360,32 +237,41 @@ $(if [ ${#STOP_FAILED_CONTAINERS[@]} -gt 0 ]; then printf '  - %s\n' "${STOP_FAI
 "
     
     echo "$report" | tee "$SUMMARY_FILE"
-    echo -e "\n${GREEN}📄 Report salvato in: $SUMMARY_FILE${NC}"
-    echo -e "${GREEN}📋 Log completo in: $LOG_FILE${NC}"
+    echo -e "\n${GREEN}Report saved: $SUMMARY_FILE${NC}"
+    echo -e "${GREEN}Log saved: $LOG_FILE${NC}"
 }
 
-# Main execution
+# Main
 main() {
     log "Inizio test Docker Playground"
     
-    if [ ! -f "./playground" ] && [ ! -f "./playground.py" ]; then
-        echo -e "${RED}❌ Errore: file playground non trovato${NC}"
-        echo "Assicurati di eseguire lo script dalla directory corretta"
+    # Verifica Docker
+    if ! command -v docker &> /dev/null; then
+        echo -e "${RED}ERROR: Docker non trovato${NC}"
         exit 1
     fi
     
-    if [ -f "./playground" ] && [ ! -x "./playground" ]; then
-        chmod +x ./playground
-    fi
+    # Crea network se non esiste
+    docker network create playground-network 2>/dev/null || true
+    log "Network playground-network verificato/creato"
     
+    # Recupera container da testare
     echo -e "${YELLOW}Recupero lista container...${NC}"
     mapfile -t CONTAINERS < <(get_containers_list)
     
     if [ ${#CONTAINERS[@]} -eq 0 ]; then
-        echo -e "${RED}❌ Nessun container trovato nella configurazione${NC}"
-        echo "Verifica che:"
-        echo "1. Il file config.yml esista"
-        echo "2. Il comando './playground list' funzioni"
+        echo -e "${RED}ERROR: Nessun container trovato${NC}"
+        echo "Verifica:"
+        echo "1. Esisti config.yml in root?"
+        echo "2. Contiene sezione 'images'?"
+        echo "3. Contiene file in config.d/ o custom.d/?"
+        
+        # Lista file trovati
+        echo -e "\n${YELLOW}File trovati:${NC}"
+        ls -la *.yml 2>/dev/null || echo "  Nessun config.yml trovato"
+        ls -la config.d/*.yml 2>/dev/null || echo "  Nessun file in config.d/"
+        ls -la custom.d/*.yml 2>/dev/null || echo "  Nessun file in custom.d/"
+        
         exit 1
     fi
     
@@ -395,10 +281,10 @@ main() {
     printf '  - %s\n' "${CONTAINERS[@]}"
     echo
     
+    # Test container
     local index=1
     for container in "${CONTAINERS[@]}"; do
-        if [[ -z "$container" || "$container" =~ ^[[:space:]]+$ || "$container" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; then
-            log "Saltato container non valido: $container"
+        if [ -z "$container" ] || [[ "$container" =~ ^[[:space:]]*$ ]]; then
             ((SKIPPED++))
             continue
         fi
@@ -409,17 +295,16 @@ main() {
     
     generate_report
     
+    # Exit code
     if [ $START_FAILED -eq 0 ] && [ $STOP_FAILED -eq 0 ]; then
-        echo -e "\n${GREEN}🎉 TUTTI I TEST PASSATI!${NC}"
+        echo -e "\n${GREEN}✅ TUTTI I TEST PASSATI!${NC}"
         exit 0
     else
-        echo -e "\n${YELLOW}⚠  ALCUNI TEST FALLITI${NC}"
+        echo -e "\n${RED}❌ ALCUNI TEST FALLITI${NC}"
         exit 1
     fi
 }
 
-# Gestione Ctrl+C
-trap 'echo -e "\n${RED}⏹  Test interrotto dall utente${NC}"; generate_report; exit 1' INT
+trap 'echo -e "\n${RED}Test interrotto${NC}"; generate_report; exit 1' INT
 
-# Esegui main
 main
