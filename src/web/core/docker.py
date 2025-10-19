@@ -1,3 +1,4 @@
+"""Docker client management and container utilities"""
 import docker
 import socket
 import logging
@@ -8,10 +9,11 @@ import time
 logger = logging.getLogger("uvicorn")
 docker_client = docker.from_env()
 
-# Percorsi e configurazioni
+# Paths and configurations
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 SHARED_DIR = BASE_DIR / "shared-volumes"
 NETWORK_NAME = "playground-network"
+
 
 def ensure_network():
     """Ensure playground network exists"""
@@ -142,8 +144,11 @@ def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> T
 
 
 def get_stop_timeout(img_data: Dict[str, Any]) -> int:
-    """Get appropriate stop timeout based on scripts"""
-    # If there's a pre-stop script, give it more time
+    """Get appropriate stop timeout based on scripts
+    
+    Returns:
+        int: 30 seconds if pre-stop script exists, 10 seconds otherwise
+    """
     scripts = img_data.get("scripts", {})
     if scripts.get("pre_stop"):
         return 30  # 30 seconds for containers with pre-stop scripts
@@ -151,7 +156,15 @@ def get_stop_timeout(img_data: Dict[str, Any]) -> int:
 
 
 def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Start a single container synchronously with volume support"""
+    """Start a single container synchronously with volume support
+    
+    Args:
+        container_name: Name of the container (without 'playground-' prefix)
+        img_data: Container configuration dict
+    
+    Returns:
+        dict: Operation result with status and optional error info
+    """
     from src.web.core.scripts import execute_script
     
     full_container_name = f"playground-{container_name}"
@@ -259,7 +272,15 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
 
 
 def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Stop a single container synchronously with proper timeout"""
+    """Stop a single container synchronously with proper timeout
+    
+    Args:
+        container_name: Name of the container (without 'playground-' prefix)
+        img_data: Container configuration dict
+    
+    Returns:
+        dict: Operation result with status and optional error info
+    """
     from src.web.core.scripts import execute_script
     
     full_container_name = f"playground-{container_name}"
@@ -302,7 +323,11 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) ->
 
 
 def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str, bool]:
-    """Get special features of a container"""
+    """Get special features of a container
+    
+    Returns:
+        dict: Flags for MOTD, scripts, volumes etc.
+    """
     img_data = config.get(image_name, {})
     return {
         'has_motd': bool(img_data.get('motd')),
@@ -314,7 +339,14 @@ def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str,
 
 
 def get_container_volumes(container_name: str) -> Dict[str, str]:
-    """Get volumes mounted in a container"""
+    """Get volumes mounted in a container
+    
+    Args:
+        container_name: Name of the container (with or without 'playground-' prefix)
+    
+    Returns:
+        dict: Mapping of container paths to volume info
+    """
     if not container_name.startswith("playground-"):
         container_name = f"playground-{container_name}"
     

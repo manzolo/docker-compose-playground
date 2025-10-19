@@ -542,14 +542,13 @@ test_system_info_running_count() {
 
 test_manage_page() {
     log_info "TEST 17: Manage page endpoint"
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT}/manage")
     
-    local response=$(curl -s "http://localhost:${PORT}/manage")
-    
-    if echo "$response" | grep -q "<!DOCTYPE\|<html"; then
+    if [ "$http_code" -eq 200 ]; then
         log_success "Manage page loaded correctly"
         return 0
     else
-        log_error "Manage page invalid"
+        log_error "Manage page invalid (HTTP: $http_code)"
         return 1
     fi
 }
@@ -567,6 +566,8 @@ test_add_container_page() {
         return 1
     fi
 }
+
+
 
 # ============ MAIN ============
 
@@ -610,8 +611,8 @@ main() {
         "test_stop_container"
         "test_stop_nonexistent"
         "test_start_invalid_image"
-        "test_operation_status_nonexistent"
         "test_system_info"
+        "test_operation_status_nonexistent"
         "test_get_groups_list"
         "test_start_group"
         "test_stop_group"

@@ -202,6 +202,78 @@ const ApiService = {
      */
     async getServerLogs() {
         return this.fetchText('/api/logs');
+    },
+    /**
+     * Server logs
+     */
+    async getServerLogs() {
+        return this.fetchText('/api/logs');
+    },
+
+    /**
+     * Container statistics
+     */
+    async getContainerStats(container) {
+        return this.fetchJson(`/api/container-stats/${container}`, {
+            timeout: 10000
+        });
+    },
+
+    /**
+     * System health
+     */
+    async getSystemHealth() {
+        return this.fetchJson('/api/system-health', {
+            timeout: 10000
+        });
+    },
+
+    /**
+     * Container health status
+     */
+    async getContainersHealth() {
+        return this.fetchJson('/api/containers-health', {
+            timeout: 10000
+        });
+    },
+
+    /**
+     * Port conflicts check
+     */
+    async checkPortConflicts() {
+        return this.fetchJson('/api/port-conflicts', {
+            timeout: 10000
+        });
+    },
+
+    /**
+     * Execute command in container
+     */
+    async executeCommand(container, command, timeout = 30) {
+        return this.fetchJson(`/api/execute-command/${container}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command, timeout }),
+            timeout: (timeout + 5) * 1000
+        });
+    },
+
+    /**
+     * Run diagnostics on container
+     */
+    async runDiagnostics(container) {
+        return this.fetchJson(`/api/execute-diagnostic/${container}`, {
+            timeout: 60000
+        });
+    },
+
+    /**
+     * Validate container configuration
+     */
+    async validateContainerConfig(image) {
+        return this.fetchJson(`/api/validate-config/${image}`, {
+            timeout: 10000
+        });
     }
 };
 

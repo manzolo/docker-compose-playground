@@ -3,11 +3,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import logging
-import re
 
 from src.web.core.config import load_config
 from src.web.core.docker import docker_client, get_container_features
 from src.web.utils.helpers import natural_sort_key
+from src.web.utils.motd_processor import parse_motd_commands, clean_motd_text
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
@@ -16,59 +16,6 @@ logger = logging.getLogger("uvicorn")
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-def parse_motd_commands(motd_text):
-    """Parse MOTD text and count command lines (non-empty, non-title lines)"""
-    if not motd_text:
-        return []
-    
-    commands = []
-    for line in motd_text.split('\n'):
-        line = line.strip()
-        # Conta le righe che sembrano comandi: contengono 'apk ', 'apt ', 'npm ', '--', etc.
-        # Esclude righe vuote, titoli (con ║, ═), note e sezioni
-        if (line and 
-            not any(c in line for c in ['║', '═', '╔', '╚', '╗', '╝']) and
-            not line.startswith('Note:') and
-            not line.startswith('⚠️') and
-            ' # ' in line):  # Ha un commento spiegativo
-            commands.append(line)
-    
-    return commands
-
-def clean_motd_text(motd_text):
-    """Clean MOTD text by removing box drawing characters and normalizing formatting"""
-    if not motd_text:
-        return ""
-    
-    # Box drawing characters da rimuovere
-    box_chars = ['╔', '╚', '╗', '╝', '║', '═', '─', '┌', '┐', '└', '┘', '│', '├', '┤', '┼']
-    
-    cleaned = motd_text
-    for char in box_chars:
-        cleaned = cleaned.replace(char, '')
-    
-    # Rimuovi righe che sono solo spazi o hanno solo dashes
-    lines = []
-    for line in cleaned.split('\n'):
-        # Rimuovi righe con solo caratteri di disegno
-        if line.strip() and not all(c in '─═ ' for c in line):
-            lines.append(line.rstrip())
-        elif line.strip():  # Mantieni righe non vuote
-            lines.append(line.rstrip())
-    
-    # Rimuovi righe vuote multiple consecutive
-    result = []
-    prev_empty = False
-    for line in lines:
-        if not line.strip():
-            if not prev_empty:
-                result.append('')
-            prev_empty = True
-        else:
-            result.append(line)
-            prev_empty = False
-    
-    return '\n'.join(result).strip()
 
 def enrich_image_data(config):
     """Add motd_commands and clean motd to each image config"""
@@ -77,9 +24,10 @@ def enrich_image_data(config):
         enriched_data = img_data.copy()
         motd = img_data.get('motd', '')
         enriched_data['motd_commands'] = parse_motd_commands(motd)
-        enriched_data['motd'] = clean_motd_text(motd)  # Pulisci il testo
+        enriched_data['motd'] = clean_motd_text(motd)
         enriched[img_name] = enriched_data
     return enriched
+
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -105,7 +53,7 @@ async def dashboard(request: Request):
         for img_name in sorted_config.keys():
             features_dict[img_name] = get_container_features(img_name, sorted_config)
         
-        # Enrich config with parsed MOTD commands e testo pulito (DOPO get_container_features)
+        # Enrich config with parsed MOTD commands and cleaned text
         sorted_config = enrich_image_data(sorted_config)
         
         # Categories
@@ -128,6 +76,7 @@ async def dashboard(request: Request):
     except Exception as e:
         logger.error("Error loading dashboard: %s", str(e))
         raise HTTPException(500, f"Error loading dashboard: {str(e)}")
+
 
 @router.get("/manage", response_class=HTMLResponse)
 async def manage_page(request: Request):
@@ -170,6 +119,7 @@ async def manage_page(request: Request):
     except Exception as e:
         logger.error("Error loading manage page: %s", str(e))
         raise HTTPException(500, str(e))
+
 
 @router.get("/add-container", response_class=HTMLResponse)
 async def add_container_page(request: Request):

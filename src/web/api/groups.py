@@ -1,21 +1,17 @@
 from fastapi import APIRouter, HTTPException
-from datetime import datetime
 import asyncio
 import uuid
 import logging
-from typing import Dict, Any
 
 from src.web.core.config import load_config
 from src.web.core.docker import (
     start_single_container_sync, stop_single_container_sync,
-    docker_client, get_stop_timeout
+    docker_client
 )
+from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
-
-# Global state for operations
-active_operations: Dict[str, dict] = {}
 
 
 @router.post("/api/start-group/{group_name}")
@@ -40,18 +36,12 @@ async def start_group(group_name: str):
         logger.info("Starting group '%s' with %d containers", group_name, len(containers))
         
         operation_id = str(uuid.uuid4())
-        active_operations[operation_id] = {
-            "status": "running",
-            "started_at": datetime.now().isoformat(),
-            "total": len(containers),
-            "started": 0,
-            "already_running": 0,
-            "failed": 0,
-            "operation": "start_group",
-            "group_name": group_name,
-            "containers": [],
-            "errors": []
-        }
+        create_operation(
+            operation_id,
+            "start_group",
+            total=len(containers),
+            group_name=group_name
+        )
         
         asyncio.create_task(start_group_background(operation_id, group_name, containers, images))
         
@@ -93,13 +83,14 @@ async def start_group_background(operation_id: str, group_name: str, containers:
                     errors.append(f"{result['name']}: {result.get('error', 'Unknown')}")
                 
                 # Update progress
-                active_operations[operation_id].update({
-                    "started": len(started),
-                    "already_running": len(already_running),
-                    "failed": len(failed),
-                    "errors": errors,
-                    "containers": started + already_running
-                })
+                update_operation(
+                    operation_id,
+                    started=len(started),
+                    already_running=len(already_running),
+                    failed=len(failed),
+                    errors=errors,
+                    containers=started + already_running
+                )
             
             except Exception as e:
                 error_msg = f"Error processing {container_name}: {str(e)}"
@@ -110,18 +101,11 @@ async def start_group_background(operation_id: str, group_name: str, containers:
         logger.info("Group '%s' completed: %d started, %d running, %d failed",
                    group_name, len(started), len(already_running), len(failed))
         
-        active_operations[operation_id].update({
-            "status": "completed",
-            "completed_at": datetime.now().isoformat()
-        })
+        complete_operation(operation_id)
     
     except Exception as e:
         logger.error("Error in start_group_background: %s", str(e))
-        active_operations[operation_id].update({
-            "status": "error",
-            "error": str(e),
-            "completed_at": datetime.now().isoformat()
-        })
+        fail_operation(operation_id, str(e))
 
 
 @router.post("/api/stop-group/{group_name}")
@@ -140,18 +124,12 @@ async def stop_group(group_name: str):
             raise HTTPException(400, f"Group '{group_name}' has no containers")
         
         operation_id = str(uuid.uuid4())
-        active_operations[operation_id] = {
-            "status": "running",
-            "started_at": datetime.now().isoformat(),
-            "total": len(containers),
-            "stopped": 0,
-            "not_running": 0,
-            "failed": 0,
-            "operation": "stop_group",
-            "group_name": group_name,
-            "containers": [],
-            "errors": []
-        }
+        create_operation(
+            operation_id,
+            "stop_group",
+            total=len(containers),
+            group_name=group_name
+        )
         
         asyncio.create_task(stop_group_background(operation_id, group_name, containers, images))
         
@@ -188,13 +166,14 @@ async def stop_group_background(operation_id: str, group_name: str, containers: 
                     failed.append(result["name"])
                     errors.append(result.get("error", f"Unknown error for {result['name']}"))
                 
-                active_operations[operation_id].update({
-                    "stopped": len(stopped),
-                    "not_running": len(not_running),
-                    "failed": len(failed),
-                    "errors": errors,
-                    "containers": stopped
-                })
+                update_operation(
+                    operation_id,
+                    stopped=len(stopped),
+                    not_running=len(not_running),
+                    failed=len(failed),
+                    errors=errors,
+                    containers=stopped
+                )
             
             except Exception as e:
                 error_msg = f"Error processing {container_name}: {str(e)}"
@@ -202,18 +181,11 @@ async def stop_group_background(operation_id: str, group_name: str, containers: 
                 failed.append(container_name)
                 errors.append(error_msg)
         
-        active_operations[operation_id].update({
-            "status": "completed",
-            "completed_at": datetime.now().isoformat()
-        })
+        complete_operation(operation_id)
     
     except Exception as e:
         logger.error("Error in stop_group_background: %s", str(e))
-        active_operations[operation_id].update({
-            "status": "error",
-            "error": str(e),
-            "completed_at": datetime.now().isoformat()
-        })
+        fail_operation(operation_id, str(e))
 
 
 @router.get("/api/group-status/{group_name}")
@@ -260,6 +232,10 @@ async def get_group_status(group_name: str):
 @router.get("/api/operation-status/{operation_id}")
 async def get_operation_status(operation_id: str):
     """Get status of async operation"""
-    if operation_id not in active_operations:
+    from src.web.core.state import get_operation
+    
+    operation = get_operation(operation_id)
+    if not operation:
         raise HTTPException(404, "Operation not found")
-    return active_operations[operation_id]
+    
+    return operation

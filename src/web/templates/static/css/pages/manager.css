@@ -3,6 +3,200 @@
    ============================================ */
 
 /* ============================================
+   ACCORDION STYLES
+   ============================================ */
+
+.accordion-section {
+    margin-bottom: 16px;
+}
+
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.3s;
+    user-select: none;
+}
+
+.accordion-header:hover {
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+}
+
+.accordion-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.accordion-toggle {
+    font-size: 20px;
+    transition: transform 0.3s;
+    flex-shrink: 0;
+}
+
+.accordion-toggle.open {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: white;
+    border-radius: 0 0 12px 12px;
+}
+
+.accordion-content.open {
+    transition: max-height 0.4s ease-in;
+}
+
+.accordion-body {
+    padding: 24px;
+}
+
+.accordion-header.info {
+    background: linear-gradient(135deg, var(--info) 0%, #3182ce 100%);
+}
+
+.accordion-header.success {
+    background: linear-gradient(135deg, var(--success) 0%, #38a169 100%);
+}
+
+.accordion-header.warning {
+    background: linear-gradient(135deg, var(--warning) 0%, #dd6b20 100%);
+}
+
+/* ============================================
+   HEALTH STATUS BAR
+   ============================================ */
+
+.health-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--primary-light) 0%, white 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--primary);
+    animation: slideDown 0.4s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.health-status-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.health-status-badge {
+    font-size: 20px;
+}
+
+.health-status-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    color: var(--dark);
+}
+
+.health-status-info p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.health-status-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ============================================
+   HEALTH WARNINGS CONTAINER
+   ============================================ */
+
+.health-warnings-container {
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.health-alert {
+    padding: 16px 20px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border-left: 4px solid;
+    display: flex;
+    gap: 12px;
+    animation: slideDown 0.3s ease-out;
+}
+
+.alert-critical {
+    background: #fee2e2;
+    border-left-color: var(--danger);
+    color: #991b1b;
+}
+
+.alert-warning {
+    background: #fef3c7;
+    border-left-color: var(--warning);
+    color: #92400e;
+}
+
+.alert-info {
+    background: #dbeafe;
+    border-left-color: var(--info);
+    color: #1e40af;
+}
+
+.alert-success {
+    background: #dcfce7;
+    border-left-color: var(--success);
+    color: #166534;
+}
+
+.alert-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.alert-content ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+}
+
+.alert-content li {
+    margin: 4px 0;
+}
+
+/* ============================================
    STATS GRID
    ============================================ */
 
@@ -20,7 +214,7 @@
     box-shadow: var(--shadow-md);
     display: flex;
     align-items: center;
-    /*gap: 20px;*/
+    gap: 20px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border);
     position: relative;
@@ -83,26 +277,6 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
-}
-
-/* ============================================
-   MANAGER SECTION
-   ============================================ */
-
-.manager-section {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: var(--shadow-md);
-    margin-bottom: 30px;
-    border: 1px solid var(--border);
-}
-
-.manager-section h2 {
-    margin: 0 0 24px 0;
-    font-size: 1.3rem;
-    color: var(--dark);
-    font-weight: 700;
 }
 
 /* ============================================
@@ -227,40 +401,12 @@
     font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 }
 
-/* ============================================
-   ACTIVE CONTAINERS LIST
-   ============================================ */
-
-#active-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.active-container-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: white;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    font-size: 13px;
-    transition: all 0.2s;
-}
-
-.active-container-item:hover {
-    background: var(--light-secondary);
-    border-color: #cbd5e1;
-}
-
-.container-status {
-    font-size: 11px;
-    padding: 4px 8px;
-    background: var(--success);
-    color: white;
+.stat-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
     border-radius: 4px;
-    font-weight: 600;
+    overflow: hidden;
 }
 
 /* ============================================
@@ -288,10 +434,6 @@
     padding-bottom: 12px;
     border-bottom: 2px solid var(--border);
 }
-
-/* ============================================
-   CATEGORY ITEM
-   ============================================ */
 
 .category-item {
     background: white;
@@ -380,48 +522,39 @@
 }
 
 /* ============================================
-   BACKUPS TABLE
+   ACTIVE CONTAINERS LIST
    ============================================ */
 
-.backups-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 8px;
-    margin-top: 16px;
+#active-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.backups-table th {
-    text-align: left;
-    padding: 12px 16px;
-    background: var(--light-secondary);
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-radius: 6px;
-}
-
-.backups-table td {
-    padding: 12px 16px;
+.active-container-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
     background: white;
+    border-radius: 6px;
     border: 1px solid var(--border);
     font-size: 13px;
-    color: var(--dark);
+    transition: all 0.2s;
 }
 
-.backups-table tr td:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-.backups-table tr td:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
-
-.backups-table tbody tr:hover td {
+.active-container-item:hover {
     background: var(--light-secondary);
+    border-color: #cbd5e1;
+}
+
+.container-status {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: var(--success);
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
 }
 
 /* ============================================
@@ -436,10 +569,6 @@
     .stat-card {
         flex-direction: column;
         text-align: center;
-    }
-
-    .manager-section {
-        padding: 20px;
     }
 
     .action-grid {
@@ -469,20 +598,86 @@
     .category-actions .btn {
         flex: 1;
     }
+
+    .health-status-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .health-status-actions {
+        width: 100%;
+    }
+
+    .health-status-actions .btn {
+        flex: 1;
+    }
+
+    .accordion-header h2 {
+        font-size: 1rem;
+    }
+
+    .accordion-header {
+        padding: 16px;
+    }
+
+    .accordion-body {
+        padding: 16px;
+    }
 }
 
 /* ============================================
    DARK MODE - MANAGER PAGE
    ============================================ */
 
-html.dark-mode .manager-section {
+html.dark-mode .accordion-header {
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+}
+
+html.dark-mode .accordion-content {
     background: #1a202c;
-    border-color: #4a5568;
+}
+
+html.dark-mode .accordion-body {
+    background: #1a202c;
     color: #e2e8f0;
 }
 
-html.dark-mode .manager-section h2 {
+html.dark-mode .health-status-bar {
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    border-left-color: var(--primary);
+}
+
+html.dark-mode .health-status-info h3 {
     color: #e2e8f0;
+}
+
+html.dark-mode .health-status-info p {
+    color: #a0aec0;
+}
+
+html.dark-mode .alert-critical {
+    background: #4a1f1f;
+    border-left-color: var(--danger);
+    color: #fca5a5;
+}
+
+html.dark-mode .alert-warning {
+    background: #3d2a10;
+    border-left-color: var(--warning);
+    color: #fcd34d;
+}
+
+html.dark-mode .alert-info {
+    background: #1e3a5f;
+    border-left-color: var(--info);
+    color: #93c5fd;
+}
+
+html.dark-mode .alert-success {
+    background: #1d4a2c;
+    border-left-color: var(--success);
+    color: #86efac;
 }
 
 html.dark-mode .stat-card {
@@ -597,20 +792,4 @@ html.dark-mode .active-container-item:hover {
 html.dark-mode .container-status {
     background: var(--success);
     color: white;
-}
-
-html.dark-mode .backups-table th {
-    background: #2d3748;
-    color: #a0aec0;
-    border-color: #4a5568;
-}
-
-html.dark-mode .backups-table td {
-    background: #1a202c;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-html.dark-mode .backups-table tbody tr:hover td {
-    background: #2d3748;
 }

@@ -17,6 +17,7 @@ logger = logging.getLogger("uvicorn")
 # Ensure custom.d exists
 CUSTOM_CONFIG_DIR.mkdir(exist_ok=True)
 
+
 class CustomDumper(yaml.SafeDumper):
     """Custom YAML dumper for multiline strings"""
     def represent_str(self, data):
@@ -25,6 +26,7 @@ class CustomDumper(yaml.SafeDumper):
         return self.represent_scalar('tag:yaml.org,2002:str', data)
 
 CustomDumper.add_representer(str, CustomDumper.represent_str)
+
 
 @router.get("/api/export-config")
 async def export_config():
@@ -63,6 +65,7 @@ async def export_config():
     except Exception as e:
         logger.error("Error exporting config: %s", str(e))
         raise HTTPException(500, f"Error exporting config: {str(e)}")
+
 
 @router.post("/api/add-container")
 async def add_container_config(request: Request):
@@ -136,6 +139,7 @@ async def add_container_config(request: Request):
         logger.error("Error adding container: %s", str(e))
         raise HTTPException(500, f"Failed to add container: {str(e)}")
 
+
 @router.post("/api/validate-image")
 async def validate_image(request: Request):
     """Validate Docker image"""
@@ -155,14 +159,14 @@ async def validate_image(request: Request):
                 "size": f"{image.attrs['Size'] / (1024*1024):.2f} MB",
                 "created": image.attrs['Created'][:10]
             }
-        except docker.errors.ImageNotFound:
-            return {"exists": False, "error": "Image not found"}
-        except docker.errors.APIError as e:
+        except Exception as e:
+            logger.warning("Image validation failed for %s: %s", image_name, str(e))
             return {"exists": False, "error": str(e)}
     
     except Exception as e:
         logger.error("Error validating image: %s", str(e))
         raise HTTPException(500, str(e))
+
 
 @router.post("/api/detect-shell")
 async def detect_shell(request: Request):
@@ -205,6 +209,7 @@ async def detect_shell(request: Request):
         logger.error("Error detecting shell: %s", str(e))
         return {"shell": "/bin/sh"}
 
+
 @router.get("/api/logs")
 async def get_server_logs():
     """Get server logs"""
@@ -214,6 +219,7 @@ async def get_server_logs():
             logs = f.read()
         return PlainTextResponse(logs)
     return PlainTextResponse("No logs found")
+
 
 @router.get("/api/backups")
 async def get_backups():
@@ -245,6 +251,7 @@ async def get_backups():
         logger.error("Error listing backups: %s", str(e))
         raise HTTPException(500, str(e))
 
+
 @router.get("/api/download-backup/{category}/{filename}")
 async def download_backup(category: str, filename: str):
     """Download backup file"""
@@ -252,6 +259,7 @@ async def download_backup(category: str, filename: str):
     if not backup_path.exists():
         raise HTTPException(404, "Backup not found")
     return FileResponse(str(backup_path), filename=filename, media_type="application/octet-stream")
+
 
 @router.get("/debug-config")
 async def debug_config():
@@ -284,14 +292,20 @@ async def debug_config():
     except Exception as e:
         return {"error": str(e)}
 
-def cleanup_temp_files(age_hours=1):
-    """Cleanup old temp files"""
+
+def cleanup_temp_files(age_hours: int = 1) -> int:
+    """Cleanup old temp files and return count removed"""
     temp_dir = tempfile.gettempdir()
     cutoff = datetime.now() - timedelta(hours=age_hours)
+    removed_count = 0
+    
     for temp_file in glob.glob(f"{temp_dir}/*.yml"):
-        if os.path.getmtime(temp_file) < cutoff.timestamp():
-            try:
+        try:
+            if os.path.getmtime(temp_file) < cutoff.timestamp():
                 os.unlink(temp_file)
                 logger.info("Deleted old temp file: %s", temp_file)
-            except Exception as e:
-                logger.warning("Error deleting temp file: %s", str(e))
+                removed_count += 1
+        except Exception as e:
+            logger.warning("Error deleting temp file %s: %s", temp_file, str(e))
+    
+    return removed_count
