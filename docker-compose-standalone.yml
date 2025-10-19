@@ -1,5 +1,5 @@
 services:
-  playground:
+  docker-compose-playground:
     build:
       context: .
       dockerfile: Dockerfile

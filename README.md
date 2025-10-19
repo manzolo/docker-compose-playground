@@ -187,7 +187,7 @@ Run Docker Playground Manager as a standalone container using `docker-compose-st
    - Stop and remove: `make docker-down`
    - Run CLI commands inside the container:
      ```bash
-     docker exec playground-manager /app/playground list
+     docker exec docker-compose-playground /app/playground list
      ```
    - Run tests inside the container:
      ```bash
@@ -199,7 +199,7 @@ Run Docker Playground Manager as a standalone container using `docker-compose-st
   If you see this error in the logs (`make docker-logs`), the Docker CLI may not be installed or cannot access the Docker daemon:
   - Verify Docker CLI is installed in the container:
     ```bash
-    docker exec playground-manager docker --version
+    docker exec docker-compose-playground docker --version
     ```
     If it fails, rebuild the image with `make docker-build`.
   - Check Docker socket permissions:
@@ -323,7 +323,7 @@ Start the group:
 # CLI (Local or Docker)
 playground group start dev-stack
 # Docker
-docker exec playground-manager /app/playground group start dev-stack
+docker exec docker-compose-playground /app/playground group start dev-stack
 
 # Web UI
 Dashboard → Groups → dev-stack → Start
@@ -408,7 +408,7 @@ Container appears immediately in all interfaces.
 ./playground group start PHP-MySQL-Stack
 ./playground ps
 # Docker
-docker exec playground-manager /app/playground group start PHP-MySQL-Stack
+docker exec docker-compose-playground /app/playground group start PHP-MySQL-Stack
 ```
 
 ### Create Database Backup (any interface)
@@ -422,7 +422,7 @@ The `pre_stop` script in PostgreSQL config automatically creates backups when st
 # CLI (Local)
 ./playground exec postgres-16
 # CLI (Docker)
-docker exec playground-manager /app/playground exec postgres-16
+docker exec docker-compose-playground /app/playground exec postgres-16
 
 # TUI
 ./playground.sh → Enter a container → Select postgres-16
@@ -467,7 +467,7 @@ echo "test" > shared-volumes/file.txt
 # From container
 playground exec alpine "cat /shared/file.txt"
 # Docker
-docker exec playground-manager /app/playground exec alpine "cat /shared/file.txt"
+docker exec docker-compose-playground /app/playground exec alpine "cat /shared/file.txt"
 ```
 
 ### Network Communication
@@ -477,7 +477,7 @@ Containers can communicate using their names:
 playground exec nginx "ping postgres-16"
 playground exec nginx "curl http://redis:6379"
 # Docker
-docker exec playground-manager /app/playground exec nginx "ping postgres-16"
+docker exec docker-compose-playground /app/playground exec nginx "ping postgres-16"
 ```
 
 ## 📝 Logging
@@ -530,7 +530,7 @@ make docker-logs             # Docker
   If you see this error in the logs (`make docker-logs`), the Docker CLI may not be installed or cannot access the Docker daemon:
   - Verify Docker CLI is installed in the container:
     ```bash
-    docker exec playground-manager docker --version
+    docker exec docker-compose-playground docker --version
     ```
     If it fails, rebuild the image with `make docker-build`.
   - Check Docker socket permissions:
