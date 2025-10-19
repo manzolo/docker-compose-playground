@@ -54,8 +54,7 @@
             <div class="search-section">
                 <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
                 <span class="search-count" id="search-count"></span>
-                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()"
-                    title="Clear search">
+                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()" title="Clear search">
                     ✕
                 </button>
             </div>
@@ -85,8 +84,7 @@
             </div>
 
             <div class="bulk-actions">
-                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()"
-                    title="Stop all running containers">
+                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()" title="Stop all running containers">
                     <span class="btn-icon">⏹</span> Stop All
                 </button>
             </div>
@@ -129,12 +127,10 @@
                     </div>
 
                     <div class="group-actions">
-                        <button onclick="GroupOperations.startGroup('{{ group_name }}')"
-                            class="btn btn-success btn-block group-start-btn">
+                        <button onclick="GroupOperations.startGroup('{{ group_name }}')" class="btn btn-success btn-block group-start-btn">
                             <span class="btn-icon">🚀</span> Start Stack
                         </button>
-                        <button onclick="GroupOperations.stopGroup('{{ group_name }}')"
-                            class="btn btn-danger btn-sm group-stop-btn">
+                        <button onclick="GroupOperations.stopGroup('{{ group_name }}')" class="btn btn-danger btn-sm group-stop-btn">
                             <span class="btn-icon">⏹</span> Stop All
                         </button>
                     </div>
@@ -157,8 +153,7 @@
             {% set feature = features.get(name, {}) %}
             {% set running_info = running.get(name) %}
 
-            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
-                data-container="playground-{{ name }}">
+            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}" data-container="playground-{{ name }}">
                 <div class="card-header">
                     <h3>{{ name }}</h3>
                     <div class="header-badges">
@@ -209,17 +204,49 @@
                 </div>
                 {% endif %}
 
+                <!-- Stats Panel (Hidden by default, shown when Stats button clicked) -->
+                <div id="stats-panel-{{ name }}" class="stats-panel" style="display: none;">
+                    <div class="stat-item">
+                        <span class="stat-label">CPU</span>
+                        <div class="stat-bar">
+                            <div class="stat-cpu-bar"></div>
+                        </div>
+                        <span class="stat-cpu-text">--</span>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <span class="stat-label">Memory</span>
+                        <div class="stat-bar">
+                            <div class="stat-memory-bar"></div>
+                        </div>
+                        <span class="stat-memory-text">--</span>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <span class="stat-label">Network</span>
+                        <span class="stat-network-text">--</span>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <span class="stat-label">I/O</span>
+                        <span class="stat-io-text">--</span>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <span class="stat-label">Processes</span>
+                        <span class="stat-processes-text">--</span>
+                    </div>
+                </div>
+
                 <div class="card-actions">
                     {% if running_info %}
-                    <button class="btn btn-danger"
-                        onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
+                    <button class="btn btn-danger" onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
                         <span class="btn-icon">⏹</span> Stop
                     </button>
                     <button class="btn btn-primary" onclick="showLogs('{{ running_info.name }}')">
                         <span class="btn-icon">📋</span> Logs
                     </button>
-                    <button class="btn btn-success"
-                        onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
+                    <button class="btn btn-success" onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
                         <span class="btn-icon">💻</span> Console
                     </button>
                     {% else %}
@@ -228,6 +255,22 @@
                     </button>
                     {% endif %}
                 </div>
+
+                <!-- Quick Actions (for running containers) -->
+                {% if running_info %}
+                <!--
+                <div class="card-quick-actions">
+                    <button class="btn btn-sm btn-info" onclick="MonitoringStatsManager.startMonitoring('{{ running_info.name }}')" title="Show live stats">
+                        <span class="btn-icon">📊</span> Stats
+                    </button>
+                    <button class="btn btn-sm btn-info" onclick="ExecuteCommandManager.open('{{ running_info.name }}', '{{ name }}')" title="Execute command">
+                        <span class="btn-icon">⚡</span> Command
+                    </button>
+                    <button class="btn btn-sm btn-info" onclick="ExecuteCommandManager.openDiagnostics('{{ running_info.name }}', '{{ name }}')" title="Run diagnostics">
+                        <span class="btn-icon">🔍</span> Diagnose
+                    </button>
+                </div>-->
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -284,6 +327,76 @@
         </div>
     </div>
 
+    <!-- Command Executor Modal -->
+    <div id="commandModal" class="modal">
+        <div class="modal-overlay" onclick="ExecuteCommandManager.close()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚡ Execute Command</h2>
+                <div class="modal-header-left">
+                    <div class="log-info">
+                        Container: <strong id="commandContainerName"></strong> | Image: <strong id="commandImageName"></strong>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="ExecuteCommandManager.close()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="command-input-group">
+                    <label for="commandInput">Command:</label>
+                    <input type="text" id="commandInput" placeholder="e.g., apt list --installed" autocomplete="off">
+                    <div class="command-input-help">💡 Examples: ps aux, df -h, netstat -tuln, env</div>
+                </div>
+                
+                <div class="command-output-group">
+                    <label>Output:</label>
+                    <pre id="commandOutput" class="command-output"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="ExecuteCommandManager.clearOutput()">Clear</button>
+                <button class="btn btn-secondary btn-sm" onclick="ExecuteCommandManager.copyOutput()">Copy Output</button>
+                <button class="btn btn-primary" onclick="ExecuteCommandManager.executeCommand()">Execute</button>
+                <button class="btn btn-secondary" onclick="ExecuteCommandManager.close()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagnostics Modal -->
+    <div id="diagnosticsModal" class="modal">
+        <div class="modal-overlay" onclick="ExecuteCommandManager.closeDiagnostics()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>🔍 Container Diagnostics</h2>
+                <div class="modal-header-left">
+                    <div class="log-info">
+                        Container: <strong id="diagnosticsContainerName"></strong> | Image: <strong id="diagnosticsImageName"></strong>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="ExecuteCommandManager.closeDiagnostics()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="diagnostics-tabs">
+                    <button class="diagnostics-tab-btn active" onclick="ExecuteCommandManager.switchTab('processes')">Processes</button>
+                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('disk')">Disk</button>
+                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('network')">Network</button>
+                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('environment')">Environment</button>
+                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('uptime')">Uptime</button>
+                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('logs')">Logs</button>
+                </div>
+                
+                <div id="diagnosticsProcesses" class="diagnostics-tab"></div>
+                <div id="diagnosticsDisk" class="diagnostics-tab" style="display: none;"></div>
+                <div id="diagnosticsNetwork" class="diagnostics-tab" style="display: none;"></div>
+                <div id="diagnosticsEnvironment" class="diagnostics-tab" style="display: none;"></div>
+                <div id="diagnosticsUptime" class="diagnostics-tab" style="display: none;"></div>
+                <div id="diagnosticsLogs" class="diagnostics-tab" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="ExecuteCommandManager.closeDiagnostics()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="confirmModal" class="modal"></div>
 
     <!-- Core Libraries -->
@@ -310,6 +423,9 @@
     <script src="/static/js/managers/motd-manager.js"></script>
     <script src="/static/js/managers/container-tag-manager.js"></script>
     <script src="/static/js/managers/filter-persistence-manager.js"></script>
+    <script src="/static/js/managers/monitoring-stats.js"></script>
+    <script src="/static/js/managers/execute-command.js"></script>
+    <script src="/static/js/managers/health-monitor.js"></script>
 
     <!-- Page-Specific Initialization -->
     <script src="/static/js/pages/page-init-dashboard.js"></script>

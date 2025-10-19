@@ -147,7 +147,8 @@ const FilterManager = {
             filterInput.value = '';
             filterInput.focus();
             this.applyFilters();
-            ToastManager.show('📄 Search cleared', 'info');
+            FilterPersistenceManager.clearSavedFilterState();
+            //ToastManager.show('📄 Search cleared', 'info');
         }
     },
 

@@ -1,3 +1,4 @@
+"""Script execution for container lifecycle management"""
 from pathlib import Path
 import subprocess
 import os
@@ -9,8 +10,23 @@ BASE_DIR = Path(__file__).parent.parent.parent.parent
 SCRIPTS_DIR = BASE_DIR / "scripts"
 SHARED_DIR = BASE_DIR / "shared-volumes"
 
-def execute_script(script_config, container_name: str, image_name: str):
-    """Execute post-start or pre-stop script"""
+
+def execute_script(script_config, container_name: str, image_name: str) -> None:
+    """Execute post-start or pre-stop script
+    
+    Supports two types of scripts:
+    1. Inline scripts: dict with 'inline' key containing bash code
+    2. File-based scripts: string path to bash script file
+    
+    Args:
+        script_config: Script configuration (dict or str)
+        container_name: Full container name (e.g., 'playground-ubuntu')
+        image_name: Image name without 'playground-' prefix
+    
+    Raises:
+        subprocess.TimeoutExpired: If script execution times out
+        Exception: On other script execution errors
+    """
     if not script_config:
         return
     

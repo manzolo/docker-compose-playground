@@ -6,10 +6,11 @@ import json
 
 from src.web.core.config import load_config, get_motd
 from src.web.core.docker import docker_client
-from src.web.utils.helpers import format_motd_for_terminal
+from src.web.utils.motd_processor import format_motd_for_terminal
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
+
 
 @router.websocket("/ws/console/{container}")
 async def websocket_console(websocket: WebSocket, container: str):
@@ -228,7 +229,6 @@ async def websocket_console(websocket: WebSocket, container: str):
                 await websocket.close()
                 logger.debug("WebSocket closed for container %s", container)
             except Exception as e:
-                # This is expected if WebSocket was already closed
                 logger.debug("WebSocket already closed for container %s: %s", container, str(e))
         else:
             logger.debug("WebSocket was already closed for container %s", container)

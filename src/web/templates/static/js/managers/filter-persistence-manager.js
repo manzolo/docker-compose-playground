@@ -91,7 +91,7 @@ const FilterPersistenceManager = {
         });
         
         FilterManager.applyFilters();
-        ToastManager.show('Filtri salvati cancellati', 'info');
+        //ToastManager.show('Filtri salvati cancellati', 'info');
     },
 
     /**

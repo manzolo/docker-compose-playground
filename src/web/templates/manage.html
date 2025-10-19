@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛠️ Advanced Manager - Docker Playground</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
-    
+
     <!-- CSS Modulari -->
     <link rel="stylesheet" href="/static/css/core/base.css">
     <link rel="stylesheet" href="/static/css/core/header.css">
@@ -32,7 +32,7 @@
             <div class="header-top">
                 <div>
                     <h1>🛠️ Advanced Manager</h1>
-                    <p class="subtitle">Bulk operations and system management</p>
+                    <p class="subtitle">System management and bulk operations</p>
                 </div>
                 <button id="darkModeToggle" class="dark-mode-btn" title="Toggle dark mode">
                     <span class="dark-mode-icon">🌙</span>
@@ -48,195 +48,262 @@
     </header>
 
     <div class="container">
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">📦</div>
-                <div class="stat-content">
-                    <div class="stat-value" id="stat-total">{{ total_images }}</div>
-                    <div class="stat-label">Total Containers</div>
+        <!-- Health Status Bar (Always Visible) -->
+        <div class="health-status-bar">
+            <div class="health-status-left">
+                <span class="health-status-badge" id="health-status-icon">🏥</span>
+                <div class="health-status-info">
+                    <h3>System Status: <span id="system-health-status" class="badge badge-status-healthy">HEALTHY</span>
+                    </h3>
+                    <p id="health-status-text">All systems operational</p>
                 </div>
             </div>
-            <div class="stat-card stat-success">
-                <div class="stat-icon">▶</div>
-                <div class="stat-content">
-                    <div class="stat-value" id="stat-running">{{ running_count }}</div>
-                    <div class="stat-label">Running</div>
-                </div>
-            </div>
-            <div class="stat-card stat-warning">
-                <div class="stat-icon">⏹</div>
-                <div class="stat-content">
-                    <div class="stat-value" id="stat-stopped">{{ stopped_count }}</div>
-                    <div class="stat-label">Stopped</div>
-                </div>
-            </div>
-            <div class="stat-card stat-info">
-                <div class="stat-icon">🌐</div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ network_info.name }}</div>
-                    <div class="stat-label">Network</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bulk Operations -->
-        <div class="manager-section">
-            <h2>🚀 Bulk Operations</h2>
-            <div class="action-grid">
-                <button class="action-card" onclick="CategoryOperations.startByCategory()">
-                    <span class="action-icon">▶</span>
-                    <h3>Start by Category</h3>
-                    <p>Start multiple containers from a specific category</p>
+            <div class="health-status-actions">
+                <button class="btn btn-sm btn-primary" onclick="HealthMonitorManager.checkSystemHealth()">
+                    🔄 Refresh
                 </button>
-
-                <button class="action-card action-danger" onclick="ManagerOperations.stopAll()">
-                    <span class="action-icon">⏹</span>
-                    <h3>Stop All</h3>
-                    <p>Stop all running containers at once</p>
-                </button>
-
-                <button class="action-card action-warning" onclick="ManagerOperations.restartAll()">
-                    <span class="action-icon">🔄</span>
-                    <h3>Restart All</h3>
-                    <p>Restart all running containers</p>
-                </button>
-
-                <button class="action-card action-danger" onclick="ManagerOperations.cleanupAll()">
-                    <span class="action-icon">🧹</span>
-                    <h3>Cleanup All</h3>
-                    <p>Stop and remove ALL containers</p>
+                <button class="btn btn-sm btn-info" onclick="HealthMonitorManager.checkPortConflicts()">
+                    🔌 Check Ports
                 </button>
             </div>
         </div>
 
-        <!-- System Information -->
-        <div class="manager-section">
-            <h2>📊 System Information</h2>
-            <div class="info-grid">
-                <div class="info-card">
-                    <h3>🐳 Docker Info</h3>
-                    <pre id="docker-info">Loading...</pre>
-                </div>
-                <div class="info-card">
-                    <h3>🌐 Network Details</h3>
-                    <pre id="network-info">Loading...</pre>
-                </div>
-                <div class="info-card">
-                    <h3>💾 Volume Info</h3>
-                    <pre id="volume-info">Loading...</pre>
-                </div>
-                <div class="info-card">
-                    <h3>📋 Active Containers</h3>
-                    <div id="active-list">Loading...</div>
+        <!-- Health Warnings -->
+        <div id="health-warnings" class="health-warnings-container"></div>
+
+        <!-- ACCORDION 1: Bulk Operations -->
+        <div class="accordion-section">
+            <div class="accordion-header success" onclick="ManagerAccordion.toggle(this)">
+                <h2>🚀 Bulk Operations</h2>
+                <span class="accordion-toggle">▼</span>
+            </div>
+            <div class="accordion-content open">
+                <div class="accordion-body">
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Perform operations on multiple containers
+                        at once</p>
+                    <div class="action-grid">
+                        <button class="action-card" onclick="CategoryOperations.startByCategory()">
+                            <span class="action-icon">▶</span>
+                            <h3>Start by Category</h3>
+                            <p>Start all containers in a specific category</p>
+                        </button>
+
+                        <button class="action-card action-danger" onclick="ManagerOperations.stopAll()">
+                            <span class="action-icon">⏹</span>
+                            <h3>Stop All</h3>
+                            <p>Stop all running containers</p>
+                        </button>
+
+                        <button class="action-card action-warning" onclick="ManagerOperations.restartAll()">
+                            <span class="action-icon">🔄</span>
+                            <h3>Restart All</h3>
+                            <p>Restart all running containers</p>
+                        </button>
+
+                        <button class="action-card action-danger" onclick="ManagerOperations.cleanupAll()">
+                            <span class="action-icon">🧹</span>
+                            <h3>Cleanup All</h3>
+                            <p>Stop and remove ALL containers</p>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="manager-section">
-            <h2>📚 Browse by Category & Groups</h2>
+        <!-- ACCORDION 2: Tools & Utilities -->
+        <div class="accordion-section">
+            <div class="accordion-header warning" onclick="ManagerAccordion.toggle(this)">
+                <h2>🔧 Tools & Utilities</h2>
+                <span class="accordion-toggle">▼</span>
+            </div>
+            <div class="accordion-content open">
+                <div class="accordion-body">
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Manage configuration, backups, and logs
+                    </p>
+                    <div class="action-grid">
+                        <button class="action-card action-info" onclick="BackupExportManager.exportConfig()">
+                            <span class="action-icon">📄</span>
+                            <h3>Export Configuration</h3>
+                            <p>Download configuration as YAML</p>
+                        </button>
 
-            <!-- Groups Section -->
-            {% if groups %}
-            <div class="browser-subsection">
-                <h3 class="subsection-title">🚀 Application Stacks ({{ groups|length }})</h3>
-                <div class="category-browser">
-                    {% for group_name, group in groups.items() %}
-                    <div class="category-item group-item">
-                        <div class="category-header">
-                            <div class="category-info">
-                                <span class="category-icon">🚀</span>
-                                <div>
-                                    <span class="category-name">{{ group.name }}</span>
-                                    <span class="category-description">{{ group.description }}</span>
+                        <button class="action-card action-info" onclick="BackupExportManager.showServerLogs()">
+                            <span class="action-icon">📋</span>
+                            <h3>View Server Logs</h3>
+                            <p>Check application logs</p>
+                        </button>
+
+                        <button class="action-card action-info" onclick="BackupExportManager.showBackups()">
+                            <span class="action-icon">💾</span>
+                            <h3>Manage Backups</h3>
+                            <p>View and download backups</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACCORDION 3: System Metrics -->
+        <div class="accordion-section">
+            <div class="accordion-header info" onclick="ManagerAccordion.toggle(this)">
+                <h2>📊 System Metrics</h2>
+                <span class="accordion-toggle">▼</span>
+            </div>
+            <div class="accordion-content open">
+                <div class="accordion-body">
+                    <!-- Detailed Info Grid -->
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h3>🐳 Docker</h3>
+                            <pre>Version: <span id="docker-version">--</span>
+Containers: <span id="docker-containers">--</span>
+Memory: <span id="docker-memory">--</span></pre>
+                        </div>
+                        <div class="info-card">
+                            <h3>📦 Containers Status</h3>
+                            <pre>Total: <span id="containers-total">--</span>
+Running: <span id="containers-running">--</span>
+Stopped: <span id="containers-stopped">--</span></pre>
+                        </div>
+                        <div class="info-card">
+                            <h3>💾 Disk Usage</h3>
+                            <div class="stat-bar"
+                                style="margin: 10px 0; height: 8px; background: var(--border); border-radius: 4px;">
+                                <div id="disk-usage-bar"
+                                    style="height: 100%; width: 50%; border-radius: 4px; transition: all 0.3s;"></div>
+                            </div>
+                            <span id="disk-usage-text">--</span>
+                        </div>
+                        <div class="info-card">
+                            <h3>📁 Shared Volume</h3>
+                            <pre>Size: <span id="volume-size">--</span></pre>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards Grid -->
+                    <div class="stats-grid" style="margin-top: 30px;">
+                        <div class="stat-card">
+                            <div class="stat-icon">📦</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="stat-total">{{ total_images }}</div>
+                                <div class="stat-label">Total Containers</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-success">
+                            <div class="stat-icon">▶</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="stat-running">{{ running_count }}</div>
+                                <div class="stat-label">Running</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-warning">
+                            <div class="stat-icon">⏹</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="stat-stopped">{{ stopped_count }}</div>
+                                <div class="stat-label">Stopped</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-info">
+                            <div class="stat-icon">🌐</div>
+                            <div class="stat-content">
+                                <div class="stat-value">{{ network_info.name }}</div>
+                                <div class="stat-label">Network</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACCORDION 4: Browse -->
+        <div class="accordion-section">
+            <div class="accordion-header" onclick="ManagerAccordion.toggle(this)">
+                <h2>📚 Browse by Category & Groups</h2>
+                <span class="accordion-toggle">▼</span>
+            </div>
+            <div class="accordion-content">
+                <div class="accordion-body">
+                    <!-- Groups Section -->
+                    {% if groups %}
+                    <div class="browser-subsection">
+                        <h3 class="subsection-title">🚀 Application Stacks ({{ groups|length }})</h3>
+                        <div class="category-browser">
+                            {% for group_name, group in groups.items() %}
+                            <div class="category-item group-item">
+                                <div class="category-header">
+                                    <div class="category-info">
+                                        <span class="category-icon">🚀</span>
+                                        <div>
+                                            <span class="category-name">{{ group.name }}</span>
+                                            <span class="category-description">{{ group.description }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="category-count">{{ group.containers|length }} containers</span>
+                                </div>
+                                <div class="category-actions">
+                                    <button class="btn btn-sm btn-success"
+                                        onclick="GroupOperations.startGroup('{{ group_name }}')">
+                                        <span class="btn-icon">▶</span> Start
+                                    </button>
+                                    <button class="btn btn-sm btn-danger"
+                                        onclick="GroupOperations.stopGroup('{{ group_name }}')">
+                                        <span class="btn-icon">⏹</span> Stop
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="viewGroup('{{ group_name }}')">
+                                        <span class="btn-icon">👁</span> View
+                                    </button>
                                 </div>
                             </div>
-                            <span class="category-count">{{ group.containers|length }} containers</span>
-                        </div>
-                        <div class="category-actions">
-                            <button class="btn btn-sm btn-success" onclick="GroupOperations.startGroup('{{ group_name }}')">
-                                <span class="btn-icon">▶</span> Start Stack
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="GroupOperations.stopGroup('{{ group_name }}')">
-                                <span class="btn-icon">⏹</span> Stop Stack
-                            </button>
-                            <button class="btn btn-sm btn-primary" onclick="viewGroup('{{ group_name }}')">
-                                <span class="btn-icon">👁</span> View
-                            </button>
+                            {% endfor %}
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
+                    {% endif %}
 
-            <!-- Categories Section -->
-            <div class="browser-subsection">
-                <h3 class="subsection-title">📁 Individual Containers by Category ({{ categories|length }})</h3>
-                <div class="category-browser">
-                    {% for category, count in categories.items() %}
-                    <div class="category-item">
-                        <div class="category-header">
-                            <div class="category-info">
-                                <span class="category-icon">
-                                    {% if category == 'linux' %}🧠
-                                    {% elif category == 'programming' %}💻
-                                    {% elif category == 'database' %}🗄️
-                                    {% elif category == 'webserver' %}🌐
-                                    {% elif category == 'devops' %}⚙️
-                                    {% elif category == 'messaging' %}📨
-                                    {% elif category == 'monitoring' %}📊
-                                    {% elif category == 'ml' %}🤖
-                                    {% else %}📦
-                                    {% endif %}
-                                </span>
-                                <span class="category-name">{{ category|title }}</span>
+                    <!-- Categories Section -->
+                    <div class="browser-subsection">
+                        <h3 class="subsection-title">📁 Containers by Category ({{ categories|length }})</h3>
+                        <div class="category-browser">
+                            {% for category, count in categories.items() %}
+                            <div class="category-item">
+                                <div class="category-header">
+                                    <div class="category-info">
+                                        <span class="category-icon">
+                                            {% if category == 'linux' %}🧠
+                                            {% elif category == 'programming' %}💻
+                                            {% elif category == 'database' %}🗄️
+                                            {% elif category == 'webserver' %}🌐
+                                            {% elif category == 'devops' %}⚙️
+                                            {% elif category == 'messaging' %}📨
+                                            {% elif category == 'monitoring' %}📊
+                                            {% elif category == 'ml' %}🤖
+                                            {% else %}📦
+                                            {% endif %}
+                                        </span>
+                                        <span class="category-name">{{ category|title }}</span>
+                                    </div>
+                                    <span class="category-count">{{ count }} containers</span>
+                                </div>
+                                <div class="category-actions">
+                                    <button class="btn btn-sm btn-success"
+                                        onclick="event.stopPropagation(); CategoryOperations.startCategory('{{ category }}')">
+                                        <span class="btn-icon">▶</span> Start All
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="viewCategory('{{ category }}')">
+                                        <span class="btn-icon">👁</span> View
+                                    </button>
+                                </div>
                             </div>
-                            <span class="category-count">{{ count }} containers</span>
-                        </div>
-                        <div class="category-actions">
-                            <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); CategoryOperations.startCategory('{{ category }}')">
-                                <span class="btn-icon">▶</span> Start All
-                            </button>
-                            <button class="btn btn-sm btn-primary" onclick="viewCategory('{{ category }}')">
-                                <span class="btn-icon">👁</span> View
-                            </button>
+                            {% endfor %}
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
-            </div>
-        </div>
-
-        <!-- Export & Logs -->
-        <div class="manager-section">
-            <h2>🔤 Export & Logs</h2>
-            <div class="action-grid">
-                <button class="action-card action-info" onclick="BackupExportManager.exportConfig()">
-                    <span class="action-icon">📄</span>
-                    <h3>Export Configuration</h3>
-                    <p>Download current configuration as YAML</p>
-                </button>
-
-                <button class="action-card action-info" onclick="BackupExportManager.showServerLogs()">
-                    <span class="action-icon">📋</span>
-                    <h3>View Server Logs</h3>
-                    <p>Check application logs</p>
-                </button>
-
-                <button class="action-card action-info" onclick="BackupExportManager.showBackups()">
-                    <span class="action-icon">💾</span>
-                    <h3>Manage Backups</h3>
-                    <p>View and manage container backups</p>
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal confirm -->
+    <!-- Modals -->
     <div id="confirmModal" class="modal"></div>
 
-    <!-- Modal for Server Logs -->
     <div id="logModal" class="modal">
         <div class="modal-overlay" onclick="ModalManager.close('logModal')"></div>
         <div class="modal-content modal-large">
@@ -253,7 +320,6 @@
         </div>
     </div>
 
-    <!-- Modal for Backups -->
     <div id="backupsModal" class="modal">
         <div class="modal-overlay" onclick="ModalManager.close('backupsModal')"></div>
         <div class="modal-content modal-large">
@@ -270,7 +336,35 @@
         </div>
     </div>
 
-    <!-- Shared Modules -->
+    <div id="portConflictsModal" class="modal">
+        <div class="modal-overlay" onclick="ModalManager.close('portConflictsModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔌 Port Conflicts</h2>
+                <button class="modal-close" onclick="ModalManager.close('portConflictsModal')">&times;</button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="ModalManager.close('portConflictsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="validationModal" class="modal">
+        <div class="modal-overlay" onclick="ModalManager.close('validationModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✓ Configuration Validation</h2>
+                <button class="modal-close" onclick="ModalManager.close('validationModal')">&times;</button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="ModalManager.close('validationModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="/static/js/core/core-modules.js"></script>
     <script src="/static/js/core/api-service.js"></script>
     <script src="/static/js/core/dark-mode.js"></script>
@@ -289,9 +383,14 @@
     <script src="/static/js/managers/motd-manager.js"></script>
     <script src="/static/js/managers/container-tag-manager.js"></script>
     <script src="/static/js/managers/filter-persistence-manager.js"></script>
+    <script src="/static/js/managers/monitoring-stats.js"></script>
+    <script src="/static/js/managers/execute-command.js"></script>
+    <script src="/static/js/managers/health-monitor.js"></script>
 
-    <!-- Page-Specific Initialization -->
+    <!-- Page Initialization -->
+     <script src="/static/js/managers/accordion-manager.js"></script>
     <script src="/static/js/pages/page-init-manager.js"></script>
+    
 </body>
 
 </html>

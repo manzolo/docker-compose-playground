@@ -1,3 +1,4 @@
+"""Configuration loading and management"""
 from pathlib import Path
 from typing import Dict, Any
 import yaml
@@ -6,7 +7,7 @@ import logging
 
 logger = logging.getLogger("uvicorn")
 
-# Percorsi base
+# Base paths
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 CONFIG_DIR = BASE_DIR / "config.d"
 CUSTOM_CONFIG_DIR = BASE_DIR / "custom.d"
@@ -14,7 +15,14 @@ CONFIG_FILE = BASE_DIR / "config.yml"
 
 
 def _process_config(config: Dict[str, Any], source_name: str, images: Dict[str, Any], groups: Dict[str, Any]):
-    """Process a single config file and extract images and groups"""
+    """Process a single config file and extract images and groups
+    
+    Args:
+        config: Parsed YAML configuration dict
+        source_name: Name of the config file (for logging)
+        images: Accumulator dict for images
+        groups: Accumulator dict for groups
+    """
     if not config or not isinstance(config, dict):
         return
     
@@ -61,7 +69,19 @@ def _process_config(config: Dict[str, Any], source_name: str, images: Dict[str, 
 
 
 def load_config() -> Dict[str, Dict[str, Any]]:
-    """Load configuration from config.yml, config.d and custom.d"""
+    """Load configuration from config.yml, config.d and custom.d
+    
+    Configuration is loaded in this order:
+    1. config.yml (main config file)
+    2. config.d/ (additional configs)
+    3. custom.d/ (user-defined configs, highest priority)
+    
+    Returns:
+        dict: Dictionary with 'images' and 'groups' keys
+    
+    Raises:
+        HTTPException: If no valid configurations found or YAML parsing fails
+    """
     images = {}
     groups = {}
     
@@ -110,6 +130,14 @@ def load_config() -> Dict[str, Dict[str, Any]]:
 
 
 def get_motd(image_name: str, config: Dict[str, Any]) -> str:
-    """Get MOTD for image"""
+    """Get MOTD (Message of the Day) for an image
+    
+    Args:
+        image_name: Name of the container/image
+        config: Images configuration dict
+    
+    Returns:
+        str: MOTD text, empty string if not found
+    """
     img_data = config.get(image_name, {})
     return img_data.get('motd', '')

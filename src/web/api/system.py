@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-from datetime import datetime
 import asyncio
 import docker
 import uuid
@@ -13,12 +12,10 @@ from src.web.core.docker import (
     get_stop_timeout, prepare_volumes, ensure_named_volumes
 )
 from src.web.core.scripts import execute_script
+from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, get_operation
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
-
-# Import from groups for shared state
-from src.web.api.groups import active_operations
 
 
 @router.post("/api/start/{image_name}")
@@ -39,18 +36,14 @@ async def start_container(image_name: str):
             existing = docker_client.containers.get(container_name)
             if existing.status == "running":
                 operation_id = str(uuid.uuid4())
-                active_operations[operation_id] = {
-                    "status": "completed",
-                    "started_at": datetime.now().isoformat(),
-                    "completed_at": datetime.now().isoformat(),
-                    "total": 1,
-                    "started": 0,
-                    "already_running": 1,
-                    "failed": 0,
-                    "operation": "start",
-                    "container": container_name,
-                    "errors": []
-                }
+                create_operation(
+                    operation_id,
+                    "start",
+                    total=1,
+                    container=container_name
+                )
+                complete_operation(operation_id, started=0, already_running=1, failed=0)
+                
                 return {
                     "operation_id": operation_id,
                     "status": "already_running",
@@ -64,17 +57,12 @@ async def start_container(image_name: str):
         
         # Create operation
         operation_id = str(uuid.uuid4())
-        active_operations[operation_id] = {
-            "status": "running",
-            "started_at": datetime.now().isoformat(),
-            "total": 1,
-            "started": 0,
-            "already_running": 0,
-            "failed": 0,
-            "operation": "start",
-            "container": container_name,
-            "errors": []
-        }
+        create_operation(
+            operation_id,
+            "start",
+            total=1,
+            container=container_name
+        )
         
         # Start container in background
         asyncio.create_task(start_container_background(operation_id, image_name, img_data, container_name))
@@ -86,11 +74,11 @@ async def start_container(image_name: str):
         }
     
     except HTTPException:
-        # Re-raise HTTPException (404, 403, etc.)
         raise
     except Exception as e:
         logger.error(f"Failed to start {image_name}: {str(e)}")
         raise HTTPException(500, f"Failed to start container: {str(e)}")
+
 
 async def start_container_background(operation_id: str, image_name: str, img_data: dict, container_name: str):
     """Background task to start a single container with volume support"""
@@ -128,7 +116,7 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
             labels={"playground.managed": "true"}
         )
         
-        # Wait for container to be ready (max 30 seconds)
+        # Wait for container to be ready (max 60 seconds)
         max_wait = 60
         for i in range(max_wait):
             await asyncio.sleep(0.5)
@@ -144,13 +132,9 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
                         logger.info(f"Post-start script completed for {container_name}")
                     except Exception as e:
                         logger.warning(f"Failed to execute post-start script for {container_name}: {e}")
-                        active_operations[operation_id]["errors"].append(f"Post-start script error: {str(e)}")
+                        update_operation(operation_id, errors=[f"Post-start script error: {str(e)}"])
                 
-                active_operations[operation_id].update({
-                    "status": "completed",
-                    "started": 1,
-                    "completed_at": datetime.now().isoformat()
-                })
+                complete_operation(operation_id, started=1, already_running=0, failed=0)
                 logger.info(f"Container {container_name} started successfully")
                 return
             
@@ -162,13 +146,7 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Failed to start {image_name}: {error_msg}")
-        active_operations[operation_id].update({
-            "status": "error",
-            "failed": 1,
-            "error": error_msg,
-            "errors": [error_msg],
-            "completed_at": datetime.now().isoformat()
-        })
+        fail_operation(operation_id, error_msg, started=0, already_running=0, failed=1)
 
 
 @router.post("/stop/{container_name}")
@@ -215,13 +193,13 @@ async def stop_container(container_name: str):
         }
     
     except HTTPException:
-        # Re-raise HTTPException (404, 403, etc.)
         raise
     except docker.errors.NotFound:
         raise HTTPException(404, f"Container {container_name} not found")
     except Exception as e:
         logger.error(f"Failed to stop {container_name}: {str(e)}")
         raise HTTPException(500, f"Failed to stop container: {str(e)}")
+
 
 @router.post("/api/start-category/{category}")
 async def start_category(category: str):
@@ -293,13 +271,11 @@ async def stop_all():
     containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
     operation_id = str(uuid.uuid4())
     
-    active_operations[operation_id] = {
-        "status": "running",
-        "started_at": datetime.now().isoformat(),
-        "total": len(containers),
-        "stopped": 0,
-        "operation": "stop"
-    }
+    create_operation(
+        operation_id,
+        "stop_all",
+        total=len(containers)
+    )
     
     asyncio.create_task(stop_all_background(operation_id, containers))
     return {"operation_id": operation_id, "status": "started"}
@@ -337,12 +313,7 @@ async def stop_all_background(operation_id: str, containers):
         results = await asyncio.gather(*futures, return_exceptions=True)
         stopped = [r for r in results if r and not isinstance(r, Exception)]
     
-    active_operations[operation_id].update({
-        "status": "completed",
-        "stopped": len(stopped),
-        "containers": stopped,
-        "completed_at": datetime.now().isoformat()
-    })
+    complete_operation(operation_id, stopped=len(stopped), containers=stopped)
 
 
 @router.post("/api/restart-all")
@@ -351,13 +322,11 @@ async def restart_all():
     containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
     operation_id = str(uuid.uuid4())
     
-    active_operations[operation_id] = {
-        "status": "running",
-        "started_at": datetime.now().isoformat(),
-        "total": len(containers),
-        "restarted": 0,
-        "operation": "restart"
-    }
+    create_operation(
+        operation_id,
+        "restart_all",
+        total=len(containers)
+    )
     
     asyncio.create_task(restart_all_background(operation_id, containers))
     return {"operation_id": operation_id, "status": "started"}
@@ -399,12 +368,7 @@ async def restart_all_background(operation_id: str, containers):
         results = await asyncio.gather(*futures, return_exceptions=True)
         restarted = [r for r in results if r and not isinstance(r, Exception)]
     
-    active_operations[operation_id].update({
-        "status": "completed",
-        "restarted": len(restarted),
-        "containers": restarted,
-        "completed_at": datetime.now().isoformat()
-    })
+    complete_operation(operation_id, restarted=len(restarted), containers=restarted)
 
 
 @router.post("/api/cleanup-all")
@@ -413,17 +377,20 @@ async def cleanup_all():
     containers = docker_client.containers.list(all=True, filters={"label": "playground.managed=true"})
     operation_id = str(uuid.uuid4())
     
-    active_operations[operation_id] = {
-        "status": "running" if containers else "completed",
-        "started_at": datetime.now().isoformat(),
-        "total": len(containers),
-        "removed": 0,
-        "operation": "cleanup",
-        "completed_at": datetime.now().isoformat() if not containers else None
-    }
-    
     if containers:
+        create_operation(
+            operation_id,
+            "cleanup",
+            total=len(containers)
+        )
         asyncio.create_task(cleanup_all_background(operation_id, containers))
+    else:
+        create_operation(
+            operation_id,
+            "cleanup",
+            total=0
+        )
+        complete_operation(operation_id, removed=0, containers=[])
     
     return {"operation_id": operation_id, "status": "started" if containers else "completed"}
 
@@ -459,12 +426,7 @@ async def cleanup_all_background(operation_id: str, containers):
         results = await asyncio.gather(*futures, return_exceptions=True)
         removed = [r for r in results if r and not isinstance(r, Exception)]
     
-    active_operations[operation_id].update({
-        "status": "completed",
-        "removed": len(removed),
-        "containers": removed,
-        "completed_at": datetime.now().isoformat()
-    })
+    complete_operation(operation_id, removed=len(removed), containers=removed)
 
 
 @router.get("/api/system-info")

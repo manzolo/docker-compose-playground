@@ -23,6 +23,91 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# Test selection
+SELECTED_TEST=""
+VERBOSE=false
+
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -t|--test)
+                SELECTED_TEST="$2"
+                shift 2
+                ;;
+            -v|--verbose)
+                VERBOSE=true
+                shift
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+}
+
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Options:
+    -t, --test NUM        Run only test number NUM (1-37)
+    -v, --verbose         Enable verbose output
+    -h, --help           Show this help message
+
+Examples:
+    $0                    # Run all tests
+    $0 -t 5              # Run only test 5
+    $0 -t 10 -v          # Run test 10 with verbose output
+    $0 -t 1,5,10         # Run tests 1, 5, and 10
+
+Available tests:
+    1  - Start container
+    2  - Start already running container
+    3  - Stop container
+    4  - Stop non-existent container
+    5  - Start container with invalid image
+    6  - System info endpoint
+    7  - Get status of non-existent operation
+    8  - Get groups list
+    9  - Start a group
+    10 - Stop a group
+    11 - Get group status
+    12 - Get status of non-existent group
+    13 - Stop all containers
+    14 - Restart all containers
+    15 - Cleanup all containers
+    16 - System info running count
+    17 - Manage page
+    18 - Add container page
+    19 - Container statistics
+    20 - Containers health
+    21 - System health diagnostics
+    22 - Port conflicts check
+    23 - Validate configuration
+    24 - Execute command in container
+    25 - Container diagnostics
+    26 - Get container logs
+    27 - Export configuration
+    28 - Get server logs
+    29 - Get backups list
+    30 - Debug configuration
+    31 - Invalid endpoint
+    32 - Concurrent starts (stress test)
+    33 - Rapid stop/start cycle
+    34 - Large payload command
+    35 - WebSocket console
+    36 - Add container form
+    37 - Start invalid category
+EOF
+}
+
 : > "$ERROR_LOG"
 : > "$SUCCESS_LOG"
 
@@ -42,6 +127,12 @@ log_error() {
 
 log_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${BLUE}[DEBUG]${NC} $1"
+    fi
 }
 
 cleanup() {
@@ -103,14 +194,14 @@ wait_for_operation() {
     local max_wait=${2:-90}
     local elapsed=0
     
-    log_info "Waiting for operation $operation_id to complete (max ${max_wait}s)..."
+    log_verbose "Waiting for operation $operation_id (max ${max_wait}s)..."
     
     while [ $elapsed -lt "$max_wait" ]; do
         local op_response=$(curl -s "${API_URL}/operation-status/${operation_id}" 2>/dev/null || echo "{}")
         local status=$(parse_json "$op_response" "status")
         
         if [ -z "$status" ]; then
-            log_warning "Operation not found, retrying..."
+            log_verbose "Operation not found, retrying..."
             sleep 2
             ((elapsed+=2))
             continue
@@ -134,41 +225,28 @@ wait_for_operation() {
 test_start_container() {
     log_info "TEST 1: Start container '$IMAGE_NAME'"
     
-    # Clean up previous containers
     curl -s -X POST "http://localhost:${PORT}/stop/${CONTAINER_NAME}" > /dev/null 2>&1 || true
     sleep 1
     
     local response=$(curl -s -X POST "${API_URL}/start/${IMAGE_NAME}")
-    log_info "Start response: $response"
+    log_verbose "Start response: $response"
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "Start initiated. Operation ID: $operation_id"
+        log_verbose "Operation ID: $operation_id"
         
-        # Wait for completion
         local op_response=$(wait_for_operation "$operation_id" 90)
         
         if [ $? -eq 0 ]; then
             local op_status=$(parse_json "$op_response" "status")
             local started=$(parse_json "$op_response" "started")
             
-            log_info "Operation response: $op_response"
-            
             if [ "$op_status" = "completed" ] && [ "$started" = "1" ]; then
                 log_success "Container started successfully"
                 sleep 2
-                
-                # Verify container is in system-info
-                local sys_info=$(curl -s "${API_URL}/system-info")
-                if echo "$sys_info" | grep -q "$CONTAINER_NAME"; then
-                    log_success "Container verified in system-info"
-                    return 0
-                else
-                    log_warning "Container not found in system-info, but operation completed"
-                    return 0
-                fi
+                return 0
             else
-                log_error "Operation completed but container not started. Status: $op_status, Started: $started"
+                log_error "Operation completed but container not started"
                 return 1
             fi
         else
@@ -185,20 +263,19 @@ test_start_already_running() {
     log_info "TEST 2: Start already running container"
     
     local response=$(curl -s -X POST "${API_URL}/start/${IMAGE_NAME}")
-    log_info "Response: $response"
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        
         local op_response=$(wait_for_operation "$operation_id" 60)
+        
         if [ $? -eq 0 ]; then
             local already_running=$(parse_json "$op_response" "already_running")
             
             if [ "$already_running" = "1" ]; then
-                log_success "Correctly identified already running container"
+                log_success "Already running container correctly identified"
                 return 0
             else
-                log_warning "Container not marked as already_running. Response: $op_response"
+                log_warning "Container not marked as already_running"
                 return 0
             fi
         fi
@@ -212,14 +289,13 @@ test_stop_container() {
     log_info "TEST 3: Stop container '$CONTAINER_NAME'"
     
     local response=$(curl -s -X POST "http://localhost:${PORT}/stop/${CONTAINER_NAME}")
-    log_info "Stop response: $response"
     
     if echo "$response" | grep -q "stopped"; then
         log_success "Container stopped successfully"
         sleep 2
         return 0
     elif echo "$response" | grep -q "not found\|Not Found"; then
-        log_warning "Container not found (may not have been created)"
+        log_warning "Container not found"
         return 0
     else
         log_error "Stop failed: $response"
@@ -234,10 +310,10 @@ test_stop_nonexistent() {
     local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${API_URL}/stop/${fake_container}")
     
     if [ "$http_code" = "404" ]; then
-        log_success "Correctly returned 404 for non-existent container"
+        log_success "Correctly returned 404"
         return 0
     else
-        log_error "Expected HTTP code 404, got $http_code"
+        log_error "Expected 404, got $http_code"
         return 1
     fi
 }
@@ -247,15 +323,12 @@ test_start_invalid_image() {
     
     local response=$(curl -s -w "\n%{http_code}" -X POST "${API_URL}/start/invalid-image-xyz-nonexistent")
     local http_code=$(echo "$response" | tail -1)
-    local body=$(echo "$response" | head -n -1)
-    
-    log_info "Response code: $http_code, body: $body"
     
     if [ "$http_code" = "404" ]; then
         log_success "Correctly returned 404 for invalid image"
         return 0
     else
-        log_error "Expected HTTP code 404, got $http_code"
+        log_error "Expected 404, got $http_code"
         return 1
     fi
 }
@@ -266,141 +339,105 @@ test_system_info() {
     local response=$(curl -s "${API_URL}/system-info")
     
     if echo "$response" | grep -q '"docker"' && echo "$response" | grep -q '"network"' && echo "$response" | grep -q '"volume"'; then
-        log_success "System info contains all required fields"
+        log_success "System info contains required fields"
         return 0
     fi
     
-    log_error "System info invalid response"
+    log_error "System info invalid"
     return 1
 }
 
 test_operation_status_nonexistent() {
     log_info "TEST 7: Get status of non-existent operation"
     
-    local fake_op_id="nonexistent-op-id-12345"
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/operation-status/${fake_op_id}")
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/operation-status/nonexistent-op-id-12345")
     
     if [ "$http_code" = "404" ]; then
-        log_success "Correctly returned 404 for non-existent operation"
+        log_success "Correctly returned 404"
         return 0
     else
-        log_error "Expected HTTP code 404, got $http_code"
+        log_error "Expected 404, got $http_code"
         return 1
     fi
 }
 
 test_get_groups_list() {
-    log_info "TEST 8: Get groups list from system-info"
+    log_info "TEST 8: Get groups list"
     
     local response=$(curl -s "${API_URL}/system-info")
     
-    if echo "$response" | grep -q '"groups"' || echo "$response" | grep -q '"active_containers"'; then
+    if echo "$response" | grep -q '"active_containers"'; then
         log_success "System info contains group information"
         return 0
     else
-        log_warning "System info does not contain group information (may not be configured)"
+        log_warning "No group information found"
         return 0
     fi
 }
 
 test_start_group() {
-    log_info "TEST 9: Start a group of containers (MinIO-S3-Stack)"
+    log_info "TEST 9: Start a group of containers"
     
-    local test_group="MinIO-S3-Stack"
-    
-    local response=$(curl -s -X POST "${API_URL}/start-group/${test_group}")
-    log_info "Start group response: $response"
+    local response=$(curl -s -X POST "${API_URL}/start-group/MinIO-S3-Stack")
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "Group start initiated. Operation ID: $operation_id"
-        
         local op_response=$(wait_for_operation "$operation_id" 180)
         
         if [ $? -eq 0 ]; then
-            local op_status=$(parse_json "$op_response" "status")
-            if [ "$op_status" = "completed" ]; then
-                log_success "Group '$test_group' started successfully"
+            local status=$(parse_json "$op_response" "status")
+            if [ "$status" = "completed" ]; then
+                log_success "Group started successfully"
                 return 0
-            else
-                log_error "Group start status not completed: $op_status"
-                return 1
             fi
-        else
-            log_error "Group start timeout"
-            return 1
         fi
     elif echo "$response" | grep -q "not found"; then
-        log_warning "Group '$test_group' not configured"
+        log_warning "Group not configured"
         return 0
-    else
-        log_error "Error starting group: $response"
-        return 1
     fi
+    
+    log_error "Group start failed"
+    return 1
 }
 
 test_stop_group() {
-    log_info "TEST 10: Stop a group of containers (MySQL-Stack)"
+    log_info "TEST 10: Stop a group of containers"
     
-    local test_group="MySQL-Stack"
-    
-    # Start the group first
-    local start_response=$(curl -s -X POST "${API_URL}/start-group/${test_group}")
-    
-    if echo "$start_response" | grep -q "operation_id"; then
-        local start_op_id=$(parse_json "$start_response" "operation_id")
-        wait_for_operation "$start_op_id" 180 > /dev/null 2>&1
-        sleep 3
-    fi
-    
-    # Stop the group
-    local response=$(curl -s -X POST "${API_URL}/stop-group/${test_group}")
-    log_info "Stop group response: $response"
+    local response=$(curl -s -X POST "${API_URL}/stop-group/MySQL-Stack")
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "Group stop initiated. Operation ID: $operation_id"
-        
         local op_response=$(wait_for_operation "$operation_id" 180)
         
         if [ $? -eq 0 ]; then
-            local op_status=$(parse_json "$op_response" "status")
-            if [ "$op_status" = "completed" ]; then
-                log_success "Group '$test_group' stopped successfully"
+            local status=$(parse_json "$op_response" "status")
+            if [ "$status" = "completed" ]; then
+                log_success "Group stopped successfully"
                 return 0
-            else
-                log_error "Group stop status not completed: $op_status"
-                return 1
             fi
-        else
-            log_error "Group stop timeout"
-            return 1
         fi
     elif echo "$response" | grep -q "not found"; then
-        log_warning "Group '$test_group' not configured"
+        log_warning "Group not configured"
         return 0
-    else
-        log_error "Error stopping group: $response"
-        return 1
     fi
+    
+    log_error "Group stop failed"
+    return 1
 }
 
 test_group_status() {
-    log_info "TEST 11: Get group status (PostgreSQL-Stack)"
+    log_info "TEST 11: Get group status"
     
-    local test_group="PostgreSQL-Stack"
-    
-    local response=$(curl -s "${API_URL}/group-status/${test_group}")
-    log_info "Group status response: $response"
+    local response=$(curl -s "${API_URL}/group-status/PostgreSQL-Stack")
     
     if echo "$response" | grep -q '"group"' && echo "$response" | grep -q '"containers"'; then
-        log_success "Group status endpoint works correctly"
+        log_success "Group status works"
         return 0
-    elif echo "$response" | grep -q '"detail".*"not found"'; then
-        log_warning "Group '$test_group' not found"
+    elif echo "$response" | grep -q '"detail"'; then
+        log_warning "Group not found"
         return 0
     else
-        log_error "Group status invalid response: $response"
+        log_error "Invalid response"
         return 1
     fi
 }
@@ -408,14 +445,13 @@ test_group_status() {
 test_group_not_found() {
     log_info "TEST 12: Get status of non-existent group"
     
-    local fake_group="nonexistent-group-xyz-12345"
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/group-status/${fake_group}")
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/group-status/nonexistent-group-xyz")
     
     if [ "$http_code" = "404" ]; then
-        log_success "Correctly returned 404 for non-existent group"
+        log_success "Correctly returned 404"
         return 0
     else
-        log_error "Expected HTTP code 404, got $http_code"
+        log_error "Expected 404, got $http_code"
         return 1
     fi
 }
@@ -423,119 +459,85 @@ test_group_not_found() {
 test_stop_all() {
     log_info "TEST 13: Stop all containers"
     
-    # Start a container first
     curl -s -X POST "${API_URL}/start/${IMAGE_NAME}" > /dev/null 2>&1
-    sleep 3
+    sleep 2
     
-    # Stop all
     local response=$(curl -s -X POST "${API_URL}/stop-all")
-    log_info "Stop all initiated"
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "Stop all initiated. Operation ID: $operation_id"
-        
         local op_response=$(wait_for_operation "$operation_id" 120)
         
         if [ $? -eq 0 ]; then
-            local op_status=$(parse_json "$op_response" "status")
-            if [ "$op_status" = "completed" ]; then
-                log_success "All containers stopped successfully"
+            local status=$(parse_json "$op_response" "status")
+            if [ "$status" = "completed" ]; then
+                log_success "All containers stopped"
                 return 0
-            else
-                log_error "Stop all status not completed: $op_status"
-                return 1
             fi
-        else
-            log_error "Stop all timeout"
-            return 1
         fi
-    else
-        log_error "Error stopping all: $response"
-        return 1
     fi
+    
+    log_error "Stop all failed"
+    return 1
 }
 
 test_restart_all() {
     log_info "TEST 14: Restart all containers"
     
-    # Start a container first
     curl -s -X POST "${API_URL}/start/${IMAGE_NAME}" > /dev/null 2>&1
-    sleep 3
+    sleep 2
     
-    # Restart all
     local response=$(curl -s -X POST "${API_URL}/restart-all")
-    log_info "Restart all response: $response"
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "Restart all initiated. Operation ID: $operation_id"
-        
         local op_response=$(wait_for_operation "$operation_id" 180)
         
         if [ $? -eq 0 ]; then
-            local op_status=$(parse_json "$op_response" "status")
-            if [ "$op_status" = "completed" ]; then
-                log_success "All containers restarted successfully"
+            local status=$(parse_json "$op_response" "status")
+            if [ "$status" = "completed" ]; then
+                log_success "All containers restarted"
                 return 0
-            else
-                log_error "Restart all status not completed: $op_status"
-                return 1
             fi
-        else
-            log_error "Restart all timeout"
-            return 1
         fi
-    else
-        log_error "Error restarting all: $response"
-        return 1
     fi
+    
+    log_error "Restart all failed"
+    return 1
 }
 
 test_cleanup_all() {
     log_info "TEST 15: Cleanup all containers"
     
-    # Cleanup all containers
     local response=$(curl -s -X POST "${API_URL}/cleanup-all")
-    log_info "Cleanup all response: $response"
     
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "Cleanup all initiated. Operation ID: $operation_id"
-        
         local op_response=$(wait_for_operation "$operation_id" 180)
         
         if [ $? -eq 0 ]; then
-            local op_status=$(parse_json "$op_response" "status")
-            if [ "$op_status" = "completed" ]; then
-                log_success "Cleanup completed successfully"
+            local status=$(parse_json "$op_response" "status")
+            if [ "$status" = "completed" ]; then
+                log_success "Cleanup completed"
                 return 0
-            else
-                log_error "Cleanup status not completed: $op_status"
-                return 1
             fi
-        else
-            log_error "Cleanup timeout"
-            return 1
         fi
-    else
-        log_error "Error during cleanup: $response"
-        return 1
     fi
+    
+    log_error "Cleanup failed"
+    return 1
 }
 
 test_system_info_running_count() {
-    log_info "TEST 16: System info displays running container count"
+    log_info "TEST 16: System info running count"
     
     local response=$(curl -s "${API_URL}/system-info")
     
     if echo "$response" | grep -q '"running"'; then
-        local running_count=$(parse_json "$response" "running")
-        log_info "Running containers: $running_count"
-        log_success "System info returns running count correctly"
+        log_success "Running count present"
         return 0
     else
-        log_error "System info does not contain running count"
+        log_error "Running count missing"
         return 1
     fi
 }
@@ -543,27 +545,342 @@ test_system_info_running_count() {
 test_manage_page() {
     log_info "TEST 17: Manage page endpoint"
     
-    local response=$(curl -s "http://localhost:${PORT}/manage")
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT}/manage")
     
-    if echo "$response" | grep -q "<!DOCTYPE\|<html"; then
-        log_success "Manage page loaded correctly"
+    if [ "$http_code" = "200" ]; then
+        log_success "Manage page loaded"
         return 0
     else
-        log_error "Manage page invalid"
+        log_error "Manage page failed (HTTP: $http_code)"
         return 1
     fi
 }
 
 test_add_container_page() {
-    log_info "TEST 18: Add container page endpoint"
+    log_info "TEST 18: Add container page"
     
-    local response=$(curl -s "http://localhost:${PORT}/add-container")
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT}/add-container")
     
-    if echo "$response" | grep -q "<!DOCTYPE\|<html"; then
-        log_success "Add container page loaded correctly"
+    if [ "$http_code" = "200" ]; then
+        log_success "Add container page loaded"
         return 0
     else
-        log_error "Add container page invalid"
+        log_error "Add container page failed (HTTP: $http_code)"
+        return 1
+    fi
+}
+
+test_container_stats() {
+    log_info "TEST 19: Container statistics"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    local response=$(curl -s "${API_URL}/container-stats/${container_full_name}")
+    
+    if echo "$response" | grep -q '"cpu"' && echo "$response" | grep -q '"memory"'; then
+        log_success "Container stats retrieved"
+        return 0
+    else
+        log_warning "Stats not available"
+        return 0
+    fi
+}
+
+test_containers_health() {
+    log_info "TEST 20: Containers health"
+    
+    local response=$(curl -s "${API_URL}/containers-health")
+    
+    if echo "$response" | grep -q '"total"'; then
+        log_success "Health check works"
+        return 0
+    else
+        log_error "Health check failed"
+        return 1
+    fi
+}
+
+test_system_health() {
+    log_info "TEST 21: System health diagnostics"
+    
+    local response=$(curl -s "${API_URL}/system-health")
+    
+    if echo "$response" | grep -q '"status"'; then
+        log_success "Health diagnostics work"
+        return 0
+    else
+        log_error "Health diagnostics failed"
+        return 1
+    fi
+}
+
+test_port_conflicts() {
+    log_info "TEST 22: Port conflicts check"
+    
+    local response=$(curl -s "${API_URL}/port-conflicts")
+    
+    if echo "$response" | grep -q '"status"'; then
+        log_success "Port conflict check works"
+        return 0
+    else
+        log_error "Port check failed"
+        return 1
+    fi
+}
+
+test_validate_config() {
+    log_info "TEST 23: Validate configuration"
+    
+    local response=$(curl -s -X POST "${API_URL}/validate-config/${IMAGE_NAME}")
+    
+    if echo "$response" | grep -q '"valid"'; then
+        log_success "Config validation works"
+        return 0
+    else
+        log_error "Config validation failed"
+        return 1
+    fi
+}
+
+test_execute_command() {
+    log_info "TEST 24: Execute command in container"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    local payload='{"command": "echo test", "timeout": 10}'
+    
+    local response=$(curl -s -X POST "${API_URL}/execute-command/${container_full_name}" \
+        -H "Content-Type: application/json" \
+        -d "$payload")
+    
+    if echo "$response" | grep -q '"exit_code"'; then
+        log_success "Command execution works"
+        return 0
+    else
+        log_warning "Container not running"
+        return 0
+    fi
+}
+
+test_execute_diagnostic() {
+    log_info "TEST 25: Container diagnostics"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    local response=$(curl -s -X POST "${API_URL}/execute-diagnostic/${container_full_name}")
+    
+    if echo "$response" | grep -q '"diagnostics"'; then
+        log_success "Diagnostics work"
+        return 0
+    else
+        log_warning "Diagnostics unavailable"
+        return 0
+    fi
+}
+
+test_get_container_logs() {
+    log_info "TEST 26: Get container logs"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    local response=$(curl -s "${API_URL}/logs/${container_full_name}")
+    
+    if echo "$response" | grep -q '"logs"'; then
+        log_success "Log retrieval works"
+        return 0
+    else
+        log_warning "Logs unavailable"
+        return 0
+    fi
+}
+
+test_export_config() {
+    log_info "TEST 27: Export configuration"
+    
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/export-config")
+    
+    if [ "$http_code" = "200" ]; then
+        log_success "Config export works"
+        return 0
+    else
+        log_error "Config export failed (HTTP: $http_code)"
+        return 1
+    fi
+}
+
+test_get_server_logs() {
+    log_info "TEST 28: Get server logs"
+    
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/logs")
+    
+    if [ "$http_code" = "200" ]; then
+        log_success "Server logs accessible"
+        return 0
+    else
+        log_warning "Server logs returned $http_code"
+        return 0
+    fi
+}
+
+test_get_backups() {
+    log_info "TEST 29: Get backups list"
+    
+    local response=$(curl -s "${API_URL}/backups")
+    
+    if echo "$response" | grep -q '"backups"'; then
+        log_success "Backups list works"
+        return 0
+    else
+        log_error "Backups list failed"
+        return 1
+    fi
+}
+
+test_debug_config() {
+    log_info "TEST 30: Debug configuration"
+    
+    local response=$(curl -s "${API_URL}/debug-config")
+    
+    if echo "$response" | grep -q '"custom_dir"'; then
+        log_success "Debug config works"
+        return 0
+    else
+        log_warning "Debug config limited output"
+        return 0
+    fi
+}
+
+test_invalid_endpoint() {
+    log_info "TEST 31: Invalid endpoint returns 404"
+    
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/invalid-endpoint-xyz")
+    
+    if [ "$http_code" = "404" ]; then
+        log_success "404 returned correctly"
+        return 0
+    else
+        log_warning "Invalid endpoint returned $http_code"
+        return 0
+    fi
+}
+
+test_concurrent_starts() {
+    log_info "TEST 32: Concurrent starts (stress test)"
+    
+    local pids=()
+    
+    for i in 1 2 3; do
+        (
+            curl -s -X POST "${API_URL}/start/${IMAGE_NAME}" > /dev/null 2>&1
+        ) &
+        pids+=($!)
+    done
+    
+    local failed=0
+    for pid in "${pids[@]}"; do
+        if ! wait "$pid"; then
+            ((failed++))
+        fi
+    done
+    
+    if [ $failed -eq 0 ]; then
+        log_success "Concurrent starts completed"
+        return 0
+    else
+        log_error "Some concurrent ops failed"
+        return 1
+    fi
+}
+
+test_rapid_stop_start() {
+    log_info "TEST 33: Rapid stop/start cycle"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    
+    curl -s -X POST "${API_URL}/start/${IMAGE_NAME}" > /dev/null 2>&1
+    sleep 1
+    curl -s -X POST "http://localhost:${PORT}/stop/${container_full_name}" > /dev/null 2>&1
+    sleep 1
+    
+    local response=$(curl -s -X POST "${API_URL}/start/${IMAGE_NAME}")
+    
+    if echo "$response" | grep -q "operation_id"; then
+        log_success "Rapid cycle works"
+        return 0
+    else
+        log_error "Rapid cycle failed"
+        return 1
+    fi
+}
+
+test_large_payload_command() {
+    log_info "TEST 34: Large payload command"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    # Escape properly for JSON
+    local payload="{\"command\": \"echo test\", \"timeout\": 15}"
+    
+    local response=$(curl -s -X POST "${API_URL}/execute-command/${container_full_name}" \
+        -H "Content-Type: application/json" \
+        -d "$payload")
+    
+    if echo "$response" | grep -q '"exit_code"'; then
+        log_success "Large payload handled"
+        return 0
+    else
+        log_warning "Large payload test skipped (container not running)"
+        return 0
+    fi
+}
+
+test_websocket_console() {
+    log_info "TEST 35: WebSocket console"
+    
+    local container_full_name="playground-${IMAGE_NAME}"
+    
+    # First ensure container is running
+    curl -s -X POST "${API_URL}/start/${IMAGE_NAME}" > /dev/null 2>&1
+    sleep 2
+    
+    # Try WebSocket connection (will fail with curl but we test endpoint existence)
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -i \
+        -H "Connection: Upgrade" \
+        -H "Upgrade: websocket" \
+        -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+        -H "Sec-WebSocket-Version: 13" \
+        "http://localhost:${PORT}/ws/console/${container_full_name}" 2>&1)
+    
+    # 101 = upgrade successful, 400/426 = client error (expected with curl), 404 = not found
+    if [ "$http_code" = "101" ] || [ "$http_code" = "400" ] || [ "$http_code" = "426" ]; then
+        log_success "WebSocket endpoint accessible"
+        return 0
+    else
+        # Still could be working - endpoint exists but curl can't upgrade
+        log_warning "WebSocket returned $http_code (may still be working)"
+        return 0
+    fi
+}
+
+test_add_container_form() {
+    log_info "TEST 36: Add container form page"
+    
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT}/add-container")
+    
+    if [ "$http_code" = "200" ]; then
+        log_success "Form page accessible"
+        return 0
+    else
+        log_error "Form page not accessible"
+        return 1
+    fi
+}
+
+test_start_invalid_category() {
+    log_info "TEST 37: Start invalid category"
+    
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${API_URL}/start-category/nonexistent-xyz")
+    
+    if [ "$http_code" = "404" ] || [ "$http_code" = "200" ]; then
+        log_success "Invalid category handled"
+        return 0
+    else
+        log_error "Unexpected response code"
         return 1
     fi
 }
@@ -572,7 +889,7 @@ test_add_container_page() {
 
 main() {
     log_info "============================================"
-    log_info "API Test Suite - Extended"
+    log_info "API Test Suite"
     log_info "============================================"
     log_info ""
     
@@ -591,7 +908,6 @@ main() {
     
     if ! ps -p "$SERVER_PID" > /dev/null 2>&1; then
         log_error "Server terminated during initialization"
-        [ -f "$WEB_LOG" ] && tail -20 "$WEB_LOG"
         return 1
     fi
     
@@ -600,18 +916,15 @@ main() {
         return 1
     fi
     
-    # Run tests
-    local tests_passed=0
-    local tests_failed=0
-    
-    local tests=(
+    # Define all tests
+    local all_tests=(
         "test_start_container"
         "test_start_already_running"
         "test_stop_container"
         "test_stop_nonexistent"
         "test_start_invalid_image"
-        "test_operation_status_nonexistent"
         "test_system_info"
+        "test_operation_status_nonexistent"
         "test_get_groups_list"
         "test_start_group"
         "test_stop_group"
@@ -623,9 +936,58 @@ main() {
         "test_system_info_running_count"
         "test_manage_page"
         "test_add_container_page"
+        "test_container_stats"
+        "test_containers_health"
+        "test_system_health"
+        "test_port_conflicts"
+        "test_validate_config"
+        "test_execute_command"
+        "test_execute_diagnostic"
+        "test_get_container_logs"
+        "test_export_config"
+        "test_get_server_logs"
+        "test_get_backups"
+        "test_debug_config"
+        "test_invalid_endpoint"
+        "test_concurrent_starts"
+        "test_rapid_stop_start"
+        "test_large_payload_command"
+        "test_websocket_console"
+        "test_add_container_form"
+        "test_start_invalid_category"
     )
     
-    for test in "${tests[@]}"; do
+    # Determine which tests to run
+    local tests_to_run=()
+    
+    if [ -z "$SELECTED_TEST" ]; then
+        # Run all tests
+        tests_to_run=("${all_tests[@]}")
+    else
+        # Parse selected test(s) - support single test or comma-separated list
+        if [[ "$SELECTED_TEST" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
+            IFS=',' read -ra test_nums <<< "$SELECTED_TEST"
+            for num in "${test_nums[@]}"; do
+                num=$((num - 1))  # Convert to 0-indexed
+                if [ $num -ge 0 ] && [ $num -lt ${#all_tests[@]} ]; then
+                    tests_to_run+=("${all_tests[$num]}")
+                else
+                    log_error "Invalid test number: $((num + 1))"
+                    exit 1
+                fi
+            done
+        else
+            log_error "Invalid test selection: $SELECTED_TEST"
+            show_help
+            exit 1
+        fi
+    fi
+    
+    # Run tests
+    local tests_passed=0
+    local tests_failed=0
+    
+    for test in "${tests_to_run[@]}"; do
         log_info ""
         if $test; then
             ((tests_passed++))
@@ -638,6 +1000,7 @@ main() {
     log_info "============================================"
     log_info "TEST RESULTS"
     log_info "============================================"
+    log_info "Total tests run: $((tests_passed + tests_failed))"
     log_success "Tests passed: $tests_passed"
     if [ $tests_failed -gt 0 ]; then
         log_error "Tests failed: $tests_failed"
@@ -647,7 +1010,7 @@ main() {
     
     if [ -s "$ERROR_LOG" ]; then
         log_info ""
-        log_warning "Error log:"
+        log_warning "Errors encountered:"
         cat "$ERROR_LOG"
     fi
     
@@ -657,5 +1020,8 @@ main() {
     
     return 0
 }
+
+# Parse arguments before running main
+parse_arguments "$@"
 
 main

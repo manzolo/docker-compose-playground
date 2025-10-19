@@ -5,6 +5,7 @@ import logging
 
 # Import routers
 from src.web.api import web, containers, groups, system, config_mgmt, websocket
+from src.web.api import monitoring, execute_command, health_check
 
 # Configure logging
 logging.basicConfig(
@@ -26,17 +27,29 @@ STATIC_DIR = APP_DIR / "templates" / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Include routers
-app.include_router(web.router)
-app.include_router(containers.router)
-app.include_router(groups.router)
-app.include_router(system.router)
-app.include_router(config_mgmt.router)
-app.include_router(websocket.router)
+app.include_router(web.router, tags=["web"])
+app.include_router(containers.router, tags=["containers"])
+app.include_router(groups.router, tags=["groups"])
+app.include_router(system.router, tags=["system"])
+app.include_router(config_mgmt.router, tags=["config"])
+app.include_router(websocket.router, tags=["websocket"])
+app.include_router(monitoring.router, tags=["monitoring"])
+app.include_router(execute_command.router, tags=["commands"])
+app.include_router(health_check.router, tags=["health"])
 
-# Startup event
+
 @app.on_event("startup")
 async def startup_event():
     """Startup tasks"""
     from src.web.api.config_mgmt import cleanup_temp_files
-    cleanup_temp_files()
+    from src.web.core.state import cleanup_old_operations
+    
+    # Cleanup old temp files
+    removed_files = cleanup_temp_files()
+    logger.info("Cleaned up %d old temp files", removed_files)
+    
+    # Cleanup old operations
+    removed_ops = cleanup_old_operations(max_age_seconds=3600)
+    logger.info("Cleaned up %d old operations", removed_ops)
+    
     logger.info("Application started successfully")
