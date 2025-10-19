@@ -158,12 +158,12 @@ docker-up:
 	@mkdir -p ${PWD}/custom.d ${PWD}/shared-volumes
 	@docker compose -f docker-compose-standalone.yml up -d
 	@echo "$(CYAN)Waiting for service to be ready...$(NC)"
-	@for i in 1 2 3 4 5; do \
+	@for i in 1 2 3 4 5 6 7 8 9; do \
 		if curl -sf http://localhost:8000 > /dev/null 2>&1; then \
 			echo "$(GREEN)✓ Container started and service is responding on port 8000$(NC)"; \
 			exit 0; \
 		fi; \
-		echo "$(YELLOW)Attempt $$i/5: Service not ready yet, waiting...$(NC)"; \
+		echo "$(YELLOW)Attempt $$i/9: Service not ready yet, waiting...$(NC)"; \
 		sleep 5; \
 	done; \
 	echo "$(RED)✗ Service failed to respond on port 8000 after 10 seconds$(NC)"; \
