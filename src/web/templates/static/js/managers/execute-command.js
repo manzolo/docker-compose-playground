@@ -151,7 +151,10 @@ const ExecuteCommandManager = {
         showLoader('Running diagnostics...');
 
         try {
-            const response = await fetch(`/api/execute-diagnostic/${container}`);
+            const response = await fetch(`/api/execute-diagnostic/${container}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
             const data = await response.json();
             hideLoader();
 

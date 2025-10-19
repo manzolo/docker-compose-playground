@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Request, HTTPException
 import docker
 import logging
-import json
+import threading
 
 logger = logging.getLogger("uvicorn")
 docker_client = docker.from_env()
@@ -46,17 +46,37 @@ async def execute_command(container: str, request: Request):
         
         logger.info("Executing command in %s: %s", container, command)
         
-        # Execute command
-        try:
-            exit_code, output = cont.exec_run(
-                command,
-                stdout=True,
-                stderr=True,
-                timeout=timeout
-            )
-        except docker.errors.APIError as e:
-            logger.error("Docker API error executing command in %s: %s", container, str(e))
-            raise HTTPException(500, f"Failed to execute command: {str(e)}")
+        # Execute command with thread-based timeout
+        result_holder = {}
+        error_holder = {}
+        
+        def run_command():
+            try:
+                exit_code, output = cont.exec_run(
+                    command,
+                    stdout=True,
+                    stderr=True
+                )
+                result_holder['exit_code'] = exit_code
+                result_holder['output'] = output
+            except Exception as e:
+                error_holder['error'] = e
+        
+        # Run command in thread with timeout
+        thread = threading.Thread(target=run_command)
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout=timeout)
+        
+        if thread.is_alive():
+            logger.error("Command timeout for %s after %d seconds", container, timeout)
+            raise HTTPException(504, f"Command execution timeout after {timeout} seconds")
+        
+        if error_holder:
+            raise error_holder['error']
+        
+        exit_code = result_holder.get('exit_code', 1)
+        output = result_holder.get('output', b'')
         
         # Decode output
         try:
@@ -75,6 +95,9 @@ async def execute_command(container: str, request: Request):
     
     except HTTPException:
         raise
+    except docker.errors.APIError as e:
+        logger.error("Docker API error executing command in %s: %s", container, str(e))
+        raise HTTPException(500, f"Failed to execute command: {str(e)}")
     except Exception as e:
         logger.error("Error executing command in %s: %s", container, str(e))
         raise HTTPException(500, str(e))
@@ -108,45 +131,74 @@ async def execute_diagnostic(container: str):
             diagnostics["message"] = "Container is not running"
             return diagnostics
         
+        # Helper function to run diagnostic command with timeout
+        def run_diag_command(cmd, cmd_name, timeout_secs=10):
+            """Run a diagnostic command with timeout handling"""
+            result = {}
+            
+            def exec_cmd():
+                try:
+                    exit_code, cmd_output = cont.exec_run(cmd, stdout=True, stderr=True)
+                    result['exit_code'] = exit_code
+                    result['output'] = cmd_output
+                except Exception as e:
+                    result['error'] = str(e)
+            
+            thread = threading.Thread(target=exec_cmd)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout=timeout_secs)
+            
+            if thread.is_alive():
+                return f"Timeout getting {cmd_name}"
+            
+            if 'error' in result:
+                return f"Error: {result['error']}"
+            
+            exit_code = result.get('exit_code', 1)
+            output = result.get('output', b'')
+            
+            if exit_code == 0:
+                return output.decode('utf-8', errors='replace')
+            else:
+                return f"Failed to get {cmd_name}"
+        
         # Get processes
         try:
-            exit_code, ps_output = cont.exec_run("ps aux", stdout=True, stderr=True, timeout=10)
-            diagnostics["diagnostics"]["processes"] = ps_output.decode('utf-8', errors='replace') if exit_code == 0 else "Failed to get processes"
+            diagnostics["diagnostics"]["processes"] = run_diag_command("ps aux", "processes")
         except Exception as e:
             logger.warning("Failed to get processes: %s", str(e))
             diagnostics["diagnostics"]["processes"] = f"Error: {str(e)}"
         
         # Get disk usage
         try:
-            exit_code, df_output = cont.exec_run("df -h", stdout=True, stderr=True, timeout=10)
-            diagnostics["diagnostics"]["disk_usage"] = df_output.decode('utf-8', errors='replace') if exit_code == 0 else "Failed to get disk usage"
+            diagnostics["diagnostics"]["disk_usage"] = run_diag_command("df -h", "disk usage")
         except Exception as e:
             logger.warning("Failed to get disk usage: %s", str(e))
             diagnostics["diagnostics"]["disk_usage"] = f"Error: {str(e)}"
         
         # Get network info
         try:
-            exit_code, netstat_output = cont.exec_run("netstat -tuln", stdout=True, stderr=True, timeout=10)
-            if exit_code != 0:
+            net_output = run_diag_command("netstat -tuln", "network info")
+            if "Error" in net_output or "Timeout" in net_output or "Failed" in net_output:
                 # Fallback to ss if netstat not available
-                exit_code, netstat_output = cont.exec_run("ss -tuln", stdout=True, stderr=True, timeout=10)
-            diagnostics["diagnostics"]["network"] = netstat_output.decode('utf-8', errors='replace') if exit_code == 0 else "Failed to get network info"
+                net_output = run_diag_command("ss -tuln", "network info")
+            diagnostics["diagnostics"]["network"] = net_output
         except Exception as e:
             logger.warning("Failed to get network info: %s", str(e))
             diagnostics["diagnostics"]["network"] = f"Error: {str(e)}"
         
         # Get environment variables
         try:
-            exit_code, env_output = cont.exec_run("env", stdout=True, stderr=True, timeout=10)
-            diagnostics["diagnostics"]["environment"] = env_output.decode('utf-8', errors='replace') if exit_code == 0 else "Failed to get environment"
+            diagnostics["diagnostics"]["environment"] = run_diag_command("env", "environment")
         except Exception as e:
             logger.warning("Failed to get environment: %s", str(e))
             diagnostics["diagnostics"]["environment"] = f"Error: {str(e)}"
         
         # Get uptime
         try:
-            exit_code, uptime_output = cont.exec_run("uptime", stdout=True, stderr=True, timeout=10)
-            diagnostics["diagnostics"]["uptime"] = uptime_output.decode('utf-8', errors='replace').strip() if exit_code == 0 else "Failed to get uptime"
+            uptime = run_diag_command("uptime", "uptime")
+            diagnostics["diagnostics"]["uptime"] = uptime.strip() if isinstance(uptime, str) else uptime
         except Exception as e:
             logger.warning("Failed to get uptime: %s", str(e))
             diagnostics["diagnostics"]["uptime"] = f"Error: {str(e)}"
