@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: docker-playground:latest
-    container_name: playground-manager
+    image: manzolo/docker-compose-playground:latest
+    container_name: docker-compose-playground
     ports:
       - "8000:8000"
     volumes:

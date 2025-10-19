@@ -156,8 +156,8 @@ docker-build:
 docker-up:
 	@echo "$(CYAN)Starting Docker container...$(NC)"
 	@mkdir -p ${PWD}/custom.d ${PWD}/shared-volumes
-	@docker compose -f docker-compose-standalone.yml up
-	@echo "$(GREEN)✓ Container started. Access Web UI at http://localhost:8000$(NC)"
+	@docker compose -f docker-compose-standalone.yml up -d
+	@echo "$(GREEN)✓ Container starting... Access Web UI at http://localhost:8000$(NC)"
 
 docker-down:
 	@echo "$(CYAN)Stopping and removing Docker container...$(NC)"
