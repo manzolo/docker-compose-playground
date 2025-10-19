@@ -14,6 +14,7 @@ services:
     restart: always
     environment:
       - PYTHONUNBUFFERED=1
+    #command: ["/app/start-webui.sh", "--log-level", "DEBUG"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000"]
       interval: 30s
