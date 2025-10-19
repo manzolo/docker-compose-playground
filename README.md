@@ -189,10 +189,6 @@ Run Docker Playground Manager as a standalone container using `docker-compose-st
      ```bash
      docker exec docker-compose-playground /app/playground list
      ```
-   - Run tests inside the container:
-     ```bash
-     make docker-test
-     ```
 
 ### Troubleshooting Docker Setup
 - **"Missing dependencies: docker" Error**  
@@ -451,7 +447,6 @@ make docker-build     # Build Docker image using docker-compose
 make docker-up        # Start Docker container
 make docker-down      # Stop and remove Docker container
 make docker-logs      # View container logs
-make docker-test      # Run tests inside the Docker container
 make web              # Start web server (local)
 make test             # Run CLI tests
 make clean            # Clean virtual environments
@@ -561,7 +556,6 @@ Contributions welcome:
 ./start-webui.sh       # Web UI
 make docker-up         # Docker
 make test              # CLI tests
-make docker-test       # Docker tests
 ```
 
 ## 📄 License
