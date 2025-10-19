@@ -1,0 +1,42 @@
+# Ignora la virtual environment
+venv/
+
+# Ignora file e directory temporanei
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.log
+
+# Ignora file di sviluppo e configurazioni locali
+.env
+*.local
+*.bak
+*.swp
+*~
+
+# Ignora directory di test (se non necessarie nell'immagine)
+tests/
+
+# Ignora file di documentazione (se non necessari nel container)
+*.md
+docs/
+
+# Ignora file di build e cache
+build/
+dist/
+*.egg-info/
+
+# Ignora directory Git e CI/CD
+.git/
+.gitignore
+.github/
+
+# Ignora directory personalizzate (già Git-ignored nel tuo repo)
+custom.d/
+shared-volumes/
+
+# Ignora altri file comuni non necessari
+*.DS_Store
+Thumbs.db

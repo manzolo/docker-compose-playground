@@ -1,0 +1,22 @@
+services:
+  playground:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: docker-playground:latest
+    container_name: playground-manager
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./custom.d:/app/custom.d
+      - ./shared-volumes:/app/shared-volumes
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

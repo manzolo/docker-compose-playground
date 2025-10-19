@@ -1,7 +1,7 @@
-# Docker Playground - CLI Makefile
-# Quick commands for CLI management
+# Docker Playground - CLI and Docker Management Makefile
+# Quick commands for CLI and Docker container management
 
-.PHONY: help install uninstall test test-cli test-webui test-all clean cli web list ps categories version dev-setup docs setup
+.PHONY: help install uninstall test test-cli test-webui test-all clean cli web list ps categories version dev-setup docs setup docker-build docker-up docker-down docker-logs
 
 # Colors
 CYAN := \033[0;36m
@@ -13,12 +13,19 @@ NC := \033[0m
 
 help:
 	@echo ""
-	@echo "$(CYAN)🐳 Docker Playground - CLI Management$(NC)"
+	@echo "$(CYAN)🐳 Docker Playground - CLI and Docker Management$(NC)"
 	@echo ""
 	@echo "$(GREEN)Setup Commands:$(NC)"
 	@echo "  make install         Install CLI globally as 'playground' command"
 	@echo "  make uninstall       Remove CLI and clean up"
 	@echo "  make dev-setup       Setup development environment"
+	@echo "  make setup           Run complete setup (dev-setup, install, test)"
+	@echo ""
+	@echo "$(GREEN)Docker Commands:$(NC)"
+	@echo "  make docker-build    Build Docker image using docker-compose"
+	@echo "  make docker-up       Start Docker container using docker-compose"
+	@echo "  make docker-down     Stop and remove Docker container"
+	@echo "  make docker-logs     View container logs"
 	@echo ""
 	@echo "$(GREEN)Test Commands:$(NC)"
 	@echo "  make test            Run all tests in cascade (cli → webui → all)"
@@ -39,6 +46,8 @@ help:
 	@echo "  make cli ARGS='list'"
 	@echo "  make cli ARGS='start nginx'"
 	@echo "  make cli ARGS='ps'"
+	@echo "  make docker-build"
+	@echo "  make docker-up"
 	@echo ""
 
 install:
@@ -138,8 +147,30 @@ docs:
 	@echo "  ./playground --help            Full help"
 	@echo ""
 
+# Docker management
+docker-build:
+	@echo "$(CYAN)Building Docker image...$(NC)"
+	@docker compose -f docker-compose-standalone.yml build
+	@echo "$(GREEN)✓ Image built successfully$(NC)"
+
+docker-up:
+	@echo "$(CYAN)Starting Docker container...$(NC)"
+	@mkdir -p ${PWD}/custom.d ${PWD}/shared-volumes
+	@docker compose -f docker-compose-standalone.yml up
+	@echo "$(GREEN)✓ Container started. Access Web UI at http://localhost:8000$(NC)"
+
+docker-down:
+	@echo "$(CYAN)Stopping and removing Docker container...$(NC)"
+	@docker compose -f docker-compose-standalone.yml down
+	@echo "$(GREEN)✓ Container stopped and removed$(NC)"
+
+docker-logs:
+	@echo "$(CYAN)Fetching container logs...$(NC)"
+	@docker compose -f docker-compose-standalone.yml logs
+	@echo "$(GREEN)✓ Logs displayed$(NC)"
+
 # All-in-one setup
-setup: dev-setup install test
+setup: dev-setup install docker-build docker-up test
 	@echo ""
 	@echo "$(GREEN)╔══════════════════════════════════════════╗$(NC)"
 	@echo "$(GREEN)║   Complete setup finished!               ║$(NC)"
@@ -148,5 +179,7 @@ setup: dev-setup install test
 	@echo "$(YELLOW)You can now use:$(NC)"
 	@echo "  playground --help"
 	@echo "  playground list"
+	@echo "  make docker-logs"
 	@echo "  make test"
+	@echo "  Access Web UI at http://localhost:8000"
 	@echo ""

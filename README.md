@@ -1,6 +1,6 @@
 # 🐳 Docker Playground Manager
 
-A professional tool for managing multiple Docker development environments. Choose between TUI (Terminal), Web UI (Browser), or CLI (Command Line) interfaces.
+A professional tool for managing multiple Docker development environments. Choose between TUI (Terminal), Web UI (Browser), CLI (Command Line), or a standalone Docker container.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Docker](https://img.shields.io/badge/docker-required-blue.svg)
@@ -12,7 +12,7 @@ A professional tool for managing multiple Docker development environments. Choos
 
 ## ✨ Features
 
-- 🎯 **Three Interfaces** - TUI (whiptail), Web UI (browser), CLI (terminal)
+- 🎯 **Three Interfaces + Docker** - TUI (whiptail), Web UI (browser), CLI (terminal), or run as a standalone Docker container
 - 📦 **100+ Pre-configured Images** - Linux, databases, programming languages, and more
 - 📁 **Shared Volumes** - `/shared` directory mounted in all containers
 - 🌐 **Network Isolation** - Dedicated Docker network for inter-container communication
@@ -114,12 +114,12 @@ This list covers key containers and stacks, but many more are available in `conf
 ## 📋 Requirements
 
 - **Docker** - [Install Docker](https://docs.docker.com/engine/install/ubuntu/)
-- **Python 3.8+** - With `python3-venv` for Web UI and CLI
+- **Python 3.8+** - With `python3-venv` for Web UI and CLI (not needed for Docker deployment)
 - **yq** - YAML processor (auto-installed by TUI if missing)
 - **whiptail** - For TUI (usually pre-installed)
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian (for local TUI/CLI/Web UI)
 sudo apt-get update
 sudo apt-get install python3 python3-venv
 ```
@@ -131,30 +131,112 @@ sudo apt-get install python3 python3-venv
 git clone https://github.com/manzolo/docker-compose-playground.git
 cd docker-compose-playground
 
-# Choose your interface:
+# Choose your interface or deployment method:
 
-# 1. TUI (Terminal Interface)
+# 1. Docker Compose (Recommended - Standalone Container)
+make docker-build  # Build the Docker image
+make docker-up     # Start the container
+# Open http://localhost:8000 for Web UI
+
+# 2. TUI (Terminal Interface)
 chmod +x playground.sh
 ./playground.sh
 
-# 2. Web UI (Browser Interface)
+# 3. Web UI (Browser Interface - Local)
 chmod +x start-webui.sh
 ./start-webui.sh
 # Open http://localhost:8000
 
-# 3. CLI (Command Line)
+# 4. CLI (Command Line)
 chmod +x playground install-cli.sh
 ./playground list
 ```
 
+## 🐳 Docker Compose Setup
+
+Run Docker Playground Manager as a standalone container using `docker-compose-standalone.yml`, similar to tools like Portainer. This method packages the application and its dependencies into a Docker image, allowing easy deployment with access to the host's Docker socket and custom configurations.
+
+### Prerequisites
+- **Docker** and **Docker Compose** installed ([Install Docker](https://docs.docker.com/engine/install/ubuntu/))
+- Directory for custom configurations and shared volumes (e.g., `/home/user/playground/custom.d` and `/home/user/playground/shared-volumes`)
+
+### Setup Instructions
+1. **Update Volume Paths**  
+   Edit `docker-compose-standalone.yml` to set the correct paths for `custom.d` and `shared-volumes`:
+   ```yaml
+   volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - /home/user/playground/custom.d:/app/custom.d
+     - /home/user/playground/shared-volumes:/app/shared-volumes
+   ```
+   Create these directories on the host:
+   ```bash
+   mkdir -p /home/user/playground/custom.d /home/user/playground/shared-volumes
+   ```
+
+2. **Build and Run**  
+   Use the provided `Makefile` commands:
+   ```bash
+   make docker-build  # Build the Docker image
+   make docker-up     # Start the container
+   ```
+   The Web UI will be available at `http://localhost:8000`.
+
+3. **Manage the Container**  
+   - View logs: `make docker-logs`
+   - Stop and remove: `make docker-down`
+   - Run CLI commands inside the container:
+     ```bash
+     docker exec playground-manager /app/playground list
+     ```
+   - Run tests inside the container:
+     ```bash
+     make docker-test
+     ```
+
+### Troubleshooting Docker Setup
+- **"Missing dependencies: docker" Error**  
+  If you see this error in the logs (`make docker-logs`), the Docker CLI may not be installed or cannot access the Docker daemon:
+  - Verify Docker CLI is installed in the container:
+    ```bash
+    docker exec playground-manager docker --version
+    ```
+    If it fails, rebuild the image with `make docker-build`.
+  - Check Docker socket permissions:
+    ```bash
+    ls -l /var/run/docker.sock
+    sudo usermod -aG docker $USER
+    newgrp docker
+    ```
+  - Ensure the Docker daemon is running:
+    ```bash
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    ```
+
+- **Container Fails to Start**  
+  Check logs with `make docker-logs` for details. Common issues:
+  - Missing Python dependencies: Ensure `requirements.txt` includes all necessary packages (e.g., `fastapi`, `uvicorn`, `pyyaml`).
+  - Port conflict: Check if port 8000 is in use:
+    ```bash
+    sudo lsof -i :8000
+    ```
+    Change the port in `docker-compose-standalone.yml` if needed (e.g., `8001:8000`).
+
+### Notes
+- The container mounts the host's Docker socket (`/var/run/docker.sock`) to manage Docker containers, similar to Portainer. This grants full control over the host, so use with caution.
+- Custom configurations in `custom.d/` and data in `shared-volumes/` persist on the host.
+- The `.dockerignore` file ensures a lean image by excluding unnecessary files like `venv/`.
+- For advanced configuration, refer to the `docker-compose-standalone.yml`, `Dockerfile`, and `.dockerignore` in the repository root.
+
 ## 🖥️ Interface Comparison
 
-| Feature | TUI | Web UI | CLI |
-|---------|-----|--------|-----|
-| Add containers | ❌ | ✅ | ❌ |
-| JSON output | ❌ | ✅ | ✅ |
-| Bulk operations | ✅ | ✅ | ✅ |
-| Group management | ❌ | ✅ | ✅ |
+| Feature | TUI | Web UI | CLI | Docker |
+|---------|-----|--------|-----|--------|
+| Add containers | ❌ | ✅ | ❌ | ✅ |
+| JSON output | ❌ | ✅ | ✅ | ✅ |
+| Bulk operations | ✅ | ✅ | ✅ | ✅ |
+| Group management | ❌ | ✅ | ✅ | ✅ |
 
 ## 📖 Usage
 
@@ -176,7 +258,10 @@ Main menu:
 
 ### Web UI
 ```bash
+# Local
 ./start-webui.sh
+# Docker
+make docker-up
 # Open http://localhost:8000
 ```
 <img width="1208" height="894" alt="image" src="https://github.com/user-attachments/assets/707da583-f005-49cf-a3df-a9e1c64fc60d" />
@@ -220,7 +305,7 @@ playground version
 
 ## 🗂️ Groups
 
-Groups allow you to organize related containers (e.g., a web server, database, and cache for a development stack) and manage them as a single unit. You can start, stop, or restart all containers in a group with a single command, simplifying workflows for complex environments. Groups are defined in configuration files (`config.yml`, `config.d/`, or `custom.d/`) and are accessible via all interfaces (TUI, Web UI, CLI).
+Groups allow you to organize related containers (e.g., a web server, database, and cache for a development stack) and manage them as a single unit. You can start, stop, or restart all containers in a group with a single command, simplifying workflows for complex environments. Groups are defined in configuration files (`config.yml`, `config.d/`, or `custom.d/`) and are accessible via all interfaces (TUI, Web UI, CLI, Docker).
 
 Example:
 ```yaml
@@ -235,8 +320,10 @@ group:
 
 Start the group:
 ```bash
-# CLI
+# CLI (Local or Docker)
 playground group start dev-stack
+# Docker
+docker exec playground-manager /app/playground group start dev-stack
 
 # Web UI
 Dashboard → Groups → dev-stack → Start
@@ -317,8 +404,11 @@ Container appears immediately in all interfaces.
 
 ### Start Development Stack (CLI)
 ```bash
+# Local
 ./playground group start PHP-MySQL-Stack
 ./playground ps
+# Docker
+docker exec playground-manager /app/playground group start PHP-MySQL-Stack
 ```
 
 ### Create Database Backup (any interface)
@@ -329,8 +419,10 @@ The `pre_stop` script in PostgreSQL config automatically creates backups when st
 
 ### Access Container Shell
 ```bash
-# CLI
+# CLI (Local)
 ./playground exec postgres-16
+# CLI (Docker)
+docker exec playground-manager /app/playground exec postgres-16
 
 # TUI
 ./playground.sh → Enter a container → Select postgres-16
@@ -341,7 +433,7 @@ Dashboard → postgres card → Console button
 
 ### Filter and Start Category
 ```bash
-# CLI
+# CLI (Local or Docker)
 ./playground list --category database
 ./playground start postgres-16
 
@@ -355,9 +447,15 @@ Dashboard → Category dropdown → database → Start
 ```bash
 make install          # Install CLI globally
 make uninstall        # Remove CLI
-make web             # Start web server
-make test            # Run CLI tests
-make clean           # Clean virtual environments
+make docker-build     # Build Docker image using docker-compose
+make docker-up        # Start Docker container
+make docker-down      # Stop and remove Docker container
+make docker-logs      # View container logs
+make docker-test      # Run tests inside the Docker container
+make web              # Start web server (local)
+make test             # Run CLI tests
+make clean            # Clean virtual environments
+make setup            # Complete setup (CLI + Docker + tests)
 ```
 
 ### Shared Volume
@@ -368,6 +466,8 @@ echo "test" > shared-volumes/file.txt
 
 # From container
 playground exec alpine "cat /shared/file.txt"
+# Docker
+docker exec playground-manager /app/playground exec alpine "cat /shared/file.txt"
 ```
 
 ### Network Communication
@@ -376,42 +476,44 @@ Containers can communicate using their names:
 # From nginx container
 playground exec nginx "ping postgres-16"
 playground exec nginx "curl http://redis:6379"
+# Docker
+docker exec playground-manager /app/playground exec nginx "ping postgres-16"
 ```
 
 ## 📝 Logging
 
 - **TUI**: `playground.log`
-- **Web UI**: `venv/web.log`
+- **Web UI**: `venv/web.log` (local) or container logs (`make docker-logs`)
 - **CLI**: Outputs to stdout/stderr
 
 ## 🛟 Troubleshooting
 
-### Docker not running
+### Docker Not Running
 ```bash
 sudo systemctl start docker
 sudo systemctl enable docker
 ```
 
-### Permission denied
+### Permission Denied
 ```bash
 sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-### CLI: venv issues
+### CLI: Venv Issues
 ```bash
 rm -rf venv/environments venv/.cli_venv_ready
 ./playground list  # Rebuilds automatically
 ```
 
-### Web UI: Port already in use
+### Web UI: Port Already in Use
 ```bash
 # Check what's using port 8000
 sudo lsof -i :8000
-# Kill process or change port in start-webui.sh
+# Kill process or change port in start-webui.sh or docker-compose-standalone.yml
 ```
 
-### Container won't start
+### Container Won't Start
 ```bash
 # Check if image exists
 docker pull <image-name>
@@ -420,7 +522,28 @@ docker pull <image-name>
 playground logs <container>  # CLI
 ./playground.sh → View logs  # TUI
 Dashboard → Logs button      # Web UI
+make docker-logs             # Docker
 ```
+
+### Docker-Specific Issues
+- **"Missing dependencies: docker" Error**  
+  If you see this error in the logs (`make docker-logs`), the Docker CLI may not be installed or cannot access the Docker daemon:
+  - Verify Docker CLI is installed in the container:
+    ```bash
+    docker exec playground-manager docker --version
+    ```
+    If it fails, rebuild the image with `make docker-build`.
+  - Check Docker socket permissions:
+    ```bash
+    ls -l /var/run/docker.sock
+    sudo usermod -aG docker $USER
+    newgrp docker
+    ```
+  - Ensure the Docker daemon is running:
+    ```bash
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    ```
 
 ## 🤝 Contributing
 
@@ -436,7 +559,9 @@ Contributions welcome:
 ./playground.sh        # TUI
 ./playground           # CLI
 ./start-webui.sh       # Web UI
+make docker-up         # Docker
 make test              # CLI tests
+make docker-test       # Docker tests
 ```
 
 ## 📄 License
