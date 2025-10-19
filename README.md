@@ -422,7 +422,7 @@ The `pre_stop` script in PostgreSQL config automatically creates backups when st
 # CLI (Local)
 ./playground exec postgres-16
 # CLI (Docker)
-docker exec docker-compose-playground /app/playground exec postgres-16
+docker exec -it docker-compose-playground /app/playground exec postgres-16
 
 # TUI
 ./playground.sh → Enter a container → Select postgres-16
