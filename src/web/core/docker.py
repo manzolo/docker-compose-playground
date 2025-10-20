@@ -6,7 +6,19 @@ from typing import Dict, Any, List, Tuple
 from pathlib import Path
 import time
 
-logger = logging.getLogger("uvicorn")
+# Logger che scrive direttamente su file
+logger = logging.getLogger("docker_ops")
+logger.setLevel(logging.DEBUG)
+
+# Configura il file handler per scrivere su venv/web.log
+LOG_FILE = Path(__file__).parent.parent.parent.parent / "venv" / "web.log"
+if not logger.handlers:
+    file_handler = logging.FileHandler(str(LOG_FILE), mode='a', encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [DOCKER] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
 docker_client = docker.from_env()
 
 # Paths and configurations
@@ -207,6 +219,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
     
     # Start container
     try:
+        logger.info("Running Docker image: %s as %s", img_data["image"], full_container_name)
         container = docker_client.containers.run(
             img_data["image"],
             detach=True,
@@ -245,9 +258,11 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
                 scripts = img_data.get('scripts', {})
                 if 'post_start' in scripts:
                     try:
+                        logger.info(">>> CALLING post_start script for %s", full_container_name)
                         execute_script(scripts['post_start'], full_container_name, container_name)
+                        logger.info(">>> post_start script COMPLETED successfully for %s", full_container_name)
                     except Exception as script_error:
-                        logger.warning("Post-start script error for %s: %s", container_name, str(script_error))
+                        logger.error(">>> post_start script FAILED for %s: %s", full_container_name, str(script_error))
                 
                 return {"status": "started", "name": container_name}
             
@@ -296,11 +311,11 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) ->
         scripts = img_data.get('scripts', {})
         if 'pre_stop' in scripts:
             try:
-                logger.info("Executing pre-stop script for %s", container_name)
+                logger.info(">>> CALLING pre_stop script for %s", full_container_name)
                 execute_script(scripts['pre_stop'], full_container_name, container_name)
-                logger.info("Pre-stop script completed for %s", container_name)
+                logger.info(">>> pre_stop script COMPLETED successfully for %s", full_container_name)
             except Exception as script_error:
-                logger.warning("Pre-stop script error for %s: %s", container_name, str(script_error))
+                logger.error(">>> pre_stop script FAILED for %s: %s", full_container_name, str(script_error))
         
         # Get appropriate timeout
         timeout = get_stop_timeout(img_data)

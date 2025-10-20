@@ -3,7 +3,7 @@ set -uo pipefail
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SERVER_SCRIPT="${SCRIPT_DIR}/start-webui.sh"
+SERVER_SCRIPT="${SCRIPT_DIR}/start-webui.sh --tail"
 PORT=8000
 API_URL="http://localhost:${PORT}/api"
 TIMEOUT=60
