@@ -1,0 +1,233 @@
+# Metadati del gruppo
+group:
+  name: "Redis-Stack"
+  description: "Redis database with RedisInsight web interface"
+  category: database
+  containers: 
+    - redis-stack
+    - redisinsight-stack
+
+# Configurazioni dei container
+images:
+  redis-stack:
+    category: database
+    description: Redis 7 Database Server
+    image: redis:7
+    keep_alive_cmd: redis-server
+    shell: /bin/sh
+    command: redis-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - type: named
+        name: redis_data
+        path: /data
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/sh
+          set -e
+          
+          echo "Initializing Redis..."
+          
+          CONTAINER="${CONTAINER_NAME}"
+          MAX_WAIT=60
+          COUNT=0
+          BACKUP_FILE="${SHARED_DIR}/backups/redis-stack/backup.txt"
+          
+          # 1. Wait for Redis to be ready
+          echo "Waiting for Redis to respond..."
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER}" redis-cli ping 2>/dev/null | grep -q PONG; then
+              echo "✓ Redis is ready!"
+              break
+            fi
+            sleep 1
+            COUNT=$((COUNT + 1))
+          done
+          
+          if [ $COUNT -ge $MAX_WAIT ]; then
+            echo "✗ Redis failed to start"
+            exit 1
+          fi
+          
+          # 2. Try to load from backup file
+          if [ -f "$BACKUP_FILE" ]; then
+            echo "Found backup file: backup.txt"
+            echo "Restoring data..."
+            
+            # Read backup file and execute each command
+            while IFS= read -r line; do
+              # Skip empty lines and comments
+              [ -z "$line" ] && continue
+              [ "${line#\#}" != "$line" ] && continue
+              
+              # Execute the command
+              docker exec "${CONTAINER}" redis-cli $line > /dev/null 2>&1
+            done < "$BACKUP_FILE"
+            
+            # Verify
+            KEYS=$(docker exec "${CONTAINER}" redis-cli DBSIZE | grep -o '[0-9]*')
+            echo "✓ Backup restored! Keys loaded: ${KEYS}"
+            exit 0
+          fi
+          
+          # 3. No backup, create sample data
+          echo "No backup found. Creating sample data..."
+          
+          docker exec "${CONTAINER}" redis-cli SET welcome "Welcome to Redis Stack!" > /dev/null
+          docker exec "${CONTAINER}" redis-cli HMSET user:1 username admin email admin@playground.local > /dev/null
+          docker exec "${CONTAINER}" redis-cli LPUSH tasks "Task 1" "Task 2" "Task 3" > /dev/null
+          
+          echo "✓ Redis initialized with sample data"
+          
+          # Save it as backup for next time
+          mkdir -p "$(dirname "$BACKUP_FILE")"
+          cat > "$BACKUP_FILE" << 'REDIS_BACKUP'
+          SET welcome "Welcome to Redis Stack!"
+          HMSET user:1 username admin email admin@playground.local
+          LPUSH tasks "Task 1" "Task 2" "Task 3"
+          REDIS_BACKUP
+          
+          echo "✓ Backup created at shared-volumes/backups/redis-stack/backup.txt"
+      
+      pre_stop:
+        inline: |
+          #!/bin/sh
+          BACKUP_DIR="${SHARED_DIR}/backups/redis-stack"
+          BACKUP_FILE="${BACKUP_DIR}/backup.txt"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          mkdir -p "$BACKUP_DIR"
+          
+          echo "Creating backup..."
+          
+          # Get all keys
+          KEYS=$(docker exec "${CONTAINER_NAME}" redis-cli --raw KEYS '*' 2>/dev/null)
+          
+          if [ -z "$KEYS" ]; then
+            echo "✗ No data to backup"
+            exit 0
+          fi
+          
+          # Create temp backup file
+          TEMP_BACKUP="${BACKUP_DIR}/backup_${TIMESTAMP}_tmp.txt"
+          > "$TEMP_BACKUP"
+          
+          # Export each key with its value and type
+          echo "# Redis Backup - ${TIMESTAMP}" >> "$TEMP_BACKUP"
+          echo "# Generated from playground" >> "$TEMP_BACKUP"
+          echo "" >> "$TEMP_BACKUP"
+          
+          while IFS= read -r key; do
+            # Get key type
+            KEY_TYPE=$(docker exec "${CONTAINER_NAME}" redis-cli TYPE "$key" 2>/dev/null)
+            
+            case "$KEY_TYPE" in
+              string)
+                VALUE=$(docker exec "${CONTAINER_NAME}" redis-cli GET "$key" 2>/dev/null | sed 's/"/\\"/g')
+                echo "SET \"$key\" \"$VALUE\"" >> "$TEMP_BACKUP"
+                ;;
+              hash)
+                # Get hash fields
+                docker exec "${CONTAINER_NAME}" redis-cli --raw HGETALL "$key" 2>/dev/null > /tmp/hash_$$.txt
+                HMSET_CMD="HMSET \"$key\""
+                while IFS= read -r field; do
+                  IFS= read -r value
+                  HMSET_CMD="$HMSET_CMD \"$field\" \"$value\""
+                done < /tmp/hash_$$.txt
+                echo "$HMSET_CMD" >> "$TEMP_BACKUP"
+                rm -f /tmp/hash_$$.txt
+                ;;
+              list)
+                VALUES=$(docker exec "${CONTAINER_NAME}" redis-cli --raw LRANGE "$key" 0 -1 2>/dev/null | sed 's/"/\\"/g' | paste -sd '|' -)
+                echo "# List: $key with values: $VALUES" >> "$TEMP_BACKUP"
+                echo "LPUSH \"$key\" $VALUES" >> "$TEMP_BACKUP"
+                ;;
+              set)
+                MEMBERS=$(docker exec "${CONTAINER_NAME}" redis-cli --raw SMEMBERS "$key" 2>/dev/null | sed 's/"/\\"/g' | paste -sd '|' -)
+                echo "# Set: $key with members: $MEMBERS" >> "$TEMP_BACKUP"
+                echo "SADD \"$key\" $MEMBERS" >> "$TEMP_BACKUP"
+                ;;
+            esac
+          done <<< "$KEYS"
+          
+          # Move to backup.txt (overwrite)
+          mv "$TEMP_BACKUP" "$BACKUP_FILE"
+          
+          # Show size
+          SIZE=$(wc -l < "$BACKUP_FILE")
+          echo "✓ Backup created: backup.txt (${SIZE} lines)"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Redis 7 Database Server                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐  Connection:
+        Host: redis-stack
+        Port: 6379
+
+      🌐  RedisInsight: http://localhost:8001
+
+      📊  Quick Commands:
+        redis-cli
+        
+        GET welcome
+        HGETALL user:1
+        KEYS *
+        DBSIZE
+
+      💾  Backup & Restore:
+        • Plain text backup: shared-volumes/backups/redis-stack/backup.txt
+        • Auto-created on shutdown
+        • Auto-restored on startup
+        • Easy to edit and view!
+
+      🎯  Learning - Useful Commands:
+
+      🔹 STRINGS:
+        SET my_value "Hello World"
+        GET my_value
+        INCR counter
+
+      🔹 HASHES:
+        HSET user:100 name "John" age 30
+        HGETALL user:100
+
+      🔹 LISTS:
+        LPUSH my_list "item1" "item2"
+        LRANGE my_list 0 -1
+
+  redisinsight-stack:
+    category: database
+    description: RedisInsight - Redis Web Interface
+    image: redis/redisinsight:latest
+    keep_alive_cmd: /opt/redisinsight/redisinsight.sh
+    shell: /bin/sh
+    ports:
+      - "8001:5540"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/sh
+          echo "Configuring RedisInsight..."
+          
+          # Wait for RedisInsight
+          sleep 10
+          
+          echo "✓ RedisInsight ready at http://localhost:8001"
+          echo "Add Redis connection: redis-stack:6379"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              RedisInsight - Web Interface                   ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 Access: http://localhost:8001
+      
+      💡 Setup:
+         1. Click "Add Redis Database"
+         2. Host: redis-stack
+         3. Port: 6379
+         4. Leave password empty
