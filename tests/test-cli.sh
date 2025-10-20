@@ -154,7 +154,7 @@ echo -e "${MAGENTA}━━━ Basic Commands ━━━${NC}\n" | tee -a "$LOG_FIL
 run_test "Version command" "$CLI version" "."
 echo ""
 
-run_test "List command" "$CLI list" "Total:\|alpine-3.22"
+run_test "List command" "$CLI list" "alpine-3.22"
 echo ""
 
 run_test "List with category filter" "$CLI list --category linux" ""
