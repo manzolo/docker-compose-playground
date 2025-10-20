@@ -1,6 +1,6 @@
 #!/bin/bash
 #############################################
-# Docker Playground CLI Test Suite - FIXED
+# Docker Playground CLI Test Suite
 # Tests for single container (alpine-3.22)
 #############################################
 
@@ -154,7 +154,7 @@ echo -e "${MAGENTA}━━━ Basic Commands ━━━${NC}\n" | tee -a "$LOG_FIL
 run_test "Version command" "$CLI version" "."
 echo ""
 
-run_test "List command" "$CLI list" "Total:\|alpine-3.22"
+run_test "List command" "$CLI list" "${TEST_CONTAINER}"
 echo ""
 
 run_test "List with category filter" "$CLI list --category linux" ""
@@ -245,7 +245,7 @@ echo -e "${CYAN}Testing single container: $TEST_CONTAINER${NC}\n" | tee -a "$LOG
 # Pre-check: verify container exists in list
 log_test "Verify container exists in list"
 LIST_OUTPUT=$($CLI list 2>&1)
-if echo "$LIST_OUTPUT" | grep -i "alpine-3.22" | grep -q "linux"; then
+if echo "$LIST_OUTPUT" | grep -i "${TEST_CONTAINER}" | grep -q "linux"; then
     log_success "Container $TEST_CONTAINER found in list"
 else
     log_error "Container $TEST_CONTAINER not found in list"
@@ -257,7 +257,7 @@ echo ""
 
 # Check initial status
 log_info "Checking initial status of $TEST_CONTAINER"
-CURRENT_STATUS=$(echo "$LIST_OUTPUT" | grep -i "alpine-3.22" | grep -oE "running|stopped" | head -1)
+CURRENT_STATUS=$(echo "$LIST_OUTPUT" | grep -i "${TEST_CONTAINER}" | grep -oE "running|stopped" | head -1)
 log_info "Current status: ${CURRENT_STATUS:-unknown}"
 echo ""
 
@@ -310,7 +310,7 @@ echo ""
 # Get container info
 log_test "Get container info"
 INFO_OUTPUT=$($CLI info "$TEST_CONTAINER" 2>&1)
-if echo "$INFO_OUTPUT" | grep -q "playground-alpine-3.22"; then
+if echo "$INFO_OUTPUT" | grep -q "playground-${TEST_CONTAINER}"; then
     log_success "Container info retrieved successfully"
 else
     log_error "Container info command failed or unexpected output"
@@ -386,10 +386,10 @@ echo ""
 echo -e "${CYAN}Quick commands:${NC}" | tee -a "$LOG_FILE"
 echo -e "  ${YELLOW}playground list${NC}                   List all containers" | tee -a "$LOG_FILE"
 echo -e "  ${YELLOW}playground ps${NC}                     Show running containers" | tee -a "$LOG_FILE"
-echo -e "  ${YELLOW}playground start alpine-3.22${NC}     Start test container" | tee -a "$LOG_FILE"
-echo -e "  ${YELLOW}playground stop alpine-3.22${NC}      Stop test container" | tee -a "$LOG_FILE"
-echo -e "  ${YELLOW}playground info alpine-3.22${NC}      Container details" | tee -a "$LOG_FILE"
-echo -e "  ${YELLOW}playground logs alpine-3.22${NC}      Show container logs" | tee -a "$LOG_FILE"
+echo -e "  ${YELLOW}playground start ${TEST_CONTAINER}${NC}     Start test container" | tee -a "$LOG_FILE"
+echo -e "  ${YELLOW}playground stop ${TEST_CONTAINER}${NC}      Stop test container" | tee -a "$LOG_FILE"
+echo -e "  ${YELLOW}playground info ${TEST_CONTAINER}${NC}      Container details" | tee -a "$LOG_FILE"
+echo -e "  ${YELLOW}playground logs ${TEST_CONTAINER}${NC}      Show container logs" | tee -a "$LOG_FILE"
 echo -e "  ${YELLOW}playground group list${NC}             List all groups" | tee -a "$LOG_FILE"
 echo ""
 
