@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# Utility function to ask for confirmation before executing a command.
+# Defaults to 'Y' (Yes).
+# Usage: confirm_action "Description of action" "command to execute"
+confirm_action() {
+    local prompt_message="$1"
+    local command_to_execute="$2"
+    
+    # Prompt with default 'Y'
+    read -r -p "$prompt_message [Y/n]: " response
+    response=${response:-Y} # Default to Y if input is empty
+    
+    if [[ "$response" =~ ^([yY])$ ]]; then
+        echo "Executing: $command_to_execute"
+        eval "$command_to_execute"
+    else
+        echo "Skipping: $command_to_execute"
+    fi
+    echo "------------------------------------"
+}
+
+# Function to increment the version number
+increment_version() {
+    local current_version="$1"
+    local part_to_increment="$2" # patch, minor, or major
+
+    # Extracts Major, Minor, Patch
+    if [[ "$current_version" =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+        local major=${BASH_REMATCH[1]}
+        local minor=${BASH_REMATCH[2]}
+        local patch=${BASH_REMATCH[3]}
+        
+        case "$part_to_increment" in
+            major)
+                major=$((major + 1))
+                minor=0
+                patch=0
+                ;;
+            minor)
+                minor=$((minor + 1))
+                patch=0
+                ;;
+            patch)
+                patch=$((patch + 1))
+                ;;
+            *)
+                # This case should not happen with the prior check
+                echo "Internal Error: Unhandled increment type '$part_to_increment'." >&2
+                exit 1
+                ;;
+        esac
+        echo "${major}.${minor}.${patch}"
+    else
+        echo "Error: Version format '$current_version' is invalid (Major.Minor.Patch)." >&2
+        exit 1
+    fi
+}
+
+# ----------------------------------------------------------------------
+
+# Main Script
+
+echo "--- Generating Git Flow Release Commands ---"
+
+# Determine the increment type: patch by default if no parameter is provided
+INCREMENT_TYPE="${1:-patch}" # If $1 is empty, use 'patch'
+
+# Check if the parameter is valid if specified
+if [[ "$INCREMENT_TYPE" != "major" && "$INCREMENT_TYPE" != "minor" && "$INCREMENT_TYPE" != "patch" ]]; then
+    echo "Usage: $0 [major|minor|patch]"
+    echo "No valid parameter specified. The patch version will be incremented by default."
+    echo "Example: $0 patch    (to increment the patch version)"
+    echo "Example: $0 minor    (to increment the minor version)"
+    echo "Example: $0 major    (to increment the major version)"
+    exit 1
+fi
+
+# 1. Get the latest version tag
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
+
+if [ -z "$LATEST_TAG" ]; then
+    echo "No tag found. Initializing version to 0.0.0."
+    CURRENT_VERSION="0.0.0"
+else
+    CURRENT_VERSION="${LATEST_TAG#v}" # Remove the leading 'v' if present
+    echo "Latest tag found: $LATEST_TAG (version: $CURRENT_VERSION)"
+fi
+
+# 2. Calculate the next version based on the increment type
+NEXT_VERSION=$(increment_version "$CURRENT_VERSION" "$INCREMENT_TYPE")
+
+echo "Next release version ($INCREMENT_TYPE): $NEXT_VERSION"
+
+# 3. Generate and Execute Git Commands with Confirmation
+
+echo ""
+echo "--- Ensuring Code is Up-to-Date ---"
+echo "The following commands pull the latest changes and ensure you are on the 'develop' branch."
+
+confirm_action "Checkout 'develop'?" "git checkout develop"
+confirm_action "Pull latest 'develop'?" "git pull"
+confirm_action "Checkout 'main'?" "git checkout main"
+confirm_action "Pull latest 'main'?" "git pull"
+confirm_action "Switch back to 'develop'?" "git checkout develop"
+
+echo ""
+echo "--- Git Flow Release Commands ---"
+echo "These commands initiate and finalize the Git Flow release process."
+
+# Store commands in variables to use them in the confirm_action function
+START_RELEASE_CMD="git flow release start $NEXT_VERSION"
+FINISH_RELEASE_CMD="git flow release finish $NEXT_VERSION -m \"Release $NEXT_VERSION\" -p"
+
+confirm_action "Start release '$NEXT_VERSION'?" "$START_RELEASE_CMD"
+
+echo ""
+echo "!!! ATTENTION: Complete all necessary changes for the release *before* running the finish command. !!!"
+echo ""
+
+confirm_action "Finish release '$NEXT_VERSION' (merges, tags, pushes)? " "$FINISH_RELEASE_CMD"
+
+echo ""
+echo "--- Script Finished ---"
