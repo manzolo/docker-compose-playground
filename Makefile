@@ -1,7 +1,14 @@
 # Docker Playground - CLI and Docker Management Makefile
 # Quick commands for CLI and Docker container management
 
-.PHONY: help install uninstall test test-cli test-webui test-all clean cli web list ps categories version dev-setup docs setup docker-build docker-up docker-down docker-logs
+.PHONY: help install uninstall test test-cli test-webui test-all clean cli web list ps categories version dev-setup docs setup docker-build docker-tag docker-push docker-up docker-down docker-stop docker-start docker-restart docker-logs
+
+# Variables
+DOCKER_IMAGE_NAME := manzolo/docker-compose-playground
+# Use environment variable VERSION or default to 'latest'
+GIT_TAG_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+
+VERSION ?= $(if $(GIT_TAG_VERSION),$(GIT_TAG_VERSION),latest)
 
 # Colors
 CYAN := \033[0;36m
@@ -22,9 +29,14 @@ help:
 	@echo "  make setup           Run complete setup (dev-setup, install, test)"
 	@echo ""
 	@echo "$(GREEN)Docker Commands:$(NC)"
-	@echo "  make docker-build    Build Docker image using docker-compose"
+	@echo "  make docker-build    Build Docker image (tags with :latest)"
+	@echo "  make docker-tag      Build and tag Docker image with a specific version. Usage: make docker-tag VERSION=1.2.3"
+	@echo "  make docker-push     Push Docker image. Usage: make docker-push VERSION=1.2.3 (or push :latest if VERSION is not set)"
 	@echo "  make docker-up       Start Docker container using docker-compose"
 	@echo "  make docker-down     Stop and remove Docker container"
+	@echo "  make docker-stop     Alias for stopping the container"
+	@echo "  make docker-start    Alias for starting the container"
+	@echo "  make docker-restart  Alias for stopping and starting the container"
 	@echo "  make docker-logs     View container logs"
 	@echo ""
 	@echo "$(GREEN)Test Commands:$(NC)"
@@ -37,18 +49,20 @@ help:
 	@echo "  make cli             Run CLI directly (without installing)"
 	@echo "  make web             Start web dashboard"
 	@echo "  make clean           Clean up virtual environments"
-	@echo "  make list            List all containers"
-	@echo "  make ps              Show running containers"
-	@echo "  make categories      Show container categories"
+	@echo "  make list            List all containers (via CLI)"
+	@echo "  make ps              Show running containers (via CLI)"
+	@echo "  make categories      Show container categories (via CLI)"
 	@echo "  make version         Show CLI version"
 	@echo ""
 	@echo "$(GREEN)Usage Examples:$(NC)"
 	@echo "  make cli ARGS='list'"
-	@echo "  make cli ARGS='start nginx'"
-	@echo "  make cli ARGS='ps'"
-	@echo "  make docker-build"
+	@echo "  make docker-tag VERSION=${VERSION}"
+	@echo "  make docker-push VERSION=${VERSION}"
 	@echo "  make docker-up"
+	@echo "  make docker-stop"
 	@echo ""
+
+# Installation Commands
 
 install:
 	@echo "$(CYAN)Installing CLI globally...$(NC)"
@@ -60,6 +74,8 @@ uninstall:
 	@echo "$(CYAN)Uninstalling CLI...$(NC)"
 	@./uninstall-cli.sh
 	@echo "$(GREEN)✓ Uninstallation complete$(NC)"
+
+# Test Commands
 
 # Test cascade - runs all tests in sequence
 test: test-cli test-webui test-all
@@ -94,6 +110,8 @@ test-all:
 	@./tests/test-all.sh
 	@echo ""
 
+# Quick Commands
+
 cli:
 	@chmod +x playground
 	@./playground $(ARGS)
@@ -109,7 +127,7 @@ clean:
 	@rm -f venv/.cli_venv_ready
 	@echo "$(GREEN)✓ Cleanup complete$(NC)"
 
-# Alias shortcuts
+# Alias shortcuts (for CLI)
 list:
 	@make cli ARGS="list"
 
@@ -149,15 +167,51 @@ docs:
 
 # Docker management
 docker-build:
-	@echo "$(CYAN)Building Docker image...$(NC)"
+	@echo "$(CYAN)Building Docker image $(DOCKER_IMAGE_NAME):latest...$(NC)"
 	@docker compose -f docker-compose-standalone.yml build
-	@echo "$(GREEN)✓ Image built successfully$(NC)"
+	@echo "$(GREEN)✓ Image built and tagged with :latest successfully$(NC)"
 
-docker-up:
+docker-tag: docker-build
+	@echo "$(CYAN)Tagging and rebuilding Docker image with version $(VERSION)...$(NC)"
+	@if [ "$(VERSION)" = "latest" ]; then \
+		echo "$(RED)✗ ERROR: You must specify a version (e.g., make docker-tag VERSION=1.2.3)$(NC)"; \
+		exit 1; \
+	fi
+	# Builds the image with the specific tag. Assumes your docker-compose file uses the build context,
+	# and we rely on 'docker-compose build' to create the image, then 'docker tag' to add the version tag.
+	@docker tag $(DOCKER_IMAGE_NAME):latest $(DOCKER_IMAGE_NAME):$(VERSION)
+	@echo "$(GREEN)✓ Image $(DOCKER_IMAGE_NAME):$(VERSION) tagged successfully$(NC)"
+
+docker-push:
+	@echo "$(CYAN)Pushing Docker image $(DOCKER_IMAGE_NAME):$(VERSION)...$(NC)"
+	@if [ "$(VERSION)" = "latest" ]; then \
+		echo "$(YELLOW)WARNING: Pushing with tag :latest (no VERSION specified).$(NC)"; \
+	else \
+		echo "$(CYAN)Pushing specific version $(DOCKER_IMAGE_NAME):$(VERSION)...$(NC)"; \
+		docker push $(DOCKER_IMAGE_NAME):$(VERSION); \
+	fi
+	@docker push $(DOCKER_IMAGE_NAME):latest
+	@echo "$(GREEN)✓ Image push complete$(NC)"
+
+docker-up: docker-start
+
+docker-down:
+	@echo "$(CYAN)Stopping and removing Docker container...$(NC)"
+	@docker compose -f docker-compose-standalone.yml down
+	@echo "$(GREEN)✓ Container stopped and removed$(NC)"
+
+# New Docker Aliases
+docker-stop:
+	@echo "$(CYAN)Stopping Docker container...$(NC)"
+	@docker compose -f docker-compose-standalone.yml stop
+	@echo "$(GREEN)✓ Container stopped$(NC)"
+
+docker-start:
 	@echo "$(CYAN)Starting Docker container...$(NC)"
 	@mkdir -p ${PWD}/custom.d ${PWD}/shared-volumes
 	@docker compose -f docker-compose-standalone.yml up -d
 	@echo "$(CYAN)Waiting for service to be ready...$(NC)"
+	# Health check logic (copied from original docker-up)
 	@for i in 1 2 3 4 5 6 7 8 9; do \
 		if curl -sf http://localhost:8000 > /dev/null 2>&1; then \
 			echo "$(GREEN)✓ Container started and service is responding on port 8000$(NC)"; \
@@ -169,14 +223,12 @@ docker-up:
 	echo "$(RED)✗ Service failed to respond on port 8000 after 10 seconds$(NC)"; \
 	exit 1
 
-docker-down:
-	@echo "$(CYAN)Stopping and removing Docker container...$(NC)"
-	@docker compose -f docker-compose-standalone.yml down
-	@echo "$(GREEN)✓ Container stopped and removed$(NC)"
+docker-restart: docker-down docker-start
+	@echo "$(GREEN)✓ Container successfully restarted$(NC)"
 
 docker-logs:
 	@echo "$(CYAN)Fetching container logs...$(NC)"
-	@docker compose -f docker-compose-standalone.yml logs
+	@docker compose -f docker-compose-standalone.yml logs -f
 	@echo "$(GREEN)✓ Logs displayed$(NC)"
 
 # All-in-one setup
