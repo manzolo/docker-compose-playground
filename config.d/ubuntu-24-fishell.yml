@@ -1,0 +1,149 @@
+images:
+  ubuntu-24-fish:
+    image: ubuntu:24.04
+    shell: /usr/bin/fish
+    keep_alive_cmd: sleep infinity
+    description: Ubuntu 24.04 LTS with Fish Shell + Starship
+    category: linux
+    ports:
+      - "2223:22"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Installing Fish Shell and dependencies..."
+          
+          docker exec "${CONTAINER_NAME}" bash -c '
+          export DEBIAN_FRONTEND=noninteractive
+          
+          # Install locales
+          apt-get update -qq >/dev/null 2>&1
+          apt-get install -y -qq locales >/dev/null 2>&1
+          locale-gen en_US.UTF-8 >/dev/null 2>&1
+          update-locale LANG=en_US.UTF-8 >/dev/null 2>&1
+          
+          # Install base packages
+          apt-get install -y -qq \
+            fish git curl wget build-essential \
+            powerline fonts-powerline w3m \
+            vim nano htop tree net-tools >/dev/null 2>&1
+          
+          # Create fish config directory
+          mkdir -p ~/.config/fish/conf.d
+          
+          # Install Starship prompt
+          curl -sS https://starship.rs/install.sh | sh -s -- -y >/dev/null 2>&1
+          
+          # Create fish config
+          cat > ~/.config/fish/config.fish << "EOFFISH"
+          # Fish shell configuration
+          set -gx LANG en_US.UTF-8
+          set -gx TERM xterm-256color
+          
+          # Initialize Starship prompt
+          starship init fish | source
+          
+          # Aliases
+          alias ls="ls --color=auto"
+          alias ll="ls -lh"
+          alias la="ls -lah"
+          alias grep="grep --color=auto"
+          alias mkdir="mkdir -p"
+          
+          # Git aliases
+          alias gs="git status"
+          alias ga="git add"
+          alias gc="git commit"
+          alias gp="git push"
+          alias gl="git log"
+          
+          # Utility functions
+          function cd
+            builtin cd $argv
+            ls -lh
+          end
+          
+          function mkcd
+            mkdir -p $argv[1]
+            cd $argv[1]
+          end
+          
+          # Enable vi keybindings
+          fish_vi_key_bindings
+          
+          # Plugins via oh-my-fish (optional)
+          # Uncomment to use oh-my-fish package manager
+          # curl https://get.oh-my.fish | fish
+          EOFFISH
+          
+          # Create starship config
+          cat > ~/.config/starship.toml << "EOFSTAR"
+          # Starship configuration
+          format = """
+          $username\
+          $hostname\
+          $directory\
+          $git_branch\
+          $git_status\
+          $cmd_duration\
+          $line_break\
+          $character """
+          
+          [character]
+          success_symbol = "[➜](bold green)"
+          error_symbol = "[➜](bold red)"
+          
+          [directory]
+          truncation_length = 3
+          truncate_to_repo = true
+          
+          [git_branch]
+          format = "on [$symbol$branch]($style) "
+          
+          [git_status]
+          format = "([\\($all_status$ahead_behind\\)]($style) )"
+          
+          [cmd_duration]
+          min_time = 500
+          format = "took [$duration]($style) "
+          EOFSTAR
+          
+          # Change default shell to fish
+          chsh -s /usr/bin/fish root
+          '
+          
+          echo "✓ Fish Shell with Starship installed"
+          echo "✓ Shell: /usr/bin/fish"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Ubuntu 24.04 LTS with Fish Shell + Starship        ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🐠 Shell: /usr/bin/fish (Fish Shell)
+      
+      📦 Installed:
+        • Fish Shell (user-friendly interactive shell)
+        • Starship prompt (cross-shell prompt)
+        • Common utilities (git, curl, build-essential, etc)
+      
+      ✨ Features:
+        • Syntax highlighting
+        • Auto-suggestions from history
+        • Tab completions
+        • Vi keybindings enabled
+      
+      📁 Configuration:
+        ~/.config/fish/config.fish - Fish configuration
+        ~/.config/starship.toml - Starship prompt config
+      
+      🎯 Quick Commands:
+        fish --version
+        echo $SHELL
+        functions  # List all functions
+        abbr       # List abbreviations
+      
+      🔧 Useful Aliases:
+        ls, ll, la - List files with colors
+        gs, ga, gc, gp, gl - Git shortcuts
+        mkcd - Create and enter directory

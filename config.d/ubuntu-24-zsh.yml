@@ -1,0 +1,92 @@
+images:
+  ubuntu-24-zsh:
+    image: ubuntu:24.04
+    shell: /bin/zsh
+    keep_alive_cmd: sleep infinity
+    description: Ubuntu 24.04 LTS with ZSH + Powerlevel10k
+    category: linux
+    ports:
+      - "2222:22"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Installing ZSH and dependencies..."
+          
+          docker exec "${CONTAINER_NAME}" bash -c '
+          export DEBIAN_FRONTEND=noninteractive
+          
+          # Install base packages
+          apt-get update -qq >/dev/null 2>&1
+          apt-get install -y -qq \
+            zsh git curl wget build-essential \
+            powerline fonts-powerline \
+            vim nano htop tree net-tools >/dev/null 2>&1
+          
+          # Clone oh-my-zsh
+          git clone --quiet --depth=1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh >/dev/null 2>&1
+          
+          # Clone plugins
+          git -C ~/.oh-my-zsh/custom/plugins clone --quiet --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git >/dev/null 2>&1
+          git -C ~/.oh-my-zsh/custom/plugins clone --quiet --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git >/dev/null 2>&1
+          
+          # Clone theme
+          git -C ~/.oh-my-zsh/custom/themes clone --quiet --depth=1 https://github.com/romkatv/powerlevel10k.git >/dev/null 2>&1
+          
+          # Create .zshrc
+          cat > ~/.zshrc << "EOFZSH"
+          ZSH=~/.oh-my-zsh
+          DISABLE_AUTO_UPDATE=true
+          DISABLE_MAGIC_FUNCTIONS=true
+          ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+          POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
+          POWERLEVEL10K_INSTANT_PROMPT=off
+          ZSH_THEME="powerlevel10k/powerlevel10k"
+          plugins=(
+            git
+            git-flow
+            zsh-syntax-highlighting
+            zsh-autosuggestions
+            history
+            sudo
+          )
+          source ~/.oh-my-zsh/oh-my-zsh.sh
+          EOFZSH
+          
+          # Change default shell to zsh
+          chsh -s /bin/zsh root
+          '
+          docker exec "${CONTAINER_NAME}" /usr/bin/zsh
+          sleep 3
+          
+          echo "✓ ZSH with Powerlevel10k installed"
+          echo "✓ Shell: /bin/zsh"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║        Ubuntu 24.04 LTS with ZSH + Powerlevel10k             ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🐚 Shell: /bin/zsh (ZSH configured)
+      
+      📦 Installed:
+        • Oh My ZSH framework
+        • Powerlevel10k theme
+        • zsh-syntax-highlighting
+        • zsh-autosuggestions
+        • Common utilities (git, curl, build-essential, etc)
+      
+      🎨 Plugins Enabled:
+        • git
+        • git-flow
+        • history
+        • sudo
+      
+      📁 Configuration:
+        ~/.zshrc - Main configuration file
+        ~/.oh-my-zsh - Oh My ZSH installation
+      
+      🚀 Quick Commands:
+        zsh --version
+        echo $SHELL
+        omz update  # Update Oh My ZSH
