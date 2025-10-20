@@ -1,0 +1,795 @@
+# Metadati del gruppo
+group:
+  name: "Node-Express-Mongo-Stack"
+  description: "Node.js with Express application and MongoDB database"
+  category: programming
+  containers: 
+    - mongodb-stack
+    - node-express-stack
+
+# Configurazioni dei container
+images:
+  mongodb-stack:
+    category: database
+    description: MongoDB 7 Database Server
+    image: mongo:7
+    keep_alive_cmd: mongod
+    shell: /bin/bash
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: playground
+      MONGO_INITDB_ROOT_PASSWORD: playground
+      MONGO_INITDB_DATABASE: playground
+    volumes:
+      - name: mongodb-data
+        path: /data/db
+        type: named    
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Initializing MongoDB..."
+          
+          # Wait for MongoDB
+          MAX_WAIT=60
+          COUNT=0
+          while [ $COUNT -lt $MAX_WAIT ]; do
+            if docker exec "${CONTAINER_NAME}" mongosh -u playground -p playground --authenticationDatabase admin --eval "db.version()" &>/dev/null; then
+              echo "✓ MongoDB is ready!"
+              break
+            fi
+            sleep 2
+            COUNT=$((COUNT + 2))
+          done
+          
+          # Insert sample data
+          docker exec "${CONTAINER_NAME}" mongosh -u playground -p playground --authenticationDatabase admin --eval "
+          db = db.getSiblingDB('playground');
+          db.users.drop();
+          db.products.drop();
+          db.orders.drop();
+          db.users.insertMany([
+            { username: 'admin', email: 'admin@playground.local', role: 'admin', createdAt: new Date() },
+            { username: 'user1', email: 'user1@example.com', role: 'user', createdAt: new Date() },
+            { username: 'user2', email: 'user2@example.com', role: 'user', createdAt: new Date() },
+            { username: 'superadmin', email: 'superadmin@playground.local', role: 'admin', createdAt: new Date() }
+          ]);
+          db.products.insertMany([
+            { name: 'Laptop', price: 999.99, category: 'Electronics', inStock: true, quantity: 5 },
+            { name: 'Mouse', price: 29.99, category: 'Electronics', inStock: true, quantity: 50 },
+            { name: 'Keyboard', price: 79.99, category: 'Electronics', inStock: false, quantity: 0 },
+            { name: 'Monitor', price: 299.99, category: 'Electronics', inStock: true, quantity: 10 },
+            { name: 'USB Cable', price: 9.99, category: 'Accessories', inStock: true, quantity: 100 }
+          ]);
+          db.orders.insertMany([
+            { userId: 'user1', productName: 'Laptop', quantity: 1, total: 999.99, status: 'completed', createdAt: new Date() },
+            { userId: 'user1', productName: 'Mouse', quantity: 2, total: 59.98, status: 'pending', createdAt: new Date() },
+            { userId: 'user2', productName: 'Keyboard', quantity: 1, total: 79.99, status: 'completed', createdAt: new Date() },
+            { userId: 'user2', productName: 'Monitor', quantity: 1, total: 299.99, status: 'pending', createdAt: new Date() }
+          ]);
+          db.users.createIndex({ username: 1 }, { unique: true });
+          db.products.createIndex({ category: 1 });
+          db.orders.createIndex({ userId: 1 });
+          print('✓ Sample data inserted');
+          "
+          
+          echo "✓ MongoDB initialized"
+      
+      pre_stop:
+        inline: |
+          #!/bin/bash
+          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          mkdir -p "${BACKUP_DIR}"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          docker exec "${CONTAINER_NAME}" mongodump -u playground -p playground --authenticationDatabase admin --db playground --out /tmp/dump
+          docker cp "${CONTAINER_NAME}:/tmp/dump" "${BACKUP_DIR}/mongo_${TIMESTAMP}"
+          tar -czf "${BACKUP_DIR}/mongo_${TIMESTAMP}.tar.gz" -C "${BACKUP_DIR}" "mongo_${TIMESTAMP}"
+          rm -rf "${BACKUP_DIR}/mongo_${TIMESTAMP}"
+          echo "✓ Backup created"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                MongoDB 7 Database Server                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🔐  Connection:
+        Host: mongodb-stack or localhost
+        Port: 27017
+        User: playground
+        Password: playground
+        Auth DB: admin
+      
+      📊  Collections:
+        • users (with role field)
+        • products (with quantity tracking)
+        • orders (order history)
+      
+      📊  Quick Commands:
+        mongosh -u playground -p playground --authenticationDatabase admin
+        use playground
+        db.users.find()
+        db.products.find()
+        show collections
+      
+      🌐 Node App: http://localhost:3000
+
+  node-express-stack:
+    category: web
+    description: "Node.js 20 with Express"
+    image: node:20
+    keep_alive_cmd: tail -f /dev/null
+    shell: /bin/bash
+    ports:
+      - "3000:3000"
+    environment:
+      MONGO_URI: mongodb://playground:playground@mongodb-stack:27017/playground
+    depends_on:
+      - mongodb-stack
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Setting up Node.js Express application..."
+          
+          # Create app directory
+          docker exec "${CONTAINER_NAME}" mkdir -p /app
+          
+          # Create package.json
+          docker exec "${CONTAINER_NAME}" sh -c 'cat > /app/package.json << "EOF"
+          {
+            "name": "express-app",
+            "version": "1.0.0",
+            "main": "server.js",
+            "dependencies": {
+              "express": "^4.18.2",
+              "mongoose": "^8.0.0"
+            }
+          }
+          EOF'
+          
+          # Install dependencies
+          docker exec "${CONTAINER_NAME}" sh -c 'cd /app && npm install --no-audit --no-fund'
+          
+          # Create HTML file
+          docker exec "${CONTAINER_NAME}" sh -c 'cat > /app/index.html << "EOFHTML"
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <title>Node-Express-MongoDB</title>
+          <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: "Segoe UI", Tahoma, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+          .container { max-width: 1400px; margin: 0 auto; }
+          h1 { color: white; margin-bottom: 20px; text-align: center; font-size: 2em; }
+          .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px; }
+          .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+          .box h2 { color: #667eea; margin-bottom: 15px; font-size: 1.2em; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+          .btn { background: #667eea; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; margin-right: 8px; margin-bottom: 15px; font-size: 0.9em; }
+          .btn:hover { background: #764ba2; }
+          .btn-small { padding: 6px 12px; font-size: 0.85em; }
+          .response { background: #f5f5f5; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; max-height: 350px; overflow-y: auto; font-family: monospace; font-size: 0.85em; white-space: pre-wrap; word-break: break-word; }
+          .loading { color: #999; }
+          .error { color: #e53e3e; border-left-color: #e53e3e; }
+          .success { color: #22863a; border-left-color: #22863a; }
+          .section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
+          .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+          .stat { background: #f0f0f0; padding: 10px 15px; border-radius: 5px; font-size: 0.9em; }
+          .stat-value { font-weight: bold; color: #667eea; }
+          </style>
+          </head>
+          <body>
+          <div class="container">
+          <h1>🚀 Node-Express-MongoDB Stack</h1>
+          <div class="grid">
+          
+          <div class="box">
+          <h2>👥 Users</h2>
+          <button class="btn" onclick="fetchUsers()">List All</button>
+          <button class="btn btn-small" onclick="fetchUsersByRole(&quot;admin&quot;)">Admins</button>
+          <button class="btn btn-small" onclick="fetchUsersByRole(&quot;user&quot;)">Users</button>
+          <div id="usersResponse" class="response loading">Click a button...</div>
+          </div>
+          
+          <div class="box">
+          <h2>📦 Products</h2>
+          <button class="btn" onclick="fetchProducts()">List All</button>
+          <button class="btn btn-small" onclick="fetchInStock()">In Stock</button>
+          <button class="btn btn-small" onclick="fetchByCategory()">Categories</button>
+          <div id="productsResponse" class="response loading">Click a button...</div>
+          </div>
+          
+          <div class="box">
+          <h2>📋 Orders</h2>
+          <button class="btn" onclick="fetchOrders()">List All</button>
+          <button class="btn btn-small" onclick="fetchOrdersByStatus(&quot;completed&quot;)">Completed</button>
+          <button class="btn btn-small" onclick="fetchOrdersByStatus(&quot;pending&quot;)">Pending</button>
+          <div id="ordersResponse" class="response loading">Click a button...</div>
+          </div>
+          
+          <div class="box">
+          <h2>📊 Statistics</h2>
+          <button class="btn" onclick="fetchStats()">Load Stats</button>
+          <button class="btn btn-small" onclick="fetchProductStats()">Product Stats</button>
+          <div id="statsResponse" class="response loading">Click a button...</div>
+          </div>
+          
+          <div class="box">
+          <h2>💰 Pricing</h2>
+          <button class="btn" onclick="fetchPricingReport()">Price Report</button>
+          <button class="btn btn-small" onclick="fetchExpensive()">Over 100</button>
+          <button class="btn btn-small" onclick="fetchCheap()">Under 50</button>
+          <div id="pricingResponse" class="response loading">Click a button...</div>
+          </div>
+          
+          <div class="box">
+          <h2>🔍 Search</h2>
+          <input type="text" id="searchInput" placeholder="Search products..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+          <button class="btn" onclick="searchProducts()">Search</button>
+          <button class="btn btn-small" onclick="clearSearch()">Clear</button>
+          <div id="searchResponse" class="response loading">Type and search...</div>
+          </div>
+          
+          </div>
+          </div>
+          
+          <script>
+          async function fetchUsers() {
+            var box = document.getElementById("usersResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/users");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchUsersByRole(role) {
+            var box = document.getElementById("usersResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/users/role/" + role);
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchProducts() {
+            var box = document.getElementById("productsResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/products");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchInStock() {
+            var box = document.getElementById("productsResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/products/stock/in");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchByCategory() {
+            var box = document.getElementById("productsResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/products/categories");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchOrders() {
+            var box = document.getElementById("ordersResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/orders");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchOrdersByStatus(status) {
+            var box = document.getElementById("ordersResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/orders/status/" + status);
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchStats() {
+            var box = document.getElementById("statsResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/stats");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchProductStats() {
+            var box = document.getElementById("statsResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/stats/products");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchPricingReport() {
+            var box = document.getElementById("pricingResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/products/pricing/report");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchExpensive() {
+            var box = document.getElementById("pricingResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/products/pricing/expensive");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function fetchCheap() {
+            var box = document.getElementById("pricingResponse");
+            box.className = "response loading";
+            box.textContent = "Loading...";
+            try {
+              var res = await fetch("/api/products/pricing/cheap");
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function searchProducts() {
+            var input = document.getElementById("searchInput").value;
+            var box = document.getElementById("searchResponse");
+            if (!input) {
+              box.className = "response error";
+              box.textContent = "Please enter a search term";
+              return;
+            }
+            box.className = "response loading";
+            box.textContent = "Searching...";
+            try {
+              var res = await fetch("/api/products/search?q=" + encodeURIComponent(input));
+              var data = await res.json();
+              box.className = "response success";
+              box.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              box.className = "response error";
+              box.textContent = "Error: " + err.message;
+            }
+          }
+          
+          async function clearSearch() {
+            document.getElementById("searchInput").value = "";
+            document.getElementById("searchResponse").className = "response loading";
+            document.getElementById("searchResponse").textContent = "Type and search...";
+          }
+          </script>
+          </body>
+          </html>
+          EOFHTML'
+          
+          # Create server.js
+          docker exec "${CONTAINER_NAME}" sh -c 'cat > /app/server.js << "EOFSERVER"
+          const express = require("express");
+          const mongoose = require("mongoose");
+          const app = express();
+          const port = 3000;
+
+          app.use(express.json());
+          app.use(express.static("/app"));
+
+          console.log("MONGO_URI:", process.env.MONGO_URI);
+
+          let isConnected = false;
+          const connectWithRetry = () => {
+            mongoose.connect(process.env.MONGO_URI, { 
+              authSource: "admin",
+              serverSelectionTimeoutMS: 10000,
+              socketTimeoutMS: 10000,
+              retryWrites: false
+            })
+              .then(() => {
+                isConnected = true;
+                console.log("✓ Connected to MongoDB");
+              })
+              .catch(err => {
+                console.error("✗ MongoDB connection failed:", err.message);
+                setTimeout(connectWithRetry, 2000);
+              });
+          };
+          connectWithRetry();
+
+          // USERS API
+          app.get("/api/users", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const users = await mongoose.connection.db.collection("users").find({}).toArray();
+              res.json(users);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/users/role/:role", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const users = await mongoose.connection.db.collection("users").find({ role: req.params.role }).toArray();
+              res.json(users);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.post("/api/users", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const result = await mongoose.connection.db.collection("users").insertOne({
+                username: req.body.username,
+                email: req.body.email,
+                role: req.body.role || "user",
+                createdAt: new Date()
+              });
+              res.status(201).json({ _id: result.insertedId, ...req.body });
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          // PRODUCTS API
+          app.get("/api/products", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({}).toArray();
+              res.json(products);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/products/stock/in", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({ inStock: true }).toArray();
+              res.json(products);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/products/categories", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({}).toArray();
+              const categories = {};
+              products.forEach(p => {
+                if (!categories[p.category]) categories[p.category] = [];
+                categories[p.category].push(p);
+              });
+              res.json(categories);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/products/pricing/report", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({}).toArray();
+              const report = {
+                total: products.length,
+                totalValue: products.reduce((sum, p) => sum + (p.price || 0), 0),
+                avgPrice: products.length > 0 ? products.reduce((sum, p) => sum + (p.price || 0), 0) / products.length : 0,
+                minPrice: Math.min(...products.map(p => p.price || 0)),
+                maxPrice: Math.max(...products.map(p => p.price || 0))
+              };
+              res.json(report);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/products/pricing/expensive", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({ price: { "$gte": 100 } }).toArray();
+              res.json(products);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/products/pricing/cheap", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({ price: { "$lt": 50 } }).toArray();
+              res.json(products);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/products/search", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const query = req.query.q || "";
+              const products = await mongoose.connection.db.collection("products").find({ name: { "$regex": query, "$options": "i" } }).toArray();
+              res.json(products);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.post("/api/products", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const result = await mongoose.connection.db.collection("products").insertOne({
+                name: req.body.name,
+                price: req.body.price,
+                category: req.body.category,
+                inStock: req.body.inStock,
+                quantity: req.body.quantity || 0
+              });
+              res.status(201).json({ _id: result.insertedId, ...req.body });
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          // ORDERS API
+          app.get("/api/orders", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const orders = await mongoose.connection.db.collection("orders").find({}).toArray();
+              res.json(orders);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/orders/status/:status", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const orders = await mongoose.connection.db.collection("orders").find({ status: req.params.status }).toArray();
+              res.json(orders);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/orders/user/:userId", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const orders = await mongoose.connection.db.collection("orders").find({ userId: req.params.userId }).toArray();
+              res.json(orders);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.post("/api/orders", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const result = await mongoose.connection.db.collection("orders").insertOne({
+                userId: req.body.userId,
+                productName: req.body.productName,
+                quantity: req.body.quantity,
+                total: req.body.total,
+                status: req.body.status || "pending",
+                createdAt: new Date()
+              });
+              res.status(201).json({ _id: result.insertedId, ...req.body });
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          // STATS API
+          app.get("/api/stats", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const totalUsers = await mongoose.connection.db.collection("users").countDocuments();
+              const totalProducts = await mongoose.connection.db.collection("products").countDocuments();
+              const totalOrders = await mongoose.connection.db.collection("orders").countDocuments();
+              const productsInStock = await mongoose.connection.db.collection("products").countDocuments({ inStock: true });
+              const completedOrders = await mongoose.connection.db.collection("orders").countDocuments({ status: "completed" });
+              
+              const products = await mongoose.connection.db.collection("products").find({}).toArray();
+              const totalValue = products.reduce((sum, p) => sum + (p.price || 0), 0);
+              
+              const orders = await mongoose.connection.db.collection("orders").find({}).toArray();
+              const totalOrderValue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+              
+              res.json({
+                totalUsers,
+                totalProducts,
+                totalOrders,
+                productsInStock,
+                completedOrders,
+                inventoryValue: totalValue,
+                orderValue: totalOrderValue
+              });
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get("/api/stats/products", async (req, res) => {
+            try {
+              if (!isConnected || !mongoose.connection.db) {
+                return res.status(503).json({ error: "Database not connected" });
+              }
+              const products = await mongoose.connection.db.collection("products").find({}).toArray();
+              const stats = {
+                total: products.length,
+                inStock: products.filter(p => p.inStock).length,
+                outOfStock: products.filter(p => !p.inStock).length,
+                byCategory: {},
+                totalInventoryValue: 0,
+                totalQuantity: 0
+              };
+              
+              products.forEach(p => {
+                if (!stats.byCategory[p.category]) {
+                  stats.byCategory[p.category] = 0;
+                }
+                stats.byCategory[p.category]++;
+                stats.totalInventoryValue += (p.price || 0) * (p.quantity || 0);
+                stats.totalQuantity += (p.quantity || 0);
+              });
+              
+              res.json(stats);
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.listen(port, "0.0.0.0", () => {
+            console.log("✓ Server running at http://localhost:3000");
+            console.log("✓ Users API: /api/users");
+            console.log("✓ Products API: /api/products");
+            console.log("✓ Orders API: /api/orders");
+            console.log("✓ Stats API: /api/stats");
+          });
+          EOFSERVER'
+
+          # Start the server
+          docker exec -d "${CONTAINER_NAME}" node /app/server.js
+          
+          sleep 3
+          echo "✓ Node.js Express application started"
+          echo "🌐 Application: http://localhost:3000"
+
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Node.js 20 with Express                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐 Application: http://localhost:3000
+      
+      📌 API Endpoints:
+        GET  http://localhost:3000/api/users
+        POST http://localhost:3000/api/users
+        DELETE http://localhost:3000/api/users/:id
+        
+        GET  http://localhost:3000/api/products
+        POST http://localhost:3000/api/products
+        DELETE http://localhost:3000/api/products/:id
+        
+        GET http://localhost:3000/api/stats
+      
+      🔧 Features:
+         • Node.js 20
+         • Express framework
+         • MongoDB connection
+         • RESTful API
+         • CRUD operations

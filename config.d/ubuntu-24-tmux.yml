@@ -1,0 +1,84 @@
+images:
+  ubuntu-24-tmux:
+    image: ubuntu:24.04
+    shell: /usr/bin/tmux
+    keep_alive_cmd: sleep infinity
+    description: Ubuntu 24.04 with Tmux
+    category: linux
+    ports:
+      - "2226:22"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Installing Tmux..."
+          
+          docker exec "${CONTAINER_NAME}" bash -c '
+          export DEBIAN_FRONTEND=noninteractive
+          
+          # Install packages
+          apt-get update -qq
+          apt-get install -y -qq \
+            tmux git curl wget vim nano htop tree net-tools
+          
+          # Create tmux config
+          cat > ~/.tmux.conf << "EOFTMUX"
+          # Set prefix to Ctrl-B (default)
+          set -g prefix C-b
+          
+          # Basic settings
+          set -g default-terminal "screen-256color"
+          set -g mouse on
+          set -g history-limit 5000
+          
+          # Keybindings
+          bind c new-window
+          bind '"' split-window -h
+          bind '%' split-window -v
+          bind o select-pane -t :.+
+          bind x kill-pane
+          bind z resize-pane -Z
+          bind d detach-client
+          bind s new-session
+          bind n next-window
+          bind p previous-window
+          bind : command-prompt
+          bind q kill-server
+          
+          # Status bar
+          set -g status-bg black
+          set -g status-fg white
+          set -g status-left "#[fg=green][#S]"
+          set -g status-right "#[fg=yellow]%H:%M #[fg=cyan]%d-%b-%y"
+          EOFTMUX
+          '
+          
+          echo "✓ Tmux installed"
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         Ubuntu 24.04 with Tmux                              ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      QUICK START:
+        tmux                - Launch Tmux
+        tmux new-session -s name - New session
+        tmux attach -t name - Attach to session
+      
+      SHORTCUTS (Ctrl+B prefix):
+      
+        New Window:         Ctrl+B then c
+        Split Horizontal:   Ctrl+B then "
+        Split Vertical:     Ctrl+B then %
+        Next Pane:          Ctrl+B then o
+        Close Pane:         Ctrl+B then x
+        Maximize Pane:      Ctrl+B then z
+        New Session:        Ctrl+B then s
+        Next Window:        Ctrl+B then n
+        Previous Window:    Ctrl+B then p
+        Command Mode:       Ctrl+B then :
+        Detach:             Ctrl+B then d
+        Kill Server:        Ctrl+B then q
+      
+      📁 Configuration:
+        ~/.tmux.conf        - Tmux configuration

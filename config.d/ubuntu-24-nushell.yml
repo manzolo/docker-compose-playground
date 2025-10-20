@@ -1,0 +1,107 @@
+images:
+  ubuntu-24-nushell:
+    image: ubuntu:24.04
+    shell: /usr/bin/nu
+    keep_alive_cmd: sleep infinity
+    description: Ubuntu 24.04 with Nushell
+    category: linux
+    ports:
+      - "2224:22"
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          echo "Installing Nushell..."
+          docker exec "${CONTAINER_NAME}" bash -c '
+          export DEBIAN_FRONTEND=noninteractive
+          # Install base packages
+          apt-get update -qq >/dev/null 2>&1
+          apt-get install -y -qq \
+            curl wget git vim nano htop tree net-tools \
+            locales gnupg >/dev/null 2>&1
+          # Generate locale
+          locale-gen en_US.UTF-8 >/dev/null 2>&1
+          update-locale LANG=en_US.UTF-8 >/dev/null 2>&1
+          # Add Nushell repo
+          curl -fsSL https://apt.fury.io/nushell/gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/fury-nushell.gpg >/dev/null 2>&1
+          echo "deb https://apt.fury.io/nushell/ /" | tee /etc/apt/sources.list.d/fury.list >/dev/null 2>&1
+          # Install Nushell
+          apt-get update -qq >/dev/null 2>&1
+          apt-get install -y -qq nushell >/dev/null 2>&1
+          # Create config directory
+          mkdir -p ~/.config/nushell
+          # Create env.nu
+          cat > ~/.config/nushell/env.nu << "EOFNU"
+          $env.LANG = "en_US.UTF-8"
+          $env.TERM = "xterm-256color"
+          EOFNU
+          # Create config.nu
+          cat > ~/.config/nushell/config.nu << "EOFNU"
+          $env.config = {
+              show_banner: false
+              edit_mode: "vi"
+          }
+
+          alias ls = ls -lah
+          alias ll = ls -lh
+
+          # Funzione mkdir che crea directory ricorsivamente
+          def mkdir [--parents (-p), ...dirs: string] {
+              for dir in $dirs {
+                  if ($parents) {
+                      builtin mkdir -s $dir
+                  } else {
+                      builtin mkdir $dir
+                  }
+              }
+          }
+
+          # Git shortcuts
+          alias gs = git status
+          alias ga = git add
+          alias gc = git commit
+          alias gp = git push
+          alias gl = git log --oneline -n 10
+
+          # Funzione per creare e entrare in una directory
+          def mkcd [dir: string] {
+              mkdir --parents $dir
+              cd $dir
+          }
+
+          # Utilità
+          def weather [] {
+              curl -s wttr.in
+          }
+
+          def myip [] {
+              curl -s https://ifconfig.me
+          }
+          EOFNU
+          '
+          echo "✓ Nushell installed"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         Ubuntu 24.04 with Nushell                            ║
+      ╚══════════════════════════════════════════════════════════════╝
+      Inside Nushell:
+        help                - Show all commands
+        ls, ll              - List files
+        cd <dir>            - Change directory
+        mkcd <dir>          - Create and enter directory
+
+      Git shortcuts:
+        gs                  - git status
+        ga                  - git add
+        gc                  - git commit
+        gp                  - git push
+        gl                  - git log
+
+      Utilities:
+        weather             - Show weather
+        myip                - Show public IP
+        htop                - System monitor
+
+      📁 Configuration:
+        ~/.config/nushell/config.nu     - Main configuration
+        ~/.config/nushell/env.nu        - Environment setup
