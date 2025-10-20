@@ -27,6 +27,8 @@ readonly STARTUP_TIMEOUT=60
 WEB_PID=""
 EXIT_CODE=0
 SHUTDOWN_IN_PROGRESS=false
+TAIL_PROCESS_PID=""
+ENABLE_TAIL=false
 
 # =============================================================================
 # Detect Python
@@ -139,6 +141,7 @@ show_environment() {
     log_info "  Virtualenv: $VENV_NAME"
     log_info "  Project: $PROJECT_DIR"
     log_info "  Port: $PORT"
+    [[ "$ENABLE_TAIL" == true ]] && log_info "  Live logs: ENABLED (tail -f)"
 }
 
 kill_port() {
@@ -283,6 +286,28 @@ health_check() {
 }
 
 # =============================================================================
+# Tail Logs Management
+# =============================================================================
+
+start_tail_logs() {
+    if [[ "$ENABLE_TAIL" == true ]]; then
+        log_info "Starting live log viewer (tail -f)..."
+        # Aspetta un po' che il file di log sia creato
+        sleep 1
+        tail -f "$LOG_FILE" &
+        TAIL_PROCESS_PID=$!
+        log_info "Live log viewer started (PID: $TAIL_PROCESS_PID)"
+    fi
+}
+
+stop_tail_logs() {
+    if [[ -n "$TAIL_PROCESS_PID" ]] && ps -p "$TAIL_PROCESS_PID" >/dev/null 2>&1; then
+        log_debug "Stopping tail process..."
+        kill "$TAIL_PROCESS_PID" 2>/dev/null || true
+    fi
+}
+
+# =============================================================================
 # Web Server Management
 # =============================================================================
 
@@ -316,6 +341,9 @@ start_server() {
     echo "$WEB_PID" > "$PID_FILE"
     log_info "Server process started with PID: $WEB_PID"
     
+    # Start tail if enabled
+    start_tail_logs
+    
     # Wait for server to be healthy
     if ! health_check; then
         kill "$WEB_PID" 2>/dev/null || true
@@ -340,6 +368,9 @@ graceful_shutdown() {
     SHUTDOWN_IN_PROGRESS=true
     
     log_info "Interrupt received. Starting graceful shutdown..."
+    
+    # Stop tail first
+    stop_tail_logs
     
     if [[ -f "$PID_FILE" ]]; then
         local pid
@@ -379,12 +410,15 @@ Options:
   --debug              Enable debug logging (sets log level to DEBUG)
   --log-level LEVEL    Set log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
                        (default: INFO)
+  --tail               Show live logs in terminal (tail -f venv/web.log)
   --help               Show this help message
 
 Examples:
-  $0                   # Run with default settings
-  $0 --debug           # Run with debug logging
-  $0 --log-level DEBUG # Run with debug level
+  $0                        # Run with default settings
+  $0 --debug                # Run with debug logging
+  $0 --tail                 # Run with live log viewer
+  $0 --debug --tail         # Run with debug + live logs
+  $0 --log-level WARNING    # Run with warning level
 
 EOF
 }
@@ -404,6 +438,10 @@ parse_arguments() {
                     exit 1
                 fi
                 shift 2
+                ;;
+            --tail)
+                ENABLE_TAIL=true
+                shift
                 ;;
             --help)
                 show_help

@@ -900,7 +900,7 @@ main() {
     
     # Start server
     log_info "Starting WebUI server..."
-    bash "${SERVER_SCRIPT}" &
+    bash "${SERVER_SCRIPT}" --tail &
     SERVER_PID=$!
     log_info "Server started with PID: $SERVER_PID"
     
