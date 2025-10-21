@@ -59,7 +59,7 @@ def execute_script(script_config, container_name: str, image_name: str) -> None:
                 ['bash', temp_script, container_name],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=180
             )
             
             # Log only essentials

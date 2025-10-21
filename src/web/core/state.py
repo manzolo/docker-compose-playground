@@ -18,6 +18,8 @@ def create_operation(operation_id: str, operation_type: str, **kwargs) -> dict:
         "completed_at": None,
         "total": kwargs.get("total", 0),
         "errors": [],
+        "scripts_running": [],  # Track script execution
+        "scripts_completed": [],  # Track completed scripts
     }
     
     # Add type-specific fields
@@ -44,6 +46,14 @@ def create_operation(operation_id: str, operation_type: str, **kwargs) -> dict:
             "container": kwargs.get("container", ""),
             "started": 0,
             "already_running": 0,
+            "failed": 0,
+        })
+
+    elif operation_type == "stop":
+        operation.update({
+            "container": kwargs.get("container", ""),
+            "stopped": 0,
+            "not_running": 0,
             "failed": 0,
         })
     
@@ -84,6 +94,42 @@ def update_operation(operation_id: str, **updates) -> bool:
     
     active_operations[operation_id].update(updates)
     return True
+
+
+def add_script_tracking(operation_id: str, container: str, script_type: str) -> bool:
+    """Track script execution start"""
+    if operation_id not in active_operations:
+        logger.warning("Operation %s not found when tracking script", operation_id)
+        return False
+    
+    script_info = {
+        "container": container,
+        "type": script_type,
+        "started_at": datetime.now().isoformat()
+    }
+    active_operations[operation_id]["scripts_running"].append(script_info)
+    logger.debug("Added script tracking for %s: %s", container, script_type)
+    return True
+
+
+def complete_script_tracking(operation_id: str, container: str) -> bool:
+    """Mark script execution as complete"""
+    if operation_id not in active_operations:
+        logger.warning("Operation %s not found when completing script", operation_id)
+        return False
+    
+    running_scripts = active_operations[operation_id]["scripts_running"]
+    completed_script = next((s for s in running_scripts if s["container"] == container), None)
+    
+    if completed_script:
+        running_scripts.remove(completed_script)
+        completed_script["completed_at"] = datetime.now().isoformat()
+        active_operations[operation_id]["scripts_completed"].append(completed_script)
+        logger.debug("Completed script tracking for %s", container)
+        return True
+    
+    logger.warning("Script tracking not found for %s in operation %s", container, operation_id)
+    return False
 
 
 def complete_operation(operation_id: str, **final_updates) -> bool:

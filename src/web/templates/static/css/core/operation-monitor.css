@@ -1,0 +1,383 @@
+/* ============================================
+   OPERATION MONITOR WIDGET - Persistent background operations
+   ============================================ */
+
+.operation-monitor-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 420px;
+}
+
+/* ============================================
+   OPERATION CARD
+   ============================================ */
+
+.operation-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid;
+    overflow: hidden;
+    animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(400px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.operation-card.operation-running {
+    border-left-color: #4299e1;
+}
+
+.operation-card.operation-completed {
+    border-left-color: #48bb78;
+}
+
+.operation-card.operation-failed {
+    border-left-color: #f56565;
+}
+
+.operation-card.operation-timeout {
+    border-left-color: #ed8936;
+}
+
+/* ============================================
+   OPERATION HEADER
+   ============================================ */
+
+.operation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.operation-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.operation-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    animation: spin 1s linear infinite;
+}
+
+.operation-card.operation-completed .operation-icon,
+.operation-card.operation-failed .operation-icon,
+.operation-card.operation-timeout .operation-icon {
+    animation: none;
+}
+
+.operation-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.operation-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.operation-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--dark);
+}
+
+/* ============================================
+   OPERATION CONTENT
+   ============================================ */
+
+.operation-content {
+    padding: 16px;
+    background: white;
+}
+
+.operation-message {
+    font-size: 13px;
+    color: var(--dark);
+    line-height: 1.5;
+    word-break: break-word;
+    margin-bottom: 12px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    white-space: pre-wrap;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.operation-message::-webkit-scrollbar {
+    width: 6px;
+}
+
+.operation-message::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 3px;
+}
+
+.operation-message::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.operation-message::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* ============================================
+   PROGRESS BAR
+   ============================================ */
+
+.operation-progress {
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.operation-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4299e1, #3182ce);
+    border-radius: 3px;
+    transition: width 0.3s ease-out;
+    animation: progressGlow 2s ease-in-out infinite;
+}
+
+@keyframes progressGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 rgba(66, 153, 225, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(66, 153, 225, 0.5);
+    }
+}
+
+.operation-card.operation-completed .operation-progress-bar {
+    background: linear-gradient(90deg, #48bb78, #38a169);
+    animation: none;
+}
+
+.operation-card.operation-failed .operation-progress-bar {
+    background: linear-gradient(90deg, #f56565, #e53e3e);
+    animation: none;
+}
+
+/* ============================================
+   OPERATION STATES - Icon colors
+   ============================================ */
+
+.operation-card.operation-running .operation-icon {
+    color: #4299e1;
+}
+
+.operation-card.operation-completed .operation-icon {
+    color: #48bb78;
+}
+
+.operation-card.operation-failed .operation-icon {
+    color: #f56565;
+}
+
+.operation-card.operation-timeout .operation-icon {
+    color: #ed8936;
+}
+
+/* ============================================
+   CLOSING ANIMATION
+   ============================================ */
+
+.operation-card.operation-closing {
+    animation: slideOutRight 0.3s ease-out forwards;
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(400px);
+    }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .operation-monitor-container {
+        left: 12px;
+        right: 12px;
+        max-width: none;
+        bottom: 12px;
+    }
+
+    .operation-card {
+        max-width: 100%;
+    }
+
+    .operation-message {
+        font-size: 12px;
+        max-height: 100px;
+        padding: 8px;
+    }
+
+    .operation-header {
+        padding: 12px;
+    }
+
+    .operation-content {
+        padding: 12px;
+    }
+
+    .operation-name {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .operation-monitor-container {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        gap: 8px;
+    }
+
+    .operation-card {
+        border-radius: 8px;
+    }
+
+    .operation-header {
+        padding: 10px;
+    }
+
+    .operation-content {
+        padding: 10px;
+    }
+
+    .operation-icon {
+        font-size: 16px;
+    }
+
+    .operation-name {
+        font-size: 12px;
+    }
+
+    .operation-message {
+        font-size: 11px;
+        max-height: 80px;
+    }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode .operation-card {
+    background: #1a202c;
+    border-color: #4a5568;
+}
+
+html.dark-mode .operation-header {
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    border-bottom-color: #4a5568;
+}
+
+html.dark-mode .operation-name {
+    color: #e2e8f0;
+}
+
+html.dark-mode .operation-close {
+    color: #718096;
+}
+
+html.dark-mode .operation-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+html.dark-mode .operation-message {
+    color: #404A4E;
+}
+
+html.dark-mode .operation-progress {
+    background: #4a5568;
+}
+
+html.dark-mode .operation-card.operation-running {
+    border-left-color: #4299e1;
+}
+
+html.dark-mode .operation-card.operation-completed {
+    border-left-color: #48bb78;
+}
+
+html.dark-mode .operation-card.operation-failed {
+    border-left-color: #f56565;
+}
+
+html.dark-mode .operation-card.operation-timeout {
+    border-left-color: #ed8936;
+}
+
+html.dark-mode .operation-progress-bar {
+    background: linear-gradient(90deg, #4299e1, #3182ce);
+}
+
+html.dark-mode .operation-card.operation-completed .operation-progress-bar {
+    background: linear-gradient(90deg, #48bb78, #38a169);
+}
+
+html.dark-mode .operation-card.operation-failed .operation-progress-bar {
+    background: linear-gradient(90deg, #f56565, #e53e3e);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes spin {
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(400px);
+    }
+}

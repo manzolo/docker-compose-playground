@@ -105,17 +105,18 @@ const GroupOperations = {
             );
             if (!confirmed) return;
 
-            showLoader(`Initiating start for group '${groupName}'...`);
-            ToastManager.show(`Starting ${groupName}...`, 'info');
+            const response = await ApiService.startGroup(groupName);
 
-            const data = await ApiService.startGroup(groupName);
-
-            if (data.operation_id) {
-                this.pollStartGroupStatus(data.operation_id, groupName);
+            if (response.operation_id) {
+                ToastManager.show(`Starting ${groupName}...`, 'info');
+                // Il widget si occupa del polling automaticamente
+                OperationMonitor.startMonitoring(response.operation_id, `Group: ${groupName}`);
             } else {
                 throw new Error('No operation ID received');
             }
+
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleGroupOperationError(error, 'start');
         }
     },
@@ -132,119 +133,20 @@ const GroupOperations = {
             );
             if (!confirmed) return;
 
-            showLoader(`Initiating stop for group '${groupName}'...`);
+            const response = await ApiService.stopGroup(groupName);
 
-            const data = await ApiService.stopGroup(groupName);
-
-            if (data.operation_id) {
-                this.pollStopGroupStatus(data.operation_id, groupName);
+            if (response.operation_id) {
+                ToastManager.show(`Stopping ${groupName}...`, 'info');
+                // Il widget si occupa del polling automaticamente
+                OperationMonitor.startMonitoring(response.operation_id, `Stopping ${groupName}`);
             } else {
                 throw new Error('No operation ID received');
             }
+
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleGroupOperationError(error, 'stop');
         }
-    },
-
-    /**
-     * Poll start group status
-     */
-    async pollStartGroupStatus(operationId, groupName) {
-        await this.pollGroupStatus(
-            operationId,
-            groupName,
-            'start',
-            (statusData) => this.formatStartGroupMessage(statusData, groupName)
-        );
-    },
-
-    /**
-     * Poll stop group status
-     */
-    async pollStopGroupStatus(operationId, groupName) {
-        await this.pollGroupStatus(
-            operationId,
-            groupName,
-            'stop',
-            (statusData) => this.formatStopGroupMessage(statusData, groupName)
-        );
-    },
-
-    /**
-     * Generic group status polling
-     */
-    async pollGroupStatus(operationId, groupName, operationType, messageFormatter) {
-        let attempts = 0;
-
-        const poll = async () => {
-            try {
-                const statusData = await ApiService.getOperationStatus(operationId);
-
-                showLoader(messageFormatter(statusData));
-
-                if (statusData.status === 'completed') {
-                    hideLoader();
-                    this.handleGroupOperationComplete(statusData, groupName, operationType);
-                    return;
-                }
-
-                if (statusData.status === 'error') {
-                    ToastManager.show(`${operationType} group failed: ${statusData.error}`, 'error');
-                    hideLoader();
-                    return;
-                }
-
-                attempts++;
-                if (attempts < Config.POLLING.MAX_ATTEMPTS) {
-                    setTimeout(poll, Config.POLLING.INTERVAL);
-                } else {
-                    ToastManager.show(`Operation timed out. Please check status manually.`, 'warning');
-                    hideLoader();
-                }
-
-            } catch (error) {
-                console.error('Polling error:', error);
-                attempts++;
-                if (attempts < Config.POLLING.MAX_ATTEMPTS) {
-                    setTimeout(poll, Config.POLLING.INTERVAL);
-                } else {
-                    ToastManager.show('Polling failed after maximum attempts', 'error');
-                    hideLoader();
-                }
-            }
-        };
-
-        poll();
-    },
-
-    /**
-     * Format start group message
-     */
-    formatStartGroupMessage(statusData, groupName) {
-        const total = statusData.total || '?';
-        const started = statusData.started || 0;
-        const alreadyRunning = statusData.already_running || 0;
-        const failed = statusData.failed || 0;
-        const completed = started + alreadyRunning + failed;
-        const remaining = total !== '?' ? total - completed : '?';
-
-        return `Starting '${groupName}': ${completed}/${total} | ` +
-            `✓ ${started} started, ⚡ ${alreadyRunning} running, ✗ ${failed} failed, ⏳ ${remaining} remaining`;
-    },
-
-    /**
-     * Format stop group message
-     */
-    formatStopGroupMessage(statusData, groupName) {
-        const total = statusData.total || 0;
-        const stopped = statusData.stopped || 0;
-        const notRunning = statusData.not_running || 0;
-        const failed = statusData.failed || 0;
-        const completed = stopped + notRunning + failed;
-        const remaining = total > 0 ? total - completed : 0;
-
-        return `Stopping '${groupName}': ${completed}/${total} | ` +
-            `⏹ ${stopped} stopped, ⏸ ${notRunning} not running, ✗ ${failed} failed, ⏳ ${remaining} remaining`;
     },
 
     /**
@@ -292,7 +194,6 @@ const GroupOperations = {
         } else {
             ToastManager.show(`${operation} operation failed: ${error.message}`, 'error');
         }
-        hideLoader();
     }
 };
 
