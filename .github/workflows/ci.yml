@@ -2,7 +2,7 @@ name: CI - Test CLI, TUI, and WebUI
 
 on:
   push:
-    branches: [develop, main, 'release/*']
+    branches: [develop, main, 'release/*', 'feature/*']
     tags: [v*]
   schedule:
     - cron: '0 0 * * *'
