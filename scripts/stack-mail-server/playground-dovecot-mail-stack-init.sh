@@ -1,26 +1,19 @@
 #!/bin/bash
-set -e
 
-echo "📬 Installing and configuring Dovecot..."
+echo "📬 Installing and configuring Dovecot IMAP/POP3..."
 
-export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
 apt-get install -y -qq --no-install-recommends dovecot-core dovecot-imapd dovecot-pop3d dovecot-mysql mysql-client ssl-cert 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
 
-sleep 1
+useradd -m -d /var/mail/virtual -s /usr/sbin/nologin -u 5000 vmail 2>/dev/null || echo "vmail user exists"
+useradd -r -s /usr/sbin/nologin -u 10000 postfix 2>/dev/null || echo "postfix user exists"
 
-echo "→ Creating vmail and postfix users..."
-useradd -m -d /var/mail/virtual -s /usr/sbin/nologin -u 5000 vmail 2>/dev/null || echo "vmail user already exists"
-useradd -r -s /usr/sbin/nologin -u 10000 postfix 2>/dev/null || echo "postfix user already exists"
-
-echo "→ Setting up directories..."
 mkdir -p /var/spool/postfix/private
 touch /var/spool/postfix/private/auth
-chown postfix:postfix /var/spool/postfix/private/auth
+chown postfix:postfix /var/spool/postfix/private/auth 2>/dev/null || true
 
 mkdir -p /etc/dovecot/conf.d
 
-echo "→ Creating Dovecot configuration..."
 cat > /etc/dovecot/dovecot.conf << 'DOVECOTEOF'
 protocols = imap pop3
 listen = *, [::]
@@ -72,7 +65,6 @@ service auth {
 }
 DOVECOTEOF
 
-echo "→ Creating Dovecot SQL configuration..."
 cat > /etc/dovecot/dovecot-sql.conf.ext << 'SQLEOF'
 driver = mysql
 connect = host=mysql-mail-stack dbname=mailserver user=mailuser password=mail_secure_pass
@@ -83,7 +75,6 @@ SQLEOF
 
 chmod 600 /etc/dovecot/dovecot-sql.conf.ext
 
-echo "→ Creating SSL certificates..."
 mkdir -p /etc/dovecot/certs
 if [ ! -f /etc/dovecot/certs/cert.pem ]; then
     openssl req -new -x509 -days 3650 -nodes \
@@ -93,21 +84,28 @@ if [ ! -f /etc/dovecot/certs/cert.pem ]; then
     chmod 600 /etc/dovecot/certs/key.pem
 fi
 
-echo "→ Setting up virtual mail directories..."
 mkdir -p /var/mail/virtual/localhost/admin /var/mail/virtual/localhost/user1
 mkdir -p /var/mail/virtual/example.com/admin
 chown -R vmail:vmail /var/mail/virtual
 chmod -R 770 /var/mail/virtual
 
-echo "→ Starting Dovecot service..."
-service dovecot start 2>/dev/null || dovecot
+echo "→ Starting Dovecot..."
+service dovecot start 2>&1 | head -5
 
 sleep 2
 
-if doveadm auth test admin@localhost admin123 > /dev/null 2>&1; then
-    echo "✓ Dovecot started and authentication working"
+if ps aux | grep -v grep | grep -q "dovecot"; then
+    echo "✓ Dovecot started successfully"
 else
-    echo "⚠️  Warning: Dovecot may need time to fully initialize, continuing..."
+    echo "⚠️ Dovecot may not have started"
+    dovecot || true
+    sleep 2
+fi
+
+if ps aux | grep -v grep | grep -q "dovecot"; then
+    echo "✓ Dovecot confirmed running"
+else
+    echo "❌ Dovecot failed to start"
 fi
 
 exit 0

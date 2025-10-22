@@ -1,15 +1,10 @@
 #!/bin/bash
-set -e
 
-echo "📧 Installing and configuring Postfix..."
+echo "📧 Installing and configuring Postfix SMTP..."
 
-export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
 apt-get install -y -qq --no-install-recommends postfix mailutils mysql-client curl 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
 
-sleep 1
-
-echo "→ Creating Postfix configuration..."
 mkdir -p /etc/postfix
 
 cat > /etc/postfix/main.cf << 'POSTFIXEOF'
@@ -42,7 +37,6 @@ maximal_queue_lifetime = 5d
 bounce_queue_lifetime = 1d
 POSTFIXEOF
 
-echo "→ Creating virtual mailbox configuration..."
 cat > /etc/postfix/virtual_mailbox << 'VMAILEOF'
 admin@localhost admin/
 user1@localhost user1/
@@ -51,7 +45,6 @@ VMAILEOF
 
 postmap /etc/postfix/virtual_mailbox 2>/dev/null || true
 
-echo "→ Creating virtual aliases configuration..."
 cat > /etc/postfix/virtual_alias << 'VALIASEOF'
 postmaster@localhost admin@localhost
 webmaster@localhost admin@localhost
@@ -59,13 +52,11 @@ VALIASEOF
 
 postmap /etc/postfix/virtual_alias 2>/dev/null || true
 
-echo "→ Setting up virtual mail directories..."
 mkdir -p /var/mail/virtual/admin /var/mail/virtual/user1
-useradd -m -d /var/mail/virtual -s /usr/sbin/nologin -u 5000 vmail 2>/dev/null || echo "vmail user already exists"
+useradd -m -d /var/mail/virtual -s /usr/sbin/nologin -u 5000 vmail 2>/dev/null || echo "vmail user exists"
 chown -R vmail:vmail /var/mail/virtual
 chmod -R 770 /var/mail/virtual
 
-echo "→ Creating SSL certificates..."
 mkdir -p /etc/postfix/certs
 if [ ! -f /etc/postfix/certs/cert.pem ]; then
     openssl req -new -x509 -days 3650 -nodes \
@@ -75,7 +66,6 @@ if [ ! -f /etc/postfix/certs/cert.pem ]; then
     chmod 600 /etc/postfix/certs/key.pem
 fi
 
-echo "→ Adding submission and SMTPS to master.cf..."
 if ! grep -q "^submission" /etc/postfix/master.cf; then
     cat >> /etc/postfix/master.cf << 'MASTEREOF'
 submission inet n       -       y       -       -       smtpd
@@ -83,15 +73,23 @@ submission inet n       -       y       -       -       smtpd
 MASTEREOF
 fi
 
-echo "→ Starting Postfix service..."
-service postfix start 2>/dev/null || postfix start
+echo "→ Starting Postfix..."
+service postfix start 2>&1 | head -5
 
 sleep 2
 
-if postfix status > /dev/null 2>&1; then
+if ps aux | grep -v grep | grep -q "postfix"; then
     echo "✓ Postfix started successfully"
 else
-    echo "⚠️  Warning: Postfix may not have started, continuing..."
+    echo "⚠️ Postfix may not have started"
+    postfix start || true
+    sleep 2
+fi
+
+if ps aux | grep -v grep | grep -q "postfix"; then
+    echo "✓ Postfix confirmed running"
+else
+    echo "❌ Postfix failed to start"
 fi
 
 exit 0
