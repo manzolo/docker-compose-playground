@@ -98,7 +98,7 @@ const ManagerOperations = {
                 const count = statusData[this.getCountField(operationType)] || 0;
 
                 let loaderMessage = `${verbName} containers: ${count} of ${total}`;
-                
+
                 // Add script tracking info if available
                 const scriptStatus = Utils.formatScriptStatus(statusData);
                 if (scriptStatus) {
@@ -110,7 +110,11 @@ const ManagerOperations = {
                 if (statusData.status === 'completed') {
                     hideLoader(); // Safety: chiudi loader esplicitamente
                     //ToastManager.show(`${verbName} operation completed!`, 'success');
-                    setTimeout(() => location.reload(), 2500);
+                    //setTimeout(() => {
+                        //ReloadManager.showReloadToast(5000);
+                        //setTimeout(() => location.reload(), 1000);
+                    //}, 5000);
+                    //setTimeout(() => location.reload(), 2500);
                     return;
                 }
 
@@ -214,11 +218,11 @@ const CategoryOperations = {
      */
     async performCategoryOperation(category, operation) {
         const isStart = operation === 'start';
-        
+
         try {
             ToastManager.show(`${isStart ? 'Starting' : 'Stopping'} ${category} containers...`, 'info');
 
-            const data = operation === 'start' 
+            const data = operation === 'start'
                 ? await ApiService.startCategory(category)
                 : await ApiService.stopCategory(category);
 
