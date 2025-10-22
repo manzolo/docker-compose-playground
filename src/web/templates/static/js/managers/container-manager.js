@@ -170,19 +170,19 @@ const ContainerManager = {
         });
 
         try {
-            console.log("🔴 Calling /stop/" + containerName);
+            //console.log("🔴 Calling /stop/" + containerName);
             const response = await ApiService.stopContainer(containerName);
 
-            console.log("🔴 Response received:", response);
+            //console.log("🔴 Response received:", response);
 
             const data = response instanceof Response ? await response.json() : response;
-            console.log("🔴 Data parsed:", data);
+            //console.log("🔴 Data parsed:", data);
 
             if (data.operation_id) {
-                console.log("🔴 operation_id:", data.operation_id);
+                //console.log("🔴 operation_id:", data.operation_id);
                 ToastManager.show(`Stopping ${containerName}...`, 'info');
                 OperationMonitor.startMonitoring(data.operation_id, `Stopping ${containerName}`);
-                console.log("🔴 Widget monitoring started");
+                //console.log("🔴 Widget monitoring started");
             } else {
                 console.error("🔴 No operation_id in response:", data);
                 throw new Error('No operation_id received');
