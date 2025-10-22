@@ -121,6 +121,13 @@ const ApiService = {
         });
     },
 
+    async cleanupContainer(containerName) {
+        return this.fetchJson(`/api/cleanup/${encodeURIComponent(containerName)}`, {
+            method: 'POST',
+            timeout: Config.POLLING.TIMEOUT.CLEANUP
+        });
+    },
+
     async cleanupAll() {
         return this.fetchJson('/api/cleanup-all', {
             method: 'POST',

@@ -12,6 +12,7 @@ const Config = {
         TIMEOUT: {
             START: 180000,
             STOP: 180000,
+            CLEANUP: 60000,
             GROUP: 180000
         }
     },
