@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: manzolo/docker-compose-playground:latest
+    image: manzolo/docker-compose-playground:${IMAGE_TAG:-latest}
     container_name: docker-compose-playground
     ports:
       - "8000:8000"
