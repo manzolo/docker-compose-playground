@@ -167,17 +167,19 @@ def get_stop_timeout(img_data: Dict[str, Any]) -> int:
     return 10  # 10 seconds default
 
 
-def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -> Dict[str, Any]:
+def start_single_container_sync(container_name: str, img_data: Dict[str, Any], operation_id: str = None) -> Dict[str, Any]:
     """Start a single container synchronously with volume support
     
     Args:
         container_name: Name of the container (without 'playground-' prefix)
         img_data: Container configuration dict
+        operation_id: Optional operation ID for tracking scripts
     
     Returns:
         dict: Operation result with status and optional error info
     """
     from src.web.core.scripts import execute_script
+    from src.web.core.state import add_script_tracking, complete_script_tracking
     
     full_container_name = f"playground-{container_name}"
     logger.info("Starting container: %s", container_name)
@@ -243,7 +245,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
         logger.error("%s: %s", container_name, error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
     
-    # Wait for running
+    # Wait for running - IMPORTANTE: usa time.sleep() non await!
     max_wait = 30
     elapsed = 0
     wait_interval = 0.5
@@ -254,15 +256,28 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
             if container.status == "running":
                 logger.info("Container %s is now running", full_container_name)
                 
-                # Execute post-start script
+                # Execute post-start script with tracking
                 scripts = img_data.get('scripts', {})
                 if 'post_start' in scripts:
                     try:
                         logger.info(">>> CALLING post_start script for %s", full_container_name)
+                        
+                        # Track script execution if operation_id provided
+                        if operation_id:
+                            add_script_tracking(operation_id, full_container_name, "post_start")
+                        
                         execute_script(scripts['post_start'], full_container_name, container_name)
                         logger.info(">>> post_start script COMPLETED successfully for %s", full_container_name)
+                        
+                        # Mark script as completed
+                        if operation_id:
+                            complete_script_tracking(operation_id, full_container_name)
                     except Exception as script_error:
                         logger.error(">>> post_start script FAILED for %s: %s", full_container_name, str(script_error))
+                        
+                        # Mark script as failed but continue
+                        if operation_id:
+                            complete_script_tracking(operation_id, full_container_name)
                 
                 return {"status": "started", "name": container_name}
             
@@ -276,6 +291,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
             logger.error("%s: %s", container_name, error_msg)
             return {"status": "failed", "name": container_name, "error": error_msg}
         
+        # IMPORTANTE: sleep sincrono, non await!
         time.sleep(wait_interval)
         elapsed += wait_interval
     
@@ -286,36 +302,44 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any]) -
     return {"status": "failed", "name": container_name, "error": error_msg}
 
 
-def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Stop a single container synchronously with proper timeout
-    
-    Args:
-        container_name: Name of the container (without 'playground-' prefix)
-        img_data: Container configuration dict
-    
-    Returns:
-        dict: Operation result with status and optional error info
-    """
+def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], operation_id: str = None) -> Dict[str, Any]:
+    """Stop a single container synchronously with proper timeout"""
     from src.web.core.scripts import execute_script
+    from src.web.core.state import add_script_tracking, complete_script_tracking
     
-    full_container_name = f"playground-{container_name}"
+    full_container_name = f"{container_name}"
+    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)", container_name, full_container_name)
     
     try:
         cont = docker_client.containers.get(full_container_name)
+        logger.info(">>> Container found, status: %s", cont.status)
         
         if cont.status != "running":
-            logger.info("Container %s not running (status: %s)", container_name, cont.status)
+            logger.info(">>> Container not running, returning not_running")
             return {"status": "not_running", "name": container_name}
         
-        # Execute pre-stop script
+        # Execute pre-stop script with tracking
         scripts = img_data.get('scripts', {})
         if 'pre_stop' in scripts:
             try:
                 logger.info(">>> CALLING pre_stop script for %s", full_container_name)
+                
+                # Track script execution if operation_id provided
+                if operation_id:
+                    add_script_tracking(operation_id, full_container_name, "pre_stop")
+                
                 execute_script(scripts['pre_stop'], full_container_name, container_name)
                 logger.info(">>> pre_stop script COMPLETED successfully for %s", full_container_name)
+                
+                # Mark script as completed
+                if operation_id:
+                    complete_script_tracking(operation_id, full_container_name)
             except Exception as script_error:
                 logger.error(">>> pre_stop script FAILED for %s: %s", full_container_name, str(script_error))
+                
+                # Mark script as failed but continue
+                if operation_id:
+                    complete_script_tracking(operation_id, full_container_name)
         
         # Get appropriate timeout
         timeout = get_stop_timeout(img_data)
@@ -335,7 +359,6 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any]) ->
         error_msg = f"Error stopping {container_name}: {str(e)}"
         logger.error(error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
-
 
 def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str, bool]:
     """Get special features of a container

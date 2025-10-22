@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/static/css/core/filters.css">
     <link rel="stylesheet" href="/static/css/core/modal.css">
     <link rel="stylesheet" href="/static/css/pages/manager.css">
+    <link rel="stylesheet" href="/static/css/core/operation-monitor.css">    
     <link rel="stylesheet" href="/static/css/core/dark-mode.css">
 </head>
 
@@ -73,7 +74,7 @@
 
         <!-- ACCORDION 1: Bulk Operations -->
         <div class="accordion-section">
-            <div class="accordion-header success" onclick="ManagerAccordion.toggle(this)">
+            <div class="accordion-header success">
                 <h2>🚀 Bulk Operations</h2>
                 <span class="accordion-toggle">▼</span>
             </div>
@@ -112,7 +113,7 @@
 
         <!-- ACCORDION 2: Tools & Utilities -->
         <div class="accordion-section">
-            <div class="accordion-header warning" onclick="ManagerAccordion.toggle(this)">
+            <div class="accordion-header warning">
                 <h2>🔧 Tools & Utilities</h2>
                 <span class="accordion-toggle">▼</span>
             </div>
@@ -145,7 +146,7 @@
 
         <!-- ACCORDION 3: System Metrics -->
         <div class="accordion-section">
-            <div class="accordion-header info" onclick="ManagerAccordion.toggle(this)">
+            <div class="accordion-header info">
                 <h2>📊 System Metrics</h2>
                 <span class="accordion-toggle">▼</span>
             </div>
@@ -214,91 +215,7 @@ Stopped: <span id="containers-stopped">--</span></pre>
                 </div>
             </div>
         </div>
-
-        <!-- ACCORDION 4: Browse -->
-        <div class="accordion-section">
-            <div class="accordion-header" onclick="ManagerAccordion.toggle(this)">
-                <h2>📚 Browse by Category & Groups</h2>
-                <span class="accordion-toggle">▼</span>
-            </div>
-            <div class="accordion-content">
-                <div class="accordion-body">
-                    <!-- Groups Section -->
-                    {% if groups %}
-                    <div class="browser-subsection">
-                        <h3 class="subsection-title">🚀 Application Stacks ({{ groups|length }})</h3>
-                        <div class="category-browser">
-                            {% for group_name, group in groups.items() %}
-                            <div class="category-item group-item">
-                                <div class="category-header">
-                                    <div class="category-info">
-                                        <span class="category-icon">🚀</span>
-                                        <div>
-                                            <span class="category-name">{{ group.name }}</span>
-                                            <span class="category-description">{{ group.description }}</span>
-                                        </div>
-                                    </div>
-                                    <span class="category-count">{{ group.containers|length }} containers</span>
-                                </div>
-                                <div class="category-actions">
-                                    <button class="btn btn-sm btn-success"
-                                        onclick="GroupOperations.startGroup('{{ group_name }}')">
-                                        <span class="btn-icon">▶</span> Start
-                                    </button>
-                                    <button class="btn btn-sm btn-danger"
-                                        onclick="GroupOperations.stopGroup('{{ group_name }}')">
-                                        <span class="btn-icon">⏹</span> Stop
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" onclick="viewGroup('{{ group_name }}')">
-                                        <span class="btn-icon">👁</span> View
-                                    </button>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Categories Section -->
-                    <div class="browser-subsection">
-                        <h3 class="subsection-title">📁 Containers by Category ({{ categories|length }})</h3>
-                        <div class="category-browser">
-                            {% for category, count in categories.items() %}
-                            <div class="category-item">
-                                <div class="category-header">
-                                    <div class="category-info">
-                                        <span class="category-icon">
-                                            {% if category == 'linux' %}🧠
-                                            {% elif category == 'programming' %}💻
-                                            {% elif category == 'database' %}🗄️
-                                            {% elif category == 'webserver' %}🌐
-                                            {% elif category == 'devops' %}⚙️
-                                            {% elif category == 'messaging' %}📨
-                                            {% elif category == 'monitoring' %}📊
-                                            {% elif category == 'ml' %}🤖
-                                            {% else %}📦
-                                            {% endif %}
-                                        </span>
-                                        <span class="category-name">{{ category|title }}</span>
-                                    </div>
-                                    <span class="category-count">{{ count }} containers</span>
-                                </div>
-                                <div class="category-actions">
-                                    <button class="btn btn-sm btn-success"
-                                        onclick="event.stopPropagation(); CategoryOperations.startCategory('{{ category }}')">
-                                        <span class="btn-icon">▶</span> Start All
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" onclick="viewCategory('{{ category }}')">
-                                        <span class="btn-icon">👁</span> View
-                                    </button>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+       
     </div>
 
     <!-- Modals -->
@@ -386,9 +303,10 @@ Stopped: <span id="containers-stopped">--</span></pre>
     <script src="/static/js/managers/monitoring-stats.js"></script>
     <script src="/static/js/managers/execute-command.js"></script>
     <script src="/static/js/managers/health-monitor.js"></script>
+    <script src="/static/js/managers/accordion-manager.js"></script>
+    <script src="/static/js/core/operation-monitor.js"></script>
 
     <!-- Page Initialization -->
-     <script src="/static/js/managers/accordion-manager.js"></script>
     <script src="/static/js/pages/page-init-manager.js"></script>
     
 </body>

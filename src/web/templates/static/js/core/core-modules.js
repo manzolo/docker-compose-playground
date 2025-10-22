@@ -7,12 +7,12 @@
 // =========================================================
 const Config = {
     POLLING: {
-        MAX_ATTEMPTS: 180,
+        MAX_ATTEMPTS: 180,  // 1800 secondi = 3 minuti
         INTERVAL: 1000,
         TIMEOUT: {
             START: 180000,
             STOP: 180000,
-            GROUP: 10000
+            GROUP: 180000
         }
     },
     TOAST: {
@@ -110,43 +110,104 @@ const Utils = {
             interval = Config.POLLING.INTERVAL 
         } = options;
         let attempts = 0;
+        let statusData = null;
+        let hasError = false;
+        let errorToThrow = null;
 
-        const poll = async () => {
-            try {
-                const response = await fetch(`/api/operation-status/${operationId}`);
-                const statusData = await response.json();
+        return new Promise((resolve, reject) => {
+            const poll = () => {
+                fetch(`/api/operation-status/${operationId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        statusData = data;
 
-                if (messageFormatter) {
-                    showLoader(messageFormatter(statusData));
-                }
+                        /*if (messageFormatter) {
+                            showLoader(messageFormatter(statusData));
+                        }*/
 
-                if (statusData.status === 'completed' || statusData.status === 'error') {
-                    hideLoader();
-                    return statusData;
-                }
+                        // Se completato o errore, risolvere
+                        if (statusData.status === 'completed' || statusData.status === 'error') {
+                            hideLoader();
+                            resolve(statusData);
+                            return;
+                        }
 
-                attempts++;
-                if (attempts < maxAttempts) {
-                    return new Promise(resolve => 
-                        setTimeout(() => resolve(poll()), interval)
-                    );
-                } else {
-                    throw new Error(`Operation timed out after ${maxAttempts} attempts`);
-                }
-            } catch (error) {
-                console.error('Polling error:', error);
-                attempts++;
-                if (attempts < maxAttempts) {
-                    return new Promise(resolve => 
-                        setTimeout(() => resolve(poll()), interval)
-                    );
-                } else {
-                    throw error;
-                }
-            }
-        };
+                        // Altrimenti, schedule il prossimo polling
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            setTimeout(poll, interval);
+                        } else {
+                            hideLoader();
+                            reject(new Error(`Operation timed out after ${maxAttempts} attempts`));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Polling error:', error);
+                        attempts++;
+                        
+                        if (attempts < maxAttempts) {
+                            // Retry dopo l'intervallo
+                            setTimeout(poll, interval);
+                        } else {
+                            hideLoader();
+                            reject(error);
+                        }
+                    });
+            };
 
-        return poll();
+            // Inizia il polling
+            poll();
+        });
+    },
+
+    /**
+     * Format script tracking info for display
+     */
+    formatScriptStatus(statusData) {
+        const scriptsRunning = statusData.scripts_running || [];
+        const scriptsCompleted = statusData.scripts_completed || [];
+
+        let message = '';
+
+        if (scriptsRunning.length > 0) {
+            message += '📝 Running scripts: ';
+            const runningNames = scriptsRunning.map(s => {
+                const elapsed = this.getElapsedTime(s.started_at);
+                return `${s.type} (${elapsed})`;
+            }).join(', ');
+            message += runningNames;
+        }
+
+        if (scriptsCompleted.length > 0) {
+            if (message) message += ' | ';
+            message += '✓ Completed: ';
+            const completedNames = scriptsCompleted.map(s => `${s.type}`).join(', ');
+            message += completedNames;
+        }
+
+        return message;
+    },
+
+    /**
+     * Calculate elapsed time from ISO timestamp
+     */
+    getElapsedTime(startedAt) {
+        try {
+            const start = new Date(startedAt);
+            const now = new Date();
+            const seconds = Math.floor((now - start) / 1000);
+            
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            return `${minutes}m ${seconds % 60}s`;
+        } catch (e) {
+            return '--';
+        }
     }
 };
 
@@ -223,9 +284,16 @@ const ModalManager = {
 // Loader Management
 // =========================================================
 const LoaderManager = {
+    activeTimeout: null,
+    forceHideTimeout: null,
+
     show(message = 'Please wait...') {
         const loader = DOM.get('global-loader');
         const messageElement = DOM.get('loader-message');
+
+        // Cancella eventuali timeout precedenti
+        if (this.activeTimeout) clearTimeout(this.activeTimeout);
+        if (this.forceHideTimeout) clearTimeout(this.forceHideTimeout);
 
         if (messageElement) {
             messageElement.textContent = message;
@@ -242,12 +310,105 @@ const LoaderManager = {
 
     hide() {
         const loader = DOM.get('global-loader');
+        
         if (loader) {
             DOM.removeClass(loader, 'active');
             document.body.style.overflow = '';
         } else {
             console.error('Loader element not found!');
         }
+
+        // Cancella timeout di sicurezza
+        if (this.forceHideTimeout) {
+            clearTimeout(this.forceHideTimeout);
+            this.forceHideTimeout = null;
+        }
+    },
+
+    /**
+     * Forza la chiusura del loader (emergency method)
+     */
+    forceHide() {
+        const loader = DOM.get('global-loader');
+        if (loader) {
+            loader.classList.remove('active');
+            loader.style.display = 'none';
+            document.body.style.overflow = '';
+            console.warn('Loader forcefully hidden');
+        }
+    },
+
+    /**
+     * Safety net: se il loader è ancora attivo dopo N secondi, forzalo a chiudersi
+     */
+    ensureHiddenAfter(seconds = 10) {
+        if (this.forceHideTimeout) clearTimeout(this.forceHideTimeout);
+        
+        this.forceHideTimeout = setTimeout(() => {
+            const loader = DOM.get('global-loader');
+            if (loader && DOM.hasClass(loader, 'active')) {
+                console.warn(`Loader still active after ${seconds}s, forcing hide`);
+                this.forceHide();
+            }
+        }, seconds * 1000);
+    },
+
+    /**
+     * Pulisci tutti i timeout
+     */
+    cleanup() {
+        if (this.activeTimeout) {
+            clearTimeout(this.activeTimeout);
+            this.activeTimeout = null;
+        }
+        if (this.forceHideTimeout) {
+            clearTimeout(this.forceHideTimeout);
+            this.forceHideTimeout = null;
+        }
+    }
+};
+
+const OperationHelper = {
+    /**
+     * Esegui una funzione async con loader, garantendo la chiusura
+     */
+    async executeWithLoader(loaderMessage, asyncFunction) {
+        LoaderManager.show(loaderMessage);
+        LoaderManager.ensureHiddenAfter(15);
+        
+        try {
+            const result = await asyncFunction();
+            LoaderManager.hide();
+            return result;
+        } catch (error) {
+            LoaderManager.hide();
+            throw error;
+        }
+    },
+
+    /**
+     * Esegui operazione lunga con OperationMonitor
+     * Non chiudere il loader - il monitor se ne occupa
+     */
+    async executeWithMonitor(loaderMessage, operationName, asyncFunction) {
+        LoaderManager.show(loaderMessage);
+        LoaderManager.ensureHiddenAfter(20);
+        
+        try {
+            const result = await asyncFunction();
+            // Non chiudere qui - OperationMonitor.startMonitoring() lo farà
+            return result;
+        } catch (error) {
+            LoaderManager.hide();
+            throw error;
+        }
+    },
+
+    /**
+     * Cleanup di sicurezza
+     */
+    cleanup() {
+        LoaderManager.cleanup();
     }
 };
 
@@ -306,6 +467,7 @@ const ConfirmModalManager = {
 window.ToastManager = ToastManager;
 window.ModalManager = ModalManager;
 window.LoaderManager = LoaderManager;
+window.OperationHelper = OperationHelper;
 window.ConfirmModalManager = ConfirmModalManager;
 window.Utils = Utils;
 window.DOM = DOM;

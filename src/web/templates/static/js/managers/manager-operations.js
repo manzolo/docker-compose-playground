@@ -15,14 +15,15 @@ const ManagerOperations = {
             );
             if (!confirmed) return;
 
-            showLoader('Stopping all containers...');
-            const data = await ApiService.stopAll();
+            const response = await ApiService.stopAll();
 
-            if (data.operation_id) {
-                ToastManager.show('Stop operation started...', 'info');
-                this.pollOperation(data.operation_id, 'stop', 'Stopping');
+            if (response.operation_id) {
+                //ToastManager.show('Stop operation started...', 'info');
+                OperationMonitor.startMonitoring(response.operation_id, 'Stopping All');
+                this.pollOperation(response.operation_id, 'stop', 'Stopping');
             }
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleError(error, 'stop');
         }
     },
@@ -39,14 +40,15 @@ const ManagerOperations = {
             );
             if (!confirmed) return;
 
-            showLoader('Restarting all containers...');
-            const data = await ApiService.restartAll();
+            const response = await ApiService.restartAll();
 
-            if (data.operation_id) {
-                ToastManager.show('Restart operation started...', 'info');
-                this.pollOperation(data.operation_id, 'restart', 'Restarting');
+            if (response.operation_id) {
+                //ToastManager.show('Restart operation started...', 'info');
+                OperationMonitor.startMonitoring(response.operation_id, 'Restarting All');
+                this.pollOperation(response.operation_id, 'restart', 'Restarting');
             }
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleError(error, 'restart');
         }
     },
@@ -70,14 +72,15 @@ const ManagerOperations = {
             );
             if (!doubleCheck) return;
 
-            showLoader('Cleaning up all containers...');
-            const data = await ApiService.cleanupAll();
+            const response = await ApiService.cleanupAll();
 
-            if (data.operation_id) {
-                ToastManager.show('Cleanup operation started...', 'warning');
-                this.pollOperation(data.operation_id, 'cleanup', 'Cleaning up');
+            if (response.operation_id) {
+                //ToastManager.show('Cleanup operation started...', 'warning');
+                OperationMonitor.startMonitoring(response.operation_id, 'Cleaning Up All');
+                this.pollOperation(response.operation_id, 'cleanup', 'Cleaning up');
             }
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleError(error, 'cleanup');
         }
     },
@@ -94,18 +97,30 @@ const ManagerOperations = {
                 const total = statusData.total || '?';
                 const count = statusData[this.getCountField(operationType)] || 0;
 
-                showLoader(`${verbName} containers: ${count} of ${total}`);
+                let loaderMessage = `${verbName} containers: ${count} of ${total}`;
+
+                // Add script tracking info if available
+                const scriptStatus = Utils.formatScriptStatus(statusData);
+                if (scriptStatus) {
+                    loaderMessage += `\n${scriptStatus}`;
+                }
+
+                //showLoader(loaderMessage);
 
                 if (statusData.status === 'completed') {
-                    ToastManager.show(`${verbName} operation completed!`, 'success');
-                    hideLoader();
-                    setTimeout(() => location.reload(), 2500);
+                    hideLoader(); // Safety: chiudi loader esplicitamente
+                    //ToastManager.show(`${verbName} operation completed!`, 'success');
+                    //setTimeout(() => {
+                        //ReloadManager.showReloadToast(5000);
+                        //setTimeout(() => location.reload(), 1000);
+                    //}, 5000);
+                    //setTimeout(() => location.reload(), 2500);
                     return;
                 }
 
                 if (statusData.status === 'error') {
+                    hideLoader(); // Safety: chiudi loader esplicitamente
                     ToastManager.show(`${verbName} operation failed: ${statusData.error}`, 'error');
-                    hideLoader();
                     return;
                 }
 
@@ -113,8 +128,8 @@ const ManagerOperations = {
                 if (attempts < Config.POLLING.MAX_ATTEMPTS) {
                     setTimeout(poll, Config.POLLING.INTERVAL);
                 } else {
+                    hideLoader(); // Safety: chiudi loader esplicitamente
                     ToastManager.show('Operation timed out. Please check manually.', 'warning');
-                    hideLoader();
                 }
             } catch (error) {
                 console.error('Polling error:', error);
@@ -122,8 +137,8 @@ const ManagerOperations = {
                 if (attempts < Config.POLLING.MAX_ATTEMPTS) {
                     setTimeout(poll, Config.POLLING.INTERVAL);
                 } else {
+                    hideLoader(); // Safety: chiudi loader esplicitamente
                     ToastManager.show('Polling failed after maximum attempts.', 'error');
-                    hideLoader();
                 }
             }
         };
@@ -152,7 +167,6 @@ const ManagerOperations = {
         } else {
             ToastManager.show(`${operationType} operation failed: ${error.message}`, 'error');
         }
-        hideLoader();
     }
 };
 
@@ -175,6 +189,7 @@ const CategoryOperations = {
 
             await this.performCategoryOperation(category, 'start');
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleCategoryError(error, 'start');
         }
     },
@@ -193,6 +208,7 @@ const CategoryOperations = {
 
             await this.performCategoryOperation(category, 'start');
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleCategoryError(error, 'start');
         }
     },
@@ -201,30 +217,31 @@ const CategoryOperations = {
      * Perform category operation
      */
     async performCategoryOperation(category, operation) {
-        showLoader(`${operation === 'start' ? 'Starting' : 'Stopping'} containers in category ${category}...`);
-        ToastManager.show(`${operation === 'start' ? 'Starting' : 'Stopping'} ${category} containers...`, 'info');
+        const isStart = operation === 'start';
 
         try {
-            const data = operation === 'start' 
+            ToastManager.show(`${isStart ? 'Starting' : 'Stopping'} ${category} containers...`, 'info');
+
+            const data = operation === 'start'
                 ? await ApiService.startCategory(category)
                 : await ApiService.stopCategory(category);
 
             if (data.started > 0 || data.stopped > 0) {
                 const count = data.started || data.stopped;
                 ToastManager.show(
-                    `Successfully ${operation === 'start' ? 'started' : 'stopped'} ${count} containers`,
+                    `Successfully ${isStart ? 'started' : 'stopped'} ${count} containers`,
                     'success'
                 );
             } else {
                 ToastManager.show(
-                    `No containers ${operation === 'start' ? 'started' : 'stopped'} in category: ${category}`,
+                    `No containers ${isStart ? 'started' : 'stopped'} in category: ${category}`,
                     'warning'
                 );
             }
 
-            hideLoader();
             setTimeout(() => location.reload(), 2000);
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleCategoryError(error, operation);
         }
     },
@@ -311,11 +328,9 @@ const CategoryOperations = {
     handleCategoryError(error, operation) {
         if (error.name === 'AbortError') {
             ToastManager.show('Operation timeout - please wait and refresh manually', 'warning');
-            hideLoader();
             setTimeout(() => location.reload(), 5000);
         } else {
             ToastManager.show(`${operation} operation failed: ${error.message}`, 'error');
-            hideLoader();
         }
     }
 };

@@ -15,21 +15,18 @@ const BulkOperations = {
             );
             if (!confirmed) return;
 
-            showLoader('Initiating stop all operation...');
-            ToastManager.show('Initiating stop all operation...', 'info');
+            const response = await ApiService.stopAll();
 
-            const data = await ApiService.stopAll();
-
-            if (data.operation_id) {
-                ToastManager.show(`Stop operation started. ID: ${data.operation_id}`, 'info');
-                this.pollStopAllStatus(data.operation_id);
+            if (response.operation_id) {
+                //ToastManager.show(`Stop operation started. ID: ${response.operation_id}`, 'info');
+                OperationMonitor.startMonitoring(response.operation_id, 'Stopping All');
+                this.pollStopAllStatus(response.operation_id);
             } else {
-                ToastManager.show(`Failed to start stop operation: ${data.error || 'Unknown error'}`, 'error');
-                hideLoader();
+                throw new Error(`Failed to start stop operation: ${response.error || 'Unknown error'}`);
             }
         } catch (error) {
+            hideLoader(); // Safety net
             ToastManager.show(`Error: ${error.message}`, 'error');
-            hideLoader();
         }
     },
 
@@ -39,29 +36,35 @@ const BulkOperations = {
     async pollStopAllStatus(operationId) {
         let attempts = 0;
 
-        showLoader('Stopping containers: Awaiting progress...');
-
         const poll = async () => {
             try {
                 const statusData = await ApiService.getOperationStatus(operationId);
 
                 const total = statusData.total || '?';
                 const stopped = statusData.stopped || 0;
-                showLoader(`Stopping containers: ${stopped} of ${total} | Status: ${statusData.status}`);
+                
+                let loaderMessage = `Stopping containers: ${stopped} of ${total}`;
+                
+                // Add script tracking info if available
+                const scriptStatus = Utils.formatScriptStatus(statusData);
+                if (scriptStatus) {
+                    loaderMessage += `\n${scriptStatus}`;
+                }
+                
+                //showLoader(loaderMessage);
 
                 if (statusData.status === 'completed') {
-                    ToastManager.show(`Stopped ${stopped} containers successfully!`, 'success');
-                    hideLoader();
-
+                    hideLoader(); // Safety: chiudi loader esplicitamente
+                    /*ToastManager.show(`Stopped ${stopped} containers successfully!`, 'success');
                     setTimeout(() => {
                         location.reload();
-                    }, Config.TOAST.DELAY_BEFORE_RELOAD);
+                    }, Config.TOAST.DELAY_BEFORE_RELOAD);*/
                     return;
                 }
 
                 if (statusData.status === 'error') {
+                    hideLoader(); // Safety: chiudi loader esplicitamente
                     ToastManager.show(`Stop operation failed: ${statusData.error}`, 'error');
-                    hideLoader();
                     return;
                 }
 
@@ -69,14 +72,19 @@ const BulkOperations = {
                 if (attempts < Config.POLLING.MAX_ATTEMPTS) {
                     setTimeout(poll, Config.POLLING.INTERVAL);
                 } else {
+                    hideLoader(); // Safety: chiudi loader esplicitamente
                     ToastManager.show(`Operation timed out. Please check manually.`, 'warning');
-                    hideLoader();
                 }
 
             } catch (error) {
                 console.error('Polling error:', error);
-                ToastManager.show('An error occurred during status check.', 'error');
-                hideLoader();
+                attempts++;
+                if (attempts < Config.POLLING.MAX_ATTEMPTS) {
+                    setTimeout(poll, Config.POLLING.INTERVAL);
+                } else {
+                    hideLoader(); // Safety: chiudi loader esplicitamente
+                    ToastManager.show('An error occurred during status check.', 'error');
+                }
             }
         };
 
