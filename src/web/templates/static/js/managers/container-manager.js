@@ -19,20 +19,20 @@ const ContainerManager = {
         });
 
         try {
-            showLoader(`Initiating start for container ${image}...`);
-            const { controller, timeoutId } = Utils.createAbortController(Config.POLLING.TIMEOUT.START);
-
+            // Avvia il container SENZA mostrare il loader
             const response = await ApiService.startContainer(image);
-            Utils.clearAbortTimeout(timeoutId);
 
             if (response.operation_id) {
-                ToastManager.show(`Starting container ${image}...`, 'info');
+                //ToastManager.show(`Starting container ${image}...`, 'info');
+                // Mostra il widget di monitoraggio
+                OperationMonitor.startMonitoring(response.operation_id, `Starting ${image}`);
                 await this.pollContainerStatus(response.operation_id, image, btn, originalHTML);
             } else {
                 throw new Error('No operation_id received from server');
             }
 
         } catch (error) {
+            hideLoader(); // Safety net
             this.handleStartError(error, image, btn, originalHTML);
         }
     },
@@ -56,7 +56,7 @@ const ContainerManager = {
                 const alreadyRunning = statusData.already_running || 0;
 
                 if (started > 0) {
-                    ToastManager.show(`✓ Container ${image} started successfully!`, 'success');
+                    //ToastManager.show(`✓ Container ${image} started successfully!`, 'success');
                 } else if (alreadyRunning > 0) {
                     ToastManager.show(`ℹ Container ${image} was already running`, 'info');
                 }
@@ -78,6 +78,7 @@ const ContainerManager = {
                 });
             }
         } catch (error) {
+            hideLoader(); // Safety net
             ToastManager.show(`✗ Error polling container status: ${error.message}`, 'error');
             Utils.updateButtonState(btn, {
                 disabled: false,
@@ -87,7 +88,7 @@ const ContainerManager = {
     },
 
     /**
-     * Format container status message
+     * Format container status message with script tracking
      */
     formatContainerStatusMessage(statusData, image) {
         const total = statusData.total || 1;
@@ -97,21 +98,30 @@ const ContainerManager = {
         const completed = started + alreadyRunning + failed;
         const remaining = total - completed;
 
+        let message = '';
+
         if (statusData.status === 'running') {
-            return `Starting '${image}': ${completed}/${total} | ` +
-                `✓ ${started} started, ⚡ ${alreadyRunning} already running, ✗ ${failed} failed, ⏳ ${remaining} remaining`;
+            message = `Starting '${image}': ${completed}/${total}\n` +
+                `✓ ${started} started | ⚡ ${alreadyRunning} running | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
+
+            // Add script tracking info if available
+            const scriptStatus = Utils.formatScriptStatus(statusData);
+            if (scriptStatus) {
+                message += `\n${scriptStatus}`;
+            }
         } else if (statusData.status === 'completed') {
-            return `Container '${image}' started successfully! ✓`;
+            message = `Container '${image}' started successfully! ✓`;
         } else {
-            return `Starting container '${image}'...`;
+            message = `Starting container '${image}'...`;
         }
+
+        return message;
     },
 
     /**
      * Handle start error
      */
     handleStartError(error, image, btn, originalHTML) {
-        hideLoader();
         if (error.name === 'AbortError') {
             ToastManager.show(`⏱ Timeout starting ${image} - check container logs`, 'warning');
             setTimeout(() => location.reload(), Config.TOAST.DELAY_BEFORE_RELOAD);
@@ -138,6 +148,7 @@ const ContainerManager = {
 
             await this.performStopContainer(imageName, containerName);
         } catch (error) {
+            hideLoader(); // Safety net
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
             this.resetStopButton(imageName);
         }
@@ -158,19 +169,29 @@ const ContainerManager = {
             showSpinner: true
         });
 
-        showLoader(`Stopping container ${containerName}...`);
-
         try {
-            const { controller, timeoutId } = Utils.createAbortController(Config.POLLING.TIMEOUT.STOP);
+            //console.log("🔴 Calling /stop/" + containerName);
             const response = await ApiService.stopContainer(containerName);
-            Utils.clearAbortTimeout(timeoutId);
 
-            await this.handleStopResponse(response, imageName, containerName, btn);
+            //console.log("🔴 Response received:", response);
+
+            const data = response instanceof Response ? await response.json() : response;
+            //console.log("🔴 Data parsed:", data);
+
+            if (data.operation_id) {
+                //console.log("🔴 operation_id:", data.operation_id);
+                //ToastManager.show(`Stopping ${containerName}...`, 'info');
+                OperationMonitor.startMonitoring(data.operation_id, `Stopping ${containerName}`);
+                //console.log("🔴 Widget monitoring started");
+            } else {
+                console.error("🔴 No operation_id in response:", data);
+                throw new Error('No operation_id received');
+            }
 
         } catch (error) {
-            this.handleStopError(error, containerName, btn, originalHTML);
-        } finally {
+            console.error("🔴 Error in performStopContainer:", error);
             hideLoader();
+            this.handleStopError(error, containerName, btn, originalHTML);
         }
     },
 
@@ -179,7 +200,7 @@ const ContainerManager = {
      */
     async handleStopResponse(response, imageName, containerName, btn) {
         if (response.ok) {
-            ToastManager.show(`✓ Container ${containerName} stopped`, 'success');
+            //ToastManager.show(`✓ Container ${containerName} stopped`, 'success');
             this.updateCardUI(imageName, false, '');
             ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
         } else {

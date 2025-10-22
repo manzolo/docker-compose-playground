@@ -9,7 +9,7 @@ const ApiService = {
     async fetchWithTimeout(url, options = {}) {
         const controller = new AbortController();
         const timeoutId = setTimeout(
-            () => controller.abort(), 
+            () => controller.abort(),
             options.timeout || Config.POLLING.TIMEOUT.START
         );
 
@@ -64,7 +64,7 @@ const ApiService = {
      * POST request for stopping container
      */
     async stopContainer(containerName) {
-        return this.fetchWithTimeout(`/stop/${containerName}`, {
+        return this.fetchJson(`/stop/${encodeURIComponent(containerName)}`, {
             method: 'POST',
             timeout: Config.POLLING.TIMEOUT.STOP
         });
@@ -263,7 +263,7 @@ const ApiService = {
      */
     async runDiagnostics(container) {
         return this.fetchJson(`/api/execute-diagnostic/${container}`, {
-            timeout: 60000
+            timeout: 6000
         });
     },
 

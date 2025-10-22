@@ -63,7 +63,8 @@ run_test() {
     local OUTPUT=""
     if OUTPUT=$(eval "$test_command" 2>&1); then
         if [ -n "$expected_pattern" ]; then
-            if echo "$OUTPUT" | grep -q "$expected_pattern"; then
+            # Disabilita SIGPIPE per questo comando
+            if echo "$OUTPUT" | PIPEFAIL=0 grep -q "$expected_pattern" 2>/dev/null; then
                 log_success "$test_name passed"
                 return 0
             else

@@ -47,11 +47,10 @@ async def get_container_stats(container: str):
         total_tx_bytes = sum(net.get('tx_bytes', 0) for net in networks.values())
         
         # Get block I/O stats
-        blkio_stats = stats.get('blkio_stats', {})
-        io_read_bytes = sum(item.get('value', 0) for item in blkio_stats.get('io_service_bytes_recursive', []) 
-                           if item.get('op') == 'Read')
-        io_write_bytes = sum(item.get('value', 0) for item in blkio_stats.get('io_service_bytes_recursive', []) 
-                            if item.get('op') == 'Write')
+        blkio_stats = stats.get('blkio_stats', {}) or {}
+        io_service = blkio_stats.get('io_service_bytes_recursive') or []
+        io_read_bytes = sum(item.get('value', 0) for item in io_service if item.get('op') == 'Read')
+        io_write_bytes = sum(item.get('value', 0) for item in io_service if item.get('op') == 'Write')
         
         return {
             "container": container,
