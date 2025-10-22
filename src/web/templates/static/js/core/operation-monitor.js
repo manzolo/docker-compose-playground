@@ -141,7 +141,7 @@ const OperationMonitor = {
             const remaining = total !== '?' ? total - completed : '?';
 
             message = `Starting: ${completed}/${total} (${elapsed})\n`;
-            message += `✓ ${started} started | ⚡ ${alreadyRunning} running | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
+            message += `✅ ${started} started \n⚡ ${alreadyRunning} running \n❌ ${failed} failed \n⏳ ${remaining} remaining`;
 
             const scriptStatus = Utils.formatScriptStatus(statusData);
             if (scriptStatus) {
@@ -155,7 +155,7 @@ const OperationMonitor = {
             const remaining = total !== '?' ? total - completed : '?';
 
             message = `Stopping: ${completed}/${total} (${elapsed})\n`;
-            message += `⏹ ${stopped} stopped | ⏸ ${notRunning} not running | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
+            message += `🛑 ${stopped} stopped \n🚫 ${notRunning} not running \n❌ ${failed} failed \n⏳ ${remaining} remaining`;
 
             const scriptStatus = Utils.formatScriptStatus(statusData);
             if (scriptStatus) {
@@ -219,9 +219,7 @@ const OperationMonitor = {
         const card = DOM.get(`operation-${operationId}`);
         if (!card) return;
 
-        // IMPORTANTE: Chiudi il loader
         hideLoader();
-
         DOM.removeClass(card, 'operation-running');
         DOM.addClass(card, 'operation-completed');
 
@@ -230,15 +228,29 @@ const OperationMonitor = {
         icon.textContent = '✓';
 
         const messageEl = card.querySelector('.operation-message');
-        messageEl.textContent = 'Operation completed!';
-        
+        const operationName = this.activeOperations[operationId]?.name || 'Operation';
+
+        // Verifica se l'operazione è un'operazione di gruppo
+        if (operationName.startsWith('Group:') || operationName.startsWith('Stopping Group:')) {
+            const groupName = operationName.replace(/^Group: |^Stopping Group: /, '');
+            const operationType = operationName.startsWith('Group:') ? 'start' : 'stop';
+            // Delega a GroupOperations.handleGroupOperationComplete
+            GroupOperations.handleGroupOperationComplete(statusData, groupName, operationType);
+        } else {
+            // Comportamento originale per altre operazioni
+            messageEl.textContent = 'Operation completed!';
+            //ToastManager.show('Operation completed!', 'success');
+        }
+
         this.activeOperations[operationId].status = 'completed';
 
         // Auto-chiudi dopo 5 secondi
         setTimeout(() => {
             this.closeOperation(operationId);
-            ReloadManager.showReloadToast(5000);
-            //setTimeout(() => location.reload(), 1000);
+            // Reload già gestito in handleGroupOperationComplete per i gruppi
+            //if (!operationName.startsWith('Group:') && !operationName.startsWith('Stopping Group:')) {
+            ReloadManager.showReloadToast(7000);
+            //}
         }, 5000);
     },
 

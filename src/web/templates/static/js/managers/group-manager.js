@@ -176,13 +176,13 @@ const GroupOperations = {
         message += details.join(', ');
 
         const toastType = failed > 0 ? 'warning' : 'success';
-        //ToastManager.show(message, toastType);
+        ToastManager.show(message, toastType);
 
-        if (failed > 0 && statusData.errors) {
+        if (failed > 0 && statusData.errors && Array.isArray(statusData.errors)) {
             ToastManager.showErrorsSequentially(statusData.errors, `Errors in group '${groupName}':`);
         }
 
-        ReloadManager.showReloadToast(isStart ? 7000 : 2000);
+        //ReloadManager.showReloadToast(isStart ? 7000 : 2000);
     },
 
     /**
