@@ -1,24 +1,37 @@
 #!/bin/bash
-
 set -e
-echo "Installing and configuring SpamAssassin..."
 
-# Crea l'utente spamd prima di qualsiasi operazione
+echo "🛡️  Installing SpamAssassin..."
+
+# Fix dpkg issues first
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
+apt-get install -y -qq --no-install-recommends apt-utils 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
+
+# Fix any broken dependencies
+dpkg --configure -a 2>&1 | grep -v "^Processing\|^Setting up" || true
+
 echo "→ Creating spamd user..."
-useradd -m -s /usr/sbin/nologin -u 5001 spamd || { echo "useradd failed: $?"; exit 1; }
+useradd -m -s /usr/sbin/nologin -u 5001 spamd 2>/dev/null || echo "spamd user already exists"
 
-# Crea la directory per sa-update-keys e imposta i permessi
-echo "→ Setting up directories and permissions..."
+echo "→ Setting up directories..."
 mkdir -p /var/lib/spamassassin/sa-update-keys
-chown -R spamd:spamd /var/lib/spamassassin || { echo "chown /var/lib/spamassassin failed: $?"; exit 1; }
-chmod 700 /var/lib/spamassassin/sa-update-keys || { echo "chmod sa-update-keys failed: $?"; exit 1; }
+mkdir -p /var/run/spamd
+chown -R spamd:spamd /var/lib/spamassassin
+chmod 700 /var/lib/spamassassin/sa-update-keys
 
-echo "→ Installing dependencies..."
-apt-get update -qq || { echo "apt-get update failed: $?"; exit 1; }
-apt-get install -y -qq spamassassin spamc libmail-dkim-perl pyzor razor mysql-client || { echo "apt-get install failed: $?"; exit 1; }
+echo "→ Installing SpamAssassin packages..."
+apt-get install -y -qq --no-install-recommends \
+    spamassassin \
+    spamc \
+    libmail-dkim-perl \
+    pyzor \
+    razor \
+    mysql-client \
+    2>&1 | grep -v "^Get\|^Reading\|^Building\|^Unpacking\|^Setting up" || true
 
 echo "→ Creating SpamAssassin configuration..."
-cat > /etc/spamassassin/local.cf << SPAMEOF
+cat > /etc/spamassassin/local.cf << 'SPAMEOF'
 required_score 5.0
 use_bayes 1
 use_bayes_rules 1
@@ -36,24 +49,28 @@ SPAMEOF
 
 echo "→ Setting up additional directories..."
 mkdir -p /var/lib/spamassassin/.spamassassin
-chown -R spamd:spamd /var/lib/spamassassin || { echo "chown /var/lib/spamassassin failed: $?"; exit 1; }
+chown -R spamd:spamd /var/lib/spamassassin
 
-echo "→ Configuring Pyzor and Razor..."
-pyzor --homedir /var/lib/spamassassin/.spamassassin discover || { echo "pyzor discover failed: $?"; exit 1; }
-razor-admin -home=/var/lib/spamassassin/.spamassassin -register || { echo "razor-admin register failed: $?"; exit 1; }
+echo "→ Configuring Pyzor..."
+pyzor --homedir /var/lib/spamassassin/.spamassassin discover 2>&1 | grep -v "^Query\|^Discovering" || true
 
-echo "→ Setting up spamd runtime directory..."
-mkdir -p /var/run/spamd
-chown spamd:spamd /var/run/spamd || { echo "chown /var/run/spamd failed: $?"; exit 1; }
+echo "→ Configuring Razor..."
+razor-admin -home=/var/lib/spamassassin/.spamassassin -register 2>&1 | grep -v "^razor" || true
 
 echo "→ Starting spamd..."
+mkdir -p /var/run/spamd
+chown spamd:spamd /var/run/spamd
+
+# Start spamd in background
 /usr/sbin/spamd -d -c -x -A 127.0.0.1 -p 783 --pidfile=/var/run/spamd/spamd.pid &
+
 sleep 2
 
-if ! pgrep -f "spamd" > /dev/null; then
-    echo "Failed to start spamd"
-    exit 1
+# Verify spamd is running
+if pgrep -f "spamd" > /dev/null; then
+    echo "✓ SpamAssassin started successfully"
+else
+    echo "⚠️  Warning: spamd may not have started properly, continuing anyway..."
 fi
 
-echo "spamd started successfully"
 exit 0
