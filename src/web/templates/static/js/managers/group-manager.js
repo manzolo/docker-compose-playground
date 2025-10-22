@@ -108,7 +108,7 @@ const GroupOperations = {
             const response = await ApiService.startGroup(groupName);
 
             if (response.operation_id) {
-                ToastManager.show(`Starting ${groupName}...`, 'info');
+                //ToastManager.show(`Starting ${groupName}...`, 'info');
                 // Il widget si occupa del polling automaticamente
                 OperationMonitor.startMonitoring(response.operation_id, `Group: ${groupName}`);
             } else {
@@ -136,7 +136,7 @@ const GroupOperations = {
             const response = await ApiService.stopGroup(groupName);
 
             if (response.operation_id) {
-                ToastManager.show(`Stopping ${groupName}...`, 'info');
+                //ToastManager.show(`Stopping ${groupName}...`, 'info');
                 // Il widget si occupa del polling automaticamente
                 OperationMonitor.startMonitoring(response.operation_id, `Stopping ${groupName}`);
             } else {
@@ -176,7 +176,7 @@ const GroupOperations = {
         message += details.join(', ');
 
         const toastType = failed > 0 ? 'warning' : 'success';
-        ToastManager.show(message, toastType);
+        //ToastManager.show(message, toastType);
 
         if (failed > 0 && statusData.errors) {
             ToastManager.showErrorsSequentially(statusData.errors, `Errors in group '${groupName}':`);

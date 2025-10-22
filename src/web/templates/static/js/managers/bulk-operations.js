@@ -18,7 +18,7 @@ const BulkOperations = {
             const response = await ApiService.stopAll();
 
             if (response.operation_id) {
-                ToastManager.show(`Stop operation started. ID: ${response.operation_id}`, 'info');
+                //ToastManager.show(`Stop operation started. ID: ${response.operation_id}`, 'info');
                 OperationMonitor.startMonitoring(response.operation_id, 'Stopping All');
                 this.pollStopAllStatus(response.operation_id);
             } else {
@@ -55,10 +55,10 @@ const BulkOperations = {
 
                 if (statusData.status === 'completed') {
                     hideLoader(); // Safety: chiudi loader esplicitamente
-                    ToastManager.show(`Stopped ${stopped} containers successfully!`, 'success');
+                    /*ToastManager.show(`Stopped ${stopped} containers successfully!`, 'success');
                     setTimeout(() => {
                         location.reload();
-                    }, Config.TOAST.DELAY_BEFORE_RELOAD);
+                    }, Config.TOAST.DELAY_BEFORE_RELOAD);*/
                     return;
                 }
 

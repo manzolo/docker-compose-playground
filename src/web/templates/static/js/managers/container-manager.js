@@ -23,7 +23,7 @@ const ContainerManager = {
             const response = await ApiService.startContainer(image);
 
             if (response.operation_id) {
-                ToastManager.show(`Starting container ${image}...`, 'info');
+                //ToastManager.show(`Starting container ${image}...`, 'info');
                 // Mostra il widget di monitoraggio
                 OperationMonitor.startMonitoring(response.operation_id, `Starting ${image}`);
                 await this.pollContainerStatus(response.operation_id, image, btn, originalHTML);
@@ -56,7 +56,7 @@ const ContainerManager = {
                 const alreadyRunning = statusData.already_running || 0;
 
                 if (started > 0) {
-                    ToastManager.show(`✓ Container ${image} started successfully!`, 'success');
+                    //ToastManager.show(`✓ Container ${image} started successfully!`, 'success');
                 } else if (alreadyRunning > 0) {
                     ToastManager.show(`ℹ Container ${image} was already running`, 'info');
                 }
@@ -180,7 +180,7 @@ const ContainerManager = {
 
             if (data.operation_id) {
                 //console.log("🔴 operation_id:", data.operation_id);
-                ToastManager.show(`Stopping ${containerName}...`, 'info');
+                //ToastManager.show(`Stopping ${containerName}...`, 'info');
                 OperationMonitor.startMonitoring(data.operation_id, `Stopping ${containerName}`);
                 //console.log("🔴 Widget monitoring started");
             } else {
@@ -200,7 +200,7 @@ const ContainerManager = {
      */
     async handleStopResponse(response, imageName, containerName, btn) {
         if (response.ok) {
-            ToastManager.show(`✓ Container ${containerName} stopped`, 'success');
+            //ToastManager.show(`✓ Container ${containerName} stopped`, 'success');
             this.updateCardUI(imageName, false, '');
             ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
         } else {

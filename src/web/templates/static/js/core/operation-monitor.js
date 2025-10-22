@@ -230,14 +230,15 @@ const OperationMonitor = {
         icon.textContent = '✓';
 
         const messageEl = card.querySelector('.operation-message');
-        messageEl.textContent = 'Operazione completata!';
-
+        messageEl.textContent = 'Operation completed!';
+        
         this.activeOperations[operationId].status = 'completed';
 
         // Auto-chiudi dopo 5 secondi
         setTimeout(() => {
             this.closeOperation(operationId);
-            setTimeout(() => location.reload(), 1000);
+            ReloadManager.showReloadToast(5000);
+            //setTimeout(() => location.reload(), 1000);
         }, 5000);
     },
 
@@ -263,7 +264,7 @@ const OperationMonitor = {
 
         this.activeOperations[operationId].status = 'failed';
 
-        ToastManager.show(`Operazione fallita: ${statusData.error || 'Sconosciuto'}`, 'error');
+        ToastManager.show(`Task failed: ${statusData.error || 'Unknown'}`, 'error');
     },
 
     /**
@@ -284,11 +285,11 @@ const OperationMonitor = {
         icon.textContent = '⏱';
 
         const messageEl = card.querySelector('.operation-message');
-        messageEl.textContent = 'Timeout: l\'operazione continua in background. Ricarica la pagina per controllare lo stato.';
+        messageEl.textContent = 'Timeout: The operation continues in the background. Reload the page to check the status.';
 
         this.activeOperations[operationId].status = 'timeout';
 
-        ToastManager.show('Operazione in timeout - continua in background', 'warning');
+        ToastManager.show('Operation timed out - continues in background', 'warning');
     },
 
     /**

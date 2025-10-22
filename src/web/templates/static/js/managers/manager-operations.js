@@ -18,7 +18,7 @@ const ManagerOperations = {
             const response = await ApiService.stopAll();
 
             if (response.operation_id) {
-                ToastManager.show('Stop operation started...', 'info');
+                //ToastManager.show('Stop operation started...', 'info');
                 OperationMonitor.startMonitoring(response.operation_id, 'Stopping All');
                 this.pollOperation(response.operation_id, 'stop', 'Stopping');
             }
@@ -43,7 +43,7 @@ const ManagerOperations = {
             const response = await ApiService.restartAll();
 
             if (response.operation_id) {
-                ToastManager.show('Restart operation started...', 'info');
+                //ToastManager.show('Restart operation started...', 'info');
                 OperationMonitor.startMonitoring(response.operation_id, 'Restarting All');
                 this.pollOperation(response.operation_id, 'restart', 'Restarting');
             }
@@ -75,7 +75,7 @@ const ManagerOperations = {
             const response = await ApiService.cleanupAll();
 
             if (response.operation_id) {
-                ToastManager.show('Cleanup operation started...', 'warning');
+                //ToastManager.show('Cleanup operation started...', 'warning');
                 OperationMonitor.startMonitoring(response.operation_id, 'Cleaning Up All');
                 this.pollOperation(response.operation_id, 'cleanup', 'Cleaning up');
             }
@@ -109,7 +109,7 @@ const ManagerOperations = {
 
                 if (statusData.status === 'completed') {
                     hideLoader(); // Safety: chiudi loader esplicitamente
-                    ToastManager.show(`${verbName} operation completed!`, 'success');
+                    //ToastManager.show(`${verbName} operation completed!`, 'success');
                     setTimeout(() => location.reload(), 2500);
                     return;
                 }
