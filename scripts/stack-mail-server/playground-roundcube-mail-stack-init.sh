@@ -47,10 +47,10 @@ mkdir -p /var/www/html/roundcube/{temp,logs,config}
 # Download Roundcube (using simpler version)
 cd /tmp
 echo "→ Downloading Roundcube..."
-wget -q -O rc.tar.gz https://github.com/roundcube/roundcubemail/releases/download/1.6.9/roundcubemail-1.6.9-complete.tar.gz || exit 1
+wget -q -O rc.tar.gz https://github.com/roundcube/roundcubemail/releases/download/1.6.11/roundcubemail-1.6.11-complete.tar.gz || exit 1
 tar xzf rc.tar.gz
-cp -r roundcubemail-1.6.9/* /var/www/html/roundcube/
-rm -rf roundcubemail-1.6.9* rc.tar.gz
+cp -r roundcubemail-1.6.11/* /var/www/html/roundcube/
+rm -rf roundcubemail-1.6.11* rc.tar.gz
 
 # Function to check MySQL connection safely
 check_mysql_connection() {
@@ -196,7 +196,7 @@ try {
 // System settings
 \$config['des_key'] = '$DES_KEY';
 \$config['product_name'] = 'Roundcube Webmail';
-\$config['useragent'] = 'Roundcube Webmail/1.6.9';
+\$config['useragent'] = 'Roundcube Webmail/1.6.11';
 
 // Logging
 \$config['log_driver'] = 'file';
