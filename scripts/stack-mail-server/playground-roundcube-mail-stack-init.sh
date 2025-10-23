@@ -626,7 +626,7 @@ if ($activeCount == $totalCount) {
         </div>
         
         <div class="btn-container">
-            <a href="/roundcube/" class="btn">Access Webmail →</a>
+            <a target="_blank" href="/roundcube/" class="btn">Access Webmail →</a>
         </div>
         
         <div class="info">
