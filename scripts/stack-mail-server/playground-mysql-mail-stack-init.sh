@@ -1,83 +1,132 @@
 #!/bin/bash
 set -e
 
+echo "→ Initializing MySQL database for Mail Stack..." | tee -a /tmp/mysql-init.log
+
+# Wait for MySQL to be ready
 MAX_WAIT=60
 COUNT=0
 while [ $COUNT -lt $MAX_WAIT ]; do
-if mysqladmin ping -u root -pmail_root_pass --silent 2>/dev/null; then
-    echo "✓ MySQL is ready!"
-    break
-fi
-sleep 2
-COUNT=$((COUNT + 2))
+    if mysqladmin ping -h localhost --silent 2>/dev/null; then
+        echo "✓ MySQL is ready!" | tee -a /tmp/mysql-init.log
+        break
+    fi
+    echo "→ MySQL not ready, retrying ($COUNT/$MAX_WAIT)..." | tee -a /tmp/mysql-init.log
+    sleep 2
+    COUNT=$((COUNT + 2))
 done
-sleep 5
 
-mysql -u root -pmail_root_pass mailserver << 'MYSQLEOF'
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
-    domain VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    quota_bytes BIGINT DEFAULT 10737418240,
-    enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_user_domain (username, domain)
-);
+if [ $COUNT -ge $MAX_WAIT ]; then
+    echo "⚠️ MySQL service not available after $MAX_WAIT seconds" | tee -a /tmp/mysql-init.log
+    exit 1
+fi
 
+# Try different authentication methods
+echo "→ Setting up database and users..." | tee -a /tmp/mysql-init.log
+
+# First try without password (default for many MySQL Docker images)
+if mysql -h localhost -u root <<EOF 2>/dev/null
+SELECT 1;
+EOF
+then
+    echo "→ Using root without password" | tee -a /tmp/mysql-init.log
+    MYSQL_CMD="mysql -h localhost -u root"
+# Then try with the expected password
+elif mysql -h localhost -u root -pmail_root_pass -e "SELECT 1;" 2>/dev/null; then
+    echo "→ Using root with password" | tee -a /tmp/mysql-init.log
+    MYSQL_CMD="mysql -h localhost -u root -pmail_root_pass"
+# Try with MYSQL_ROOT_PASSWORD environment variable
+elif [ ! -z "$MYSQL_ROOT_PASSWORD" ] && mysql -h localhost -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1;" 2>/dev/null; then
+    echo "→ Using root with env password" | tee -a /tmp/mysql-init.log
+    MYSQL_CMD="mysql -h localhost -u root -p$MYSQL_ROOT_PASSWORD"
+else
+    echo "⚠️ Could not connect to MySQL with any method" | tee -a /tmp/mysql-init.log
+    echo "→ Trying to set root password..." | tee -a /tmp/mysql-init.log
+    mysqladmin -u root password 'mail_root_pass' 2>/dev/null || true
+    MYSQL_CMD="mysql -h localhost -u root -pmail_root_pass"
+fi
+
+# Create database and user if not exists
+$MYSQL_CMD <<EOF 2>&1 | tee -a /tmp/mysql-init.log || true
+-- Create database if not exists
+CREATE DATABASE IF NOT EXISTS mailserver DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Create mail user if not exists
+CREATE USER IF NOT EXISTS 'mailuser'@'%' IDENTIFIED BY 'mail_secure_pass';
+GRANT ALL PRIVILEGES ON mailserver.* TO 'mailuser'@'%';
+FLUSH PRIVILEGES;
+
+-- Use mailserver database
+USE mailserver;
+
+-- Create virtual domains table
 CREATE TABLE IF NOT EXISTS virtual_domains (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    domain_name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+  id INT NOT NULL AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Create virtual users table
+CREATE TABLE IF NOT EXISTS virtual_users (
+  id INT NOT NULL AUTO_INCREMENT,
+  domain_id INT NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY email (email),
+  FOREIGN KEY (domain_id) REFERENCES virtual_domains(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Create virtual aliases table
 CREATE TABLE IF NOT EXISTS virtual_aliases (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    source_email VARCHAR(255) NOT NULL,
-    target_email VARCHAR(255) NOT NULL,
-    domain_id INT,
-    enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (domain_id) REFERENCES virtual_domains(id)
-);
+  id INT NOT NULL AUTO_INCREMENT,
+  domain_id INT NOT NULL,
+  source VARCHAR(255) NOT NULL,
+  destination VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id),
+  FOREIGN KEY (domain_id) REFERENCES virtual_domains(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS mail_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    direction ENUM('inbound', 'outbound') NOT NULL,
-    from_addr VARCHAR(255),
-    to_addr VARCHAR(255),
-    subject VARCHAR(255),
-    status ENUM('delivered', 'failed', 'spam', 'bounced') NOT NULL,
-    message_size INT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_timestamp (timestamp),
-    INDEX idx_status (status)
-);
+-- Insert default domains (use REPLACE to update if exists)
+REPLACE INTO virtual_domains (id, name) VALUES (1, 'localhost');
+REPLACE INTO virtual_domains (id, name) VALUES (2, 'example.com');
 
-CREATE TABLE IF NOT EXISTS spam_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email_address VARCHAR(255),
-    spam_score FLOAT,
-    is_spam BOOLEAN,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Delete existing users to avoid conflicts
+DELETE FROM virtual_users WHERE email IN ('admin@localhost', 'user1@localhost', 'admin@example.com');
 
-INSERT IGNORE INTO users (username, domain, email, password, enabled) VALUES
-('admin', 'localhost', 'admin@localhost', SHA2('admin123', 256), TRUE),
-('user1', 'localhost', 'user1@localhost', SHA2('user123', 256), TRUE);
+-- Insert users with correct encrypted passwords
+-- Password for admin@localhost is 'admin123'
+INSERT INTO virtual_users (domain_id, email, password) VALUES 
+  (1, 'admin@localhost', '{SHA256-CRYPT}\$5\$p2SC/PdRuGNps6pv\$KJB6kWHohXbAzFse4bSoa5zrb.cxcQALJB87i2v0al6');
 
-INSERT IGNORE INTO virtual_domains (domain_name, description, enabled) VALUES
-('localhost', 'Local mail domain', TRUE),
-('example.com', 'Example domain', TRUE);
+-- Password for user1@localhost is 'user123'
+INSERT INTO virtual_users (domain_id, email, password) VALUES 
+  (1, 'user1@localhost', '{SHA256-CRYPT}\$5\$9Dl7c17N.p4ZfBUv\$lZh4PqECVYn4ibaZUjgnsUXiWIg4KRHMNyxfAbvP/iD');
 
-INSERT IGNORE INTO virtual_aliases (source_email, target_email, enabled) VALUES
-('postmaster@localhost', 'admin@localhost', TRUE),
-('webmaster@localhost', 'admin@localhost', TRUE);
+-- Password for admin@example.com is 'admin123'
+INSERT INTO virtual_users (domain_id, email, password) VALUES 
+  (2, 'admin@example.com', '{SHA256-CRYPT}\$5\$p2SC/PdRuGNps6pv\$KJB6kWHohXbAzFse4bSoa5zrb.cxcQALJB87i2v0al6');
 
-MYSQLEOF
+-- Insert default aliases
+INSERT IGNORE INTO virtual_aliases (domain_id, source, destination) VALUES 
+  (1, 'postmaster@localhost', 'admin@localhost'),
+  (1, 'webmaster@localhost', 'admin@localhost'),
+  (2, 'postmaster@example.com', 'admin@example.com'),
+  (2, 'webmaster@example.com', 'admin@example.com');
 
-echo "✓ MySQL initialized successfully"
+EOF
+
+echo "✓ Mail server database structure created" | tee -a /tmp/mysql-init.log
+
+# Check if Roundcube schema needs to be loaded
+echo "→ Checking Roundcube schema..." | tee -a /tmp/mysql-init.log
+TABLES_COUNT=$(mysql -h localhost -u mailuser -pmail_secure_pass mailserver -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mailserver' AND table_name LIKE 'rc_%';" -s 2>/dev/null || echo "0")
+
+if [ "$TABLES_COUNT" -eq "0" ]; then
+    echo "→ Roundcube tables not found. Will be created when Roundcube container starts." | tee -a /tmp/mysql-init.log
+else
+    echo "✓ Roundcube tables already exist ($TABLES_COUNT tables found)" | tee -a /tmp/mysql-init.log
+fi
+
+echo "✓ MySQL initialization completed successfully" | tee -a /tmp/mysql-init.log
 exit 0

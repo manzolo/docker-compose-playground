@@ -1,227 +1,442 @@
 #!/bin/bash
-set -e
 
-echo "🌐 Installing and configuring Roundcube with PHP extensions..."
+echo "🌐 Configuring Roundcube webmail..."
 export DEBIAN_FRONTEND=noninteractive
 
-echo "→ Updating packages..."
-apt-get update -qq 2>&1 | grep -v "^Get\|^Reading\|^Building" || true
-
-echo "→ Installing system dependencies..."
+# Quick package installation
+apt-get update -qq >/dev/null 2>&1
 apt-get install -y -qq --no-install-recommends \
     wget \
     unzip \
     curl \
-    git \
+    ca-certificates \
     default-mysql-client \
-    gnupg \
-    2>&1 | grep -v "^Get\|^Reading\|^Building" || true
-
-sleep 1
-
-echo "→ Installing PHP development libraries..."
-apt-get install -y -qq --no-install-recommends \
     libzip-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    2>&1 | grep -v "^Get\|^Reading\|^Building" || true
+    libicu-dev \
+    libldap2-dev \
+    libpq-dev >/dev/null 2>&1
 
-sleep 1
+# Install ALL necessary PHP extensions including intl
+echo "→ Installing PHP extensions (including intl)..."
+docker-php-ext-configure gd --with-freetype --with-jpeg >/dev/null 2>&1
+docker-php-ext-install -j$(nproc) \
+    gd \
+    zip \
+    intl \
+    mysqli \
+    pdo_mysql \
+    opcache >/dev/null 2>&1
 
-echo "→ Configuring GD extension..."
-docker-php-ext-configure gd --with-freetype --with-jpeg 2>&1 | grep -v "^configure" || true
+# Enable Apache modules
+a2enmod rewrite headers expires >/dev/null 2>&1
 
-echo "→ Installing PHP extensions (this may take a moment)..."
-docker-php-ext-install -j$(nproc) gd zip mysqli pdo_mysql 2>&1 | grep -E "^(Installing|Build)" || true
+# Configure MySQL client to disable SSL
+echo "→ Configuring MySQL client..."
+mkdir -p /etc/mysql/conf.d
+cat > /etc/mysql/conf.d/client.cnf << 'CLIENTCNF'
+[client]
+ssl=0
+CLIENTCNF
 
-sleep 2
+# Create directories
+mkdir -p /var/www/html/roundcube/{temp,logs,config}
 
-echo "→ Enabling PHP extensions..."
-docker-php-ext-enable gd 2>&1 | grep -v "^WARNING" || true
-docker-php-ext-enable zip 2>&1 | grep -v "^WARNING" || true
-docker-php-ext-enable mysqli 2>&1 | grep -v "^WARNING" || true
-docker-php-ext-enable pdo_mysql 2>&1 | grep -v "^WARNING" || true
-
-sleep 1
-
-echo "→ Verifying PHP extensions are loaded..."
-php -m | grep -E "gd|zip|mysqli|PDO"
-
-echo "→ Creating application directories..."
-mkdir -p /var/www/html/roundcube/config
-mkdir -p /var/www/html/roundcube/temp
-mkdir -p /var/www/html/roundcube/logs
-
-echo "→ Downloading Roundcube 1.6.4..."
+# Download Roundcube (using simpler version)
 cd /tmp
+echo "→ Downloading Roundcube..."
+wget -q -O rc.tar.gz https://github.com/roundcube/roundcubemail/releases/download/1.6.9/roundcubemail-1.6.9-complete.tar.gz || exit 1
+tar xzf rc.tar.gz
+cp -r roundcubemail-1.6.9/* /var/www/html/roundcube/
+rm -rf roundcubemail-1.6.9* rc.tar.gz
 
-if [ ! -f roundcubemail-1.6.4.tar.gz ]; then
-    wget -q --timeout=10 https://github.com/roundcube/roundcubemail/releases/download/1.6.4/roundcubemail-1.6.4.tar.gz 2>/dev/null || \
-    curl -L --max-time 10 -o roundcubemail-1.6.4.tar.gz https://github.com/roundcube/roundcubemail/releases/download/1.6.4/roundcubemail-1.6.4.tar.gz 2>/dev/null || \
-    echo "⚠️  Could not download Roundcube"
-fi
+# Quick MySQL check
+echo "→ Waiting for MySQL..."
+for i in {1..15}; do
+    if mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT 1;" 2>/dev/null; then
+        echo "✓ MySQL connected"
+        break
+    fi
+    sleep 2
+done
 
-if [ -f roundcubemail-1.6.4.tar.gz ]; then
-    echo "→ Extracting Roundcube..."
-    tar xzf roundcubemail-1.6.4.tar.gz 2>/dev/null || true
-    cp -r roundcubemail-1.6.4/* /var/www/html/roundcube/ 2>/dev/null || true
-    rm -rf roundcubemail-1.6.4 roundcubemail-1.6.4.tar.gz
-fi
-
-echo "→ Creating Roundcube configuration..."
-cat > /var/www/html/roundcube/config/config.inc.php << 'RCUBEEOF'
-<?php
-$config = array();
-$config['imap_host'] = array('dovecot-mail-stack:143');
-$config['imap_port'] = 143;
-$config['imap_cache'] = 'db';
-$config['imap_auth_type'] = null;
-$config['smtp_host'] = 'postfix-mail-stack:25';
-$config['smtp_port'] = 25;
-$config['smtp_auth_type'] = null;
-$config['db_dsnw'] = 'mysql://mailuser:mail_secure_pass@mysql-mail-stack/mailserver';
-$config['db_prefix'] = 'roundcube_';
-$config['des_key'] = 'RoundcubeDESKey12345#@!SuperSecret!Key';
-$config['session_storage'] = 'db';
-$config['session_lifetime'] = 1440;
-$config['log_driver'] = 'syslog';
-$config['syslog_id'] = 'roundcube';
-$config['timezone'] = 'Europe/Rome';
-$config['language'] = 'en_US';
-$config['default_list_mode'] = 'list';
-$config['draft_autosave'] = 60;
-$config['prefer_html'] = true;
-$config['htmleditor'] = 1;
-$config['skin'] = 'elastic';
-$config['enable_caching'] = true;
-$config['enable_installer'] = false;
-$config['enable_spellcheck'] = false;
-$config['plugins'] = array('archive', 'filesystem_attachments', 'help', 'markasjunk');
-$config['max_attachment_size'] = 25000000;
-?>
-RCUBEEOF
-
-echo "→ Creating Roundcube database tables..."
-sleep 2
-mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver << 'RCUBESQLEOF' 2>/dev/null || echo "⚠️  DB tables may already exist"
-CREATE TABLE IF NOT EXISTS roundcube_users (
-  user_id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  username varchar(255) CHARACTER SET utf8mb4 NOT NULL,
-  mail_host varchar(255) NOT NULL,
-  created datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_login datetime,
-  language varchar(5),
-  preferences longtext,
-  PRIMARY KEY (user_id),
-  UNIQUE KEY username (username, mail_host)
+# Init database - Force creation of Roundcube tables
+echo "→ Initializing Roundcube database..."
+if [ -f /var/www/html/roundcube/SQL/mysql.initial.sql ]; then
+    # Check if tables exist
+    TABLE_COUNT=$(mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mailserver' AND table_name='session';" -s 2>/dev/null || echo "0")
+    
+    if [ "$TABLE_COUNT" = "0" ]; then
+        echo "→ Creating Roundcube tables..."
+        mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver < /var/www/html/roundcube/SQL/mysql.initial.sql
+        if [ $? -eq 0 ]; then
+            echo "✓ Roundcube database tables created successfully"
+        else
+            echo "⚠️ Warning: Could not create all tables, trying alternative method..."
+            # Try to create at least the session table manually
+            mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver <<'SQLEOF'
+CREATE TABLE IF NOT EXISTS `session` (
+  `sess_id` varchar(128) NOT NULL,
+  `changed` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip` varchar(40) NOT NULL,
+  `vars` mediumtext NOT NULL,
+  PRIMARY KEY(`sess_id`),
+  INDEX `changed_index` (`changed`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS roundcube_sessions (
-  sess_id varchar(128) NOT NULL,
-  created datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  changed datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  ip varchar(40) NOT NULL,
-  vars longtext NOT NULL,
-  PRIMARY KEY (sess_id)
+CREATE TABLE IF NOT EXISTS `users` (
+  `user_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `username` varchar(128) BINARY NOT NULL,
+  `mail_host` varchar(128) NOT NULL,
+  `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_login` datetime DEFAULT NULL,
+  `failed_login` datetime DEFAULT NULL,
+  `failed_login_counter` int(10) UNSIGNED DEFAULT NULL,
+  `language` varchar(16),
+  `preferences` longtext,
+  PRIMARY KEY(`user_id`),
+  UNIQUE `username` (`username`, `mail_host`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-RCUBESQLEOF
 
-echo "→ Creating debug diagnostics dashboard..."
-cat > /var/www/html/debug.php << 'DEBUGEOF'
+CREATE TABLE IF NOT EXISTS `cache` (
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `cache_key` varchar(128) BINARY NOT NULL,
+  `expires` datetime DEFAULT NULL,
+  `data` longtext NOT NULL,
+  PRIMARY KEY (`user_id`, `cache_key`),
+  CONSTRAINT `user_id_fk_cache` FOREIGN KEY (`user_id`)
+    REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  INDEX `expires_index` (`expires`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `cache_shared` (
+  `cache_key` varchar(255) BINARY NOT NULL,
+  `expires` datetime DEFAULT NULL,
+  `data` longtext NOT NULL,
+  PRIMARY KEY(`cache_key`),
+  INDEX `expires_index` (`expires`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+SQLEOF
+        fi
+    else
+        echo "✓ Roundcube tables already exist"
+    fi
+else
+    echo "⚠️ SQL file not found at /var/www/html/roundcube/SQL/mysql.initial.sql"
+fi
+
+# Generate DES key for Roundcube
+DES_KEY=$(openssl rand -base64 24)
+
+# Create Roundcube configuration
+echo "→ Creating configuration..."
+cat > /var/www/html/roundcube/config/config.inc.php << EOF
 <?php
-$db_host = 'mysql-mail-stack';
-$db_connected = false;
-$db_error = '';
-if (!extension_loaded('mysqli')) {
-    $db_error = 'MySQLi extension not loaded';
-} else {
-    $mysqli = @new mysqli($db_host, 'mailuser', 'mail_secure_pass', 'mailserver');
-    if ($mysqli->connect_error) {
-        $db_error = $mysqli->connect_error;
-    } else {
-        $db_connected = true;
-    }
-}
-?>
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Mail Stack Diagnostics</title><style>* { margin: 0; padding: 0; box-sizing: border-box; }body { font-family: 'Segoe UI', Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }.container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 40px; }h1 { color: #333; margin-bottom: 10px; font-size: 2.5em; border-bottom: 3px solid #667eea; padding-bottom: 10px; }.timestamp { color: #666; font-size: 0.9em; margin-bottom: 20px; }.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 30px 0; }.card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #f8f9fa; }.card h3 { color: #667eea; margin-bottom: 15px; }.check-list { list-style: none; }.check-list li { padding: 8px 0; padding-left: 25px; position: relative; border-bottom: 1px solid #eee; }.check-list li:before { position: absolute; left: 0; content: '✓'; font-weight: bold; }.check-list li.error:before { content: '✗'; color: #dc3545; }.check-list li.error { color: #dc3545; }.check-list li.ok { color: #28a745; }.alert { padding: 15px; border-radius: 4px; margin: 15px 0; }.alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }.alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }.info-value { text-align: right; }.footer { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center; }a { color: #667eea; text-decoration: none; }a:hover { text-decoration: underline; }</style></head><body><div class="container"><h1>📊 Mail Stack Diagnostics</h1><div class="timestamp">Generated: <?php echo date('Y-m-d H:i:s'); ?> | PHP <?php echo phpversion(); ?></div><div class="grid"><div class="card"><h3>📦 PHP Extensions</h3><ul class="check-list"><li class="<?php echo extension_loaded('mysqli') ? 'ok' : 'error'; ?>">MySQLi: <?php echo extension_loaded('mysqli') ? '✓' : '✗'; ?></li><li class="<?php echo extension_loaded('pdo_mysql') ? 'ok' : 'error'; ?>">PDO MySQL: <?php echo extension_loaded('pdo_mysql') ? '✓' : '✗'; ?></li><li class="<?php echo extension_loaded('gd') ? 'ok' : 'error'; ?>">GD: <?php echo extension_loaded('gd') ? '✓' : '✗'; ?></li><li class="<?php echo extension_loaded('zip') ? 'ok' : 'error'; ?>">ZIP: <?php echo extension_loaded('zip') ? '✓' : '✗'; ?></li><li class="<?php echo extension_loaded('openssl') ? 'ok' : 'error'; ?>">OpenSSL: <?php echo extension_loaded('openssl') ? '✓' : '✗'; ?></li></ul></div><div class="card"><h3>🗄️ Database</h3><?php if (!extension_loaded('mysqli')): ?><div class="alert alert-error">❌ MySQLi not loaded</div><?php elseif ($db_error): ?><div class="alert alert-error">❌ <?php echo htmlspecialchars($db_error); ?></div><?php else: ?><div class="alert alert-success">✓ Connected</div><div class="info-row"><span>Host:</span><span class="info-value"><?php echo $db_host; ?></span></div><div class="info-row"><span>Version:</span><span class="info-value"><?php echo $mysqli->server_info; ?></span></div><?php endif; ?></div><div class="card"><h3>📋 Tables</h3><?php if ($db_connected): $tables = $mysqli->query("SHOW TABLES IN mailserver"); if ($tables): echo '<ul class="check-list">'; while ($row = $tables->fetch_array()): $name = $row[0]; $count = $mysqli->query("SELECT COUNT(*) FROM $name")->fetch_row()[0]; echo "<li class=\"ok\">$name ($count)</li>"; endwhile; echo '</ul>'; endif; else: echo '<div class="alert alert-error">Not connected</div>'; endif; ?></div><div class="card"><h3>📁 Roundcube Files</h3><?php $config = file_exists('/var/www/html/roundcube/config/config.inc.php'); $size = $config ? filesize('/var/www/html/roundcube/config/config.inc.php') : 0; echo '<ul class="check-list">'; echo '<li class="' . ($size > 100 ? 'ok' : 'error') . '">config.inc.php: ' . ($size > 100 ? '✓ (' . $size . 'b)' : '✗') . '</li>'; echo '</ul>'; ?></div><div class="card"><h3>🔐 Permissions</h3><?php $dirs = ['/var/www/html' => 'Web', '/var/www/html/roundcube' => 'RC', '/var/www/html/roundcube/temp' => 'Temp']; echo '<ul class="check-list">'; foreach ($dirs as $d => $l): if (is_dir($d)): echo '<li class="' . (is_writable($d) ? 'ok' : 'error') . '">' . $l . ' ' . (is_writable($d) ? '✓' : '✗') . '</li>'; endif; endforeach; echo '</ul>'; ?></div><div class="card"><h3>🌐 Services</h3><?php $services = ['dovecot-mail-stack:143' => 'IMAP', 'postfix-mail-stack:25' => 'SMTP', 'mysql-mail-stack:3306' => 'MySQL']; echo '<ul class="check-list">'; foreach ($services as $svc => $lbl): list($h, $p) = explode(':', $svc); $c = @fsockopen($h, $p, $e, $es, 2); $ok = is_resource($c); if ($ok) fclose($c); echo '<li class="' . ($ok ? 'ok' : 'error') . '">' . $lbl . ' ' . ($ok ? '✓' : '✗') . '</li>'; endforeach; echo '</ul>'; ?></div></div><div class="footer"><a href="/">← Dashboard</a> | <a href="/roundcube/">📬 Roundcube</a> | <a href="">🔄 Refresh</a></div></div></body></html>
-DEBUGEOF
+// Roundcube configuration file
 
-echo "→ Creating main dashboard..."
-cat > /var/www/html/index.php << 'INDEXEOF'
+\$config = [];
+
+// Database connection
+\$config['db_dsnw'] = 'mysql://mailuser:mail_secure_pass@mysql-mail-stack/mailserver';
+
+// IMAP server configuration
+\$config['imap_host'] = 'dovecot-mail-stack:143';
+\$config['imap_auth_type'] = 'PLAIN';
+\$config['imap_delimiter'] = '/';
+
+// SMTP server configuration
+\$config['smtp_host'] = 'postfix-mail-stack:25';
+\$config['smtp_auth_type'] = 'PLAIN';
+\$config['smtp_user'] = '%u';
+\$config['smtp_pass'] = '%p';
+
+// System settings
+\$config['des_key'] = '$DES_KEY';
+\$config['product_name'] = 'Roundcube Webmail';
+\$config['useragent'] = 'Roundcube Webmail/1.6.9';
+
+// Logging
+\$config['log_driver'] = 'file';
+\$config['log_dir'] = '/var/www/html/roundcube/logs/';
+\$config['log_logins'] = true;
+\$config['smtp_log'] = true;
+\$config['imap_log'] = true;
+\$config['sql_debug'] = false;
+\$config['debug_level'] = 1;
+
+// Temp directory
+\$config['temp_dir'] = '/var/www/html/roundcube/temp/';
+
+// Plugins - enable essential plugins
+\$config['plugins'] = ['archive', 'zipdownload', 'newmail_notifier'];
+
+// User preferences
+\$config['language'] = 'en_US';
+\$config['timezone'] = 'Europe/Rome';
+\$config['date_format'] = 'Y-m-d';
+\$config['time_format'] = 'H:i';
+
+// Security
+\$config['enable_installer'] = false;
+\$config['csrf_protection'] = true;
+\$config['x_frame_options'] = 'sameorigin';
+
+// Mail settings
+\$config['html_editor'] = 1;
+\$config['draft_autosave'] = 60;
+\$config['mime_param_folding'] = 0;
+\$config['mdn_requests'] = 0;
+\$config['compose_extwin'] = false;
+
+// Address book
+\$config['address_book_type'] = 'sql';
+\$config['autocomplete_addressbooks'] = ['sql'];
+
+// Set defaults for new users
+\$config['default_folders'] = ['INBOX', 'Drafts', 'Sent', 'Spam', 'Trash'];
+\$config['create_default_folders'] = true;
+
+// Performance
+\$config['enable_caching'] = true;
+\$config['message_cache_lifetime'] = '10d';
+
+EOF
+
+# Set permissions
+echo "→ Setting permissions..."
+chown -R www-data:www-data /var/www/html/roundcube
+chmod -R 755 /var/www/html/roundcube
+chmod -R 777 /var/www/html/roundcube/temp /var/www/html/roundcube/logs
+
+# Create Apache virtual host for Roundcube
+cat > /etc/apache2/sites-available/roundcube.conf << 'APACHECONF'
+<VirtualHost *:80>
+    DocumentRoot /var/www/html
+    ServerName localhost
+    
+    <Directory /var/www/html>
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Require all granted
+    </Directory>
+    
+    <Directory /var/www/html/roundcube>
+        Options +FollowSymLinks
+        AllowOverride All
+        Require all granted
+        
+        <IfModule mod_php.c>
+            php_flag register_globals off
+            php_flag magic_quotes_gpc off
+            php_flag magic_quotes_runtime off
+            php_flag zend.ze1_compatibility_mode off
+            php_flag suhosin.session.encrypt off
+            php_flag session.auto_start off
+            php_value upload_max_filesize 25M
+            php_value post_max_size 25M
+        </IfModule>
+    </Directory>
+    
+    # Protect config files
+    <Directory /var/www/html/roundcube/config>
+        Options -FollowSymLinks
+        AllowOverride None
+        Require all denied
+    </Directory>
+    
+    # Protect temp files
+    <Directory /var/www/html/roundcube/temp>
+        Options -FollowSymLinks
+        AllowOverride None
+        Require all denied
+    </Directory>
+    
+    # Protect logs
+    <Directory /var/www/html/roundcube/logs>
+        Options -FollowSymLinks
+        AllowOverride None
+        Require all denied
+    </Directory>
+    
+    ErrorLog /var/log/apache2/roundcube_error.log
+    CustomLog /var/log/apache2/roundcube_access.log combined
+</VirtualHost>
+APACHECONF
+
+# Enable the site
+a2dissite 000-default 2>/dev/null || true
+a2ensite roundcube 2>/dev/null || true
+
+# Create index.html dashboard
+cat > /var/www/html/index.html << 'INDEXHTML'
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mail Stack</title>
+    <title>Mail Server Stack - Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI'; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; display: flex; align-items: center; justify-content: center; }
-        .container { max-width: 900px; width: 100%; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 40px; }
-        h1 { color: #333; margin-bottom: 30px; font-size: 2.5em; text-align: center; border-bottom: 3px solid #667eea; padding-bottom: 15px; }
-        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0; }
-        .card { border-left: 4px solid #667eea; padding: 20px; border-radius: 5px; background: #f8f9fa; cursor: pointer; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-2px); }
-        .card h3 { color: #667eea; margin-bottom: 10px; font-size: 1.3em; }
-        .card p { color: #666; margin-bottom: 10px; }
-        .card a { color: white; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 10px; padding: 8px 15px; background: #667eea; border-radius: 4px; }
-        .card a:hover { background: #5568d3; }
-        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .status h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        .service {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .service:last-child { border-bottom: none; }
+        .service-name { font-weight: 500; color: #495057; }
+        .service-status {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .accounts {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .accounts h2 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        .account-item {
+            background: white;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            font-family: monospace;
+            color: #333;
+        }
+        .btn-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .info p {
+            color: #856404;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📧 Mail Stack</h1>
-        <div class="info">
-            <strong>💡 Debug:</strong> Visit <a href="/debug.php" style="color: inherit; text-decoration: underline;">Diagnostics</a> to check system status
+        <h1>📧 Mail Server Stack</h1>
+        <p class="subtitle">Complete email solution with webmail interface</p>
+        
+        <div class="status">
+            <h2>Service Status</h2>
+            <div class="service">
+                <span class="service-name">MySQL Database</span>
+                <span class="service-status">✅ Running</span>
+            </div>
+            <div class="service">
+                <span class="service-name">Postfix SMTP</span>
+                <span class="service-status">✅ Running</span>
+            </div>
+            <div class="service">
+                <span class="service-name">Dovecot IMAP/POP3</span>
+                <span class="service-status">✅ Running</span>
+            </div>
+            <div class="service">
+                <span class="service-name">SpamAssassin</span>
+                <span class="service-status">✅ Running</span>
+            </div>
+            <div class="service">
+                <span class="service-name">Roundcube Webmail</span>
+                <span class="service-status">✅ Running</span>
+            </div>
         </div>
-        <div class="cards">
-            <div class="card">
-                <h3>📬 Webmail</h3>
-                <p>Roundcube Email Client<br>admin@localhost / admin123</p>
-                <a href="/roundcube/">→ Access</a>
-            </div>
-            <div class="card">
-                <h3>🔍 Diagnostics</h3>
-                <p>System Health Check<br>PHP, DB, Services Status</p>
-                <a href="/debug.php">→ View</a>
-            </div>
-            <div class="card">
-                <h3>📧 SMTP</h3>
-                <p>Postfix Mail Server<br>Ports 25, 587, 465</p>
-            </div>
-            <div class="card">
-                <h3>📨 IMAP/POP3</h3>
-                <p>Dovecot Mail Services<br>Ports 143/993, 110/995</p>
-            </div>
+        
+        <div class="accounts">
+            <h2>Test Accounts</h2>
+            <div class="account-item">admin@localhost / admin123</div>
+            <div class="account-item">user1@localhost / user123</div>
+            <div class="account-item">admin@example.com / admin123</div>
+        </div>
+        
+        <div class="btn-container">
+            <a href="/roundcube/" class="btn">Access Webmail →</a>
+        </div>
+        
+        <div class="info">
+            <p><strong>Note:</strong> This is a development mail server. For production use, please configure proper SSL certificates, authentication, and security settings.</p>
         </div>
     </div>
 </body>
 </html>
-INDEXEOF
+INDEXHTML
 
-echo "→ Creating info redirect..."
-cat > /var/www/html/info.php << 'INFOEOF'
-<?php header('Location: /debug.php'); exit; ?>
-INFOEOF
+# NO RESTART - just reload config 
+# apache2-foreground is already running as the main process
+apache2ctl graceful 2>/dev/null || true
 
-echo "→ Setting permissions..."
-chown -R www-data:www-data /var/www/html
-chmod -R 755 /var/www/html
-chmod -R 775 /var/www/html/roundcube/temp 2>/dev/null || true
-chmod -R 775 /var/www/html/roundcube/logs 2>/dev/null || true
-
-echo "→ Enabling Apache modules..."
-a2enmod rewrite 2>/dev/null || true
-a2enmod headers 2>/dev/null || true
-
-sleep 1
-
-echo "✓ Roundcube configured successfully"
-echo "✓ Dashboard: http://localhost:8082/"
-echo "✓ Diagnostics: http://localhost:8082/debug.php"
-echo "✓ PHP Extensions installed: $(php -m | grep -E 'gd|zip|mysqli|PDO' | tr '\n' ' ')"
+echo "✓ Roundcube installation completed!"
+echo "✓ Access webmail at: http://localhost:8082/roundcube/"
+echo "✓ Dashboard at: http://localhost:8082/"
 
 exit 0

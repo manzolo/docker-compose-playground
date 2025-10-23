@@ -29,8 +29,6 @@ smtpd_use_tls = yes
 smtpd_tls_cert_file = /etc/postfix/certs/cert.pem
 smtpd_tls_key_file = /etc/postfix/certs/key.pem
 smtpd_tls_security_level = may
-submission_syslog_name = postfix/submission
-submission_smtpd_restrictions = permit_sasl_authenticated,reject_unauth_destination
 message_size_limit = 52428800
 mailbox_size_limit = 0
 maximal_queue_lifetime = 5d
@@ -69,27 +67,26 @@ fi
 if ! grep -q "^submission" /etc/postfix/master.cf; then
     cat >> /etc/postfix/master.cf << 'MASTEREOF'
 submission inet n       -       y       -       -       smtpd
+    -o syslog_name=postfix/submission
+    -o smtpd_tls_security_level=encrypt
+    -o smtpd_sasl_auth_enable=yes
+    -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+    -o milter_macro_daemon_name=ORIGINATING
 465       inet  n       -       y       -       -       smtpd
+    -o syslog_name=postfix/smtps
+    -o smtpd_tls_wrappermode=yes
+    -o smtpd_sasl_auth_enable=yes
+    -o smtpd_client_restrictions=permit_sasl_authenticated,reject
 MASTEREOF
 fi
 
 echo "→ Starting Postfix..."
-service postfix start 2>&1 | head -5
+service postfix start 2>&1 | head -3 || postfix start &
 
-sleep 2
-
-if ps aux | grep -v grep | grep -q "postfix"; then
-    echo "✓ Postfix started successfully"
-else
-    echo "⚠️ Postfix may not have started"
-    postfix start || true
-    sleep 2
-fi
+sleep 1
 
 if ps aux | grep -v grep | grep -q "postfix"; then
-    echo "✓ Postfix confirmed running"
-else
-    echo "❌ Postfix failed to start"
+    echo "✓ Postfix started"
 fi
 
 exit 0

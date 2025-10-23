@@ -51,9 +51,6 @@ echo "→ Setting up additional directories..."
 mkdir -p /var/lib/spamassassin/.spamassassin
 chown -R spamd:spamd /var/lib/spamassassin
 
-echo "→ Configuring Pyzor..."
-pyzor --homedir /var/lib/spamassassin/.spamassassin discover 2>&1 | grep -v "^Query\|^Discovering" || true
-
 echo "→ Configuring Razor..."
 razor-admin -home=/var/lib/spamassassin/.spamassassin -register 2>&1 | grep -v "^razor" || true
 
