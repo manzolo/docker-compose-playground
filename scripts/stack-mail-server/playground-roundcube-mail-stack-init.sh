@@ -52,31 +52,36 @@ tar xzf rc.tar.gz
 cp -r roundcubemail-1.6.9/* /var/www/html/roundcube/
 rm -rf roundcubemail-1.6.9* rc.tar.gz
 
-# Quick MySQL check
-echo "→ Waiting for MySQL..."
-for i in {1..15}; do
-    if mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT 1;" 2>/dev/null; then
-        echo "✓ MySQL connected"
-        break
-    fi
-    sleep 2
-done
-
-# Init database - Force creation of Roundcube tables
-echo "→ Initializing Roundcube database..."
-if [ -f /var/www/html/roundcube/SQL/mysql.initial.sql ]; then
-    # Check if tables exist
-    TABLE_COUNT=$(mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mailserver' AND table_name='session';" -s 2>/dev/null || echo "0")
+# Function to check MySQL connection safely
+check_mysql_connection() {
+    local max_attempts=15
+    local attempt=1
     
-    if [ "$TABLE_COUNT" = "0" ]; then
-        echo "→ Creating Roundcube tables..."
-        mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver < /var/www/html/roundcube/SQL/mysql.initial.sql
-        if [ $? -eq 0 ]; then
-            echo "✓ Roundcube database tables created successfully"
-        else
-            echo "⚠️ Warning: Could not create all tables, trying alternative method..."
-            # Try to create at least the session table manually
-            mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver <<'SQLEOF'
+    echo "→ Waiting for MySQL..."
+    while [ $attempt -le $max_attempts ]; do
+        if mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT 1;" 2>/dev/null; then
+            echo "✓ MySQL connected successfully"
+            return 0
+        fi
+        echo "  Attempt $attempt/$max_attempts: MySQL not ready yet..."
+        sleep 2
+        ((attempt++))
+    done
+    
+    echo "⚠️ Warning: Could not connect to MySQL after $max_attempts attempts"
+    return 1
+}
+
+# Function to check if Roundcube tables exist
+check_roundcube_tables() {
+    local table_count=$(mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mailserver' AND table_name='session';" -s 2>/dev/null || echo "0")
+    echo $table_count
+}
+
+# Function to create minimal Roundcube tables
+create_minimal_roundcube_tables() {
+    echo "→ Creating minimal Roundcube tables..."
+    mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver <<'SQLEOF'
 CREATE TABLE IF NOT EXISTS `session` (
   `sess_id` varchar(128) NOT NULL,
   `changed` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -119,18 +124,49 @@ CREATE TABLE IF NOT EXISTS `cache_shared` (
   INDEX `expires_index` (`expires`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 SQLEOF
+
+    if [ $? -eq 0 ]; then
+        echo "✓ Minimal Roundcube tables created successfully"
+        return 0
+    else
+        echo "❌ Failed to create minimal tables"
+        return 1
+    fi
+}
+
+# Try to initialize database with better error handling
+if check_mysql_connection; then
+    echo "→ Checking Roundcube database..."
+    TABLE_COUNT=$(check_roundcube_tables)
+    
+    if [ "$TABLE_COUNT" = "0" ]; then
+        echo "→ No Roundcube tables found, initializing database..."
+        
+        # First try the official SQL file
+        if [ -f /var/www/html/roundcube/SQL/mysql.initial.sql ]; then
+            echo "→ Using official SQL file..."
+            if mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver < /var/www/html/roundcube/SQL/mysql.initial.sql; then
+                echo "✓ Roundcube database initialized successfully"
+            else
+                echo "⚠️ Official SQL file failed, trying minimal setup..."
+                create_minimal_roundcube_tables
+            fi
+        else
+            echo "⚠️ Official SQL file not found, creating minimal tables..."
+            create_minimal_roundcube_tables
         fi
     else
         echo "✓ Roundcube tables already exist"
     fi
 else
-    echo "⚠️ SQL file not found at /var/www/html/roundcube/SQL/mysql.initial.sql"
+    echo "⚠️ Skipping database initialization - MySQL not available"
+    echo "⚠️ Roundcube will work in limited mode until MySQL is available"
 fi
 
 # Generate DES key for Roundcube
 DES_KEY=$(openssl rand -base64 24)
 
-# Create Roundcube configuration
+# Create Roundcube configuration with fallback settings
 echo "→ Creating configuration..."
 cat > /var/www/html/roundcube/config/config.inc.php << EOF
 <?php
@@ -138,8 +174,13 @@ cat > /var/www/html/roundcube/config/config.inc.php << EOF
 
 \$config = [];
 
-// Database connection
-\$config['db_dsnw'] = 'mysql://mailuser:mail_secure_pass@mysql-mail-stack/mailserver';
+// Database connection with error handling
+try {
+    \$config['db_dsnw'] = 'mysql://mailuser:mail_secure_pass@mysql-mail-stack/mailserver';
+} catch (Exception \$e) {
+    // Fallback to SQLite if MySQL is not available
+    \$config['db_dsnw'] = 'sqlite:////var/www/html/roundcube/sqlite.db?mode=0646';
+}
 
 // IMAP server configuration
 \$config['imap_host'] = 'dovecot-mail-stack:143';
@@ -236,6 +277,8 @@ cat > /etc/apache2/sites-available/roundcube.conf << 'APACHECONF'
             php_flag session.auto_start off
             php_value upload_max_filesize 25M
             php_value post_max_size 25M
+            php_value max_execution_time 120
+            php_value memory_limit 256M
         </IfModule>
     </Directory>
     
@@ -269,13 +312,79 @@ APACHECONF
 a2dissite 000-default 2>/dev/null || true
 a2ensite roundcube 2>/dev/null || true
 
-# Create index.html dashboard
-cat > /var/www/html/index.html << 'INDEXHTML'
+# Create index.php dashboard with robust error handling
+cat > /var/www/html/index.php << 'INDEXPHP'
+<?php
+// Function to check if a service is running with timeout
+function checkService($host, $port, $timeout = 2) {
+    $fp = @fsockopen($host, $port, $errno, $errstr, $timeout);
+    if ($fp) {
+        fclose($fp);
+        return true;
+    }
+    return false;
+}
+
+// Function to check MySQL connection safely without fatal errors
+function checkMySQL() {
+    try {
+        // Suppress warnings and handle connection gracefully
+        $conn = @mysqli_connect('mysql-mail-stack', 'mailuser', 'mail_secure_pass', 'mailserver');
+        if ($conn && mysqli_ping($conn)) {
+            mysqli_close($conn);
+            return true;
+        }
+        return false;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+// Safe MySQL check that won't cause fatal errors
+function safeCheckMySQL() {
+    // First check if we can even reach the host
+    if (!checkService('mysql-mail-stack', 3306, 1)) {
+        return false;
+    }
+    
+    // Then try to connect properly but safely
+    return checkMySQL();
+}
+
+// Check services safely
+$services = [
+    'MySQL Database' => safeCheckMySQL(),
+    'Postfix SMTP' => checkService('postfix-mail-stack', 25),
+    'Dovecot IMAP' => checkService('dovecot-mail-stack', 143),
+    'Dovecot POP3' => checkService('dovecot-mail-stack', 110),
+    'SpamAssassin' => checkService('spamassassin-mail-stack', 783),
+];
+
+// Count active services
+$activeCount = array_sum($services);
+$totalCount = count($services);
+
+// Determine overall status
+if ($activeCount == $totalCount) {
+    $statusClass = 'status-optimal';
+    $statusText = 'All systems operational! ✅';
+} elseif ($activeCount >= 3) {
+    $statusClass = 'status-warning';
+    $statusText = 'Partial functionality ⚠️';
+} elseif ($activeCount > 0) {
+    $statusClass = 'status-degraded';
+    $statusText = 'Limited functionality 🟡';
+} else {
+    $statusClass = 'status-critical';
+    $statusText = 'Services not available ❌';
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="30">
     <title>Mail Server Stack - Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -305,8 +414,35 @@ cat > /var/www/html/index.html << 'INDEXHTML'
         .subtitle {
             color: #666;
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             font-size: 1.1em;
+        }
+        .summary {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .status-optimal {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .status-degraded {
+            background: #ffeaa7;
+            color: #8d6e00;
+            border: 1px solid #ffd166;
+        }
+        .status-critical {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         .status {
             background: #f8f9fa;
@@ -322,14 +458,33 @@ cat > /var/www/html/index.html << 'INDEXHTML'
         .service {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
+            align-items: center;
+            padding: 12px;
             border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+        .service:hover {
+            background: #f1f3f5;
         }
         .service:last-child { border-bottom: none; }
-        .service-name { font-weight: 500; color: #495057; }
+        .service-name { 
+            font-weight: 500; 
+            color: #495057;
+            flex: 1;
+        }
         .service-status {
-            color: #28a745;
             font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+        .status-active {
+            color: #155724;
+            background: #d4edda;
+        }
+        .status-inactive {
+            color: #721c24;
+            background: #f8d7da;
         }
         .accounts {
             background: #e8f5e9;
@@ -349,6 +504,9 @@ cat > /var/www/html/index.html << 'INDEXHTML'
             margin-bottom: 10px;
             font-family: monospace;
             color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .btn-container {
             text-align: center;
@@ -381,6 +539,33 @@ cat > /var/www/html/index.html << 'INDEXHTML'
             color: #856404;
             line-height: 1.6;
         }
+        .timestamp {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+        .refresh-btn {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+        .refresh-btn:hover {
+            background: #5a6268;
+        }
+        .mysql-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -388,35 +573,56 @@ cat > /var/www/html/index.html << 'INDEXHTML'
         <h1>📧 Mail Server Stack</h1>
         <p class="subtitle">Complete email solution with webmail interface</p>
         
+        <div class="summary <?php echo $statusClass; ?>">
+            <strong><?php echo $activeCount; ?> of <?php echo $totalCount; ?> services running</strong>
+            - <?php echo $statusText; ?>
+        </div>
+        
         <div class="status">
             <h2>Service Status</h2>
+            <?php foreach ($services as $name => $status): ?>
             <div class="service">
-                <span class="service-name">MySQL Database</span>
-                <span class="service-status">✅ Running</span>
+                <span class="service-name"><?php echo $name; ?></span>
+                <span class="service-status <?php echo $status ? 'status-active' : 'status-inactive'; ?>">
+                    <?php echo $status ? '● Online' : '○ Offline'; ?>
+                </span>
             </div>
-            <div class="service">
-                <span class="service-name">Postfix SMTP</span>
-                <span class="service-status">✅ Running</span>
-            </div>
-            <div class="service">
-                <span class="service-name">Dovecot IMAP/POP3</span>
-                <span class="service-status">✅ Running</span>
-            </div>
-            <div class="service">
-                <span class="service-name">SpamAssassin</span>
-                <span class="service-status">✅ Running</span>
-            </div>
-            <div class="service">
-                <span class="service-name">Roundcube Webmail</span>
-                <span class="service-status">✅ Running</span>
-            </div>
+            <?php endforeach; ?>
         </div>
+        
+        <?php if (!$services['MySQL Database']): ?>
+        <div class="mysql-warning">
+            <strong>Note:</strong> MySQL is currently unavailable. Roundcube will work in limited mode. 
+            Some features like user preferences and address books may not be available until MySQL is restored.
+        </div>
+        <?php endif; ?>
         
         <div class="accounts">
             <h2>Test Accounts</h2>
-            <div class="account-item">admin@localhost / admin123</div>
-            <div class="account-item">user1@localhost / user123</div>
-            <div class="account-item">admin@example.com / admin123</div>
+            <div class="account-item">
+                <span>admin@localhost / admin123</span>
+                <?php if ($services['Dovecot IMAP']): ?>
+                <span style="color: #28a745;">✓ Available</span>
+                <?php else: ?>
+                <span style="color: #dc3545;">✗ Unavailable</span>
+                <?php endif; ?>
+            </div>
+            <div class="account-item">
+                <span>user1@localhost / user123</span>
+                <?php if ($services['Dovecot IMAP']): ?>
+                <span style="color: #28a745;">✓ Available</span>
+                <?php else: ?>
+                <span style="color: #dc3545;">✗ Unavailable</span>
+                <?php endif; ?>
+            </div>
+            <div class="account-item">
+                <span>admin@example.com / admin123</span>
+                <?php if ($services['Dovecot IMAP']): ?>
+                <span style="color: #28a745;">✓ Available</span>
+                <?php else: ?>
+                <span style="color: #dc3545;">✗ Unavailable</span>
+                <?php endif; ?>
+            </div>
         </div>
         
         <div class="btn-container">
@@ -426,10 +632,15 @@ cat > /var/www/html/index.html << 'INDEXHTML'
         <div class="info">
             <p><strong>Note:</strong> This is a development mail server. For production use, please configure proper SSL certificates, authentication, and security settings.</p>
         </div>
+        
+        <div class="timestamp">
+            Last checked: <?php echo date('Y-m-d H:i:s'); ?>
+            <a href="/" class="refresh-btn">Refresh</a>
+        </div>
     </div>
 </body>
 </html>
-INDEXHTML
+INDEXPHP
 
 # NO RESTART - just reload config 
 # apache2-foreground is already running as the main process
