@@ -1,0 +1,256 @@
+# Mail Server Stack - Complete Email Server
+# Postfix (SMTP) + Dovecot (IMAP/POP3) + Roundcube (Webmail) + SpamAssassin (Anti-spam)
+# VERSION 1 - HARDCODED, FUNZIONANTE
+
+group:
+  name: "Mail-Server-Stack"
+  description: "Complete email server with webmail interface, SMTP, IMAP and spam filtering"
+  category: communication
+  containers:
+    - mysql-mail-stack
+    - postfix-mail-stack
+    - dovecot-mail-stack
+    - spamassassin-mail-stack
+    - roundcube-mail-stack
+
+images:
+  mysql-mail-stack:
+    category: database
+    description: MySQL 8 Database for Mail Stack
+    image: mysql:8
+    keep_alive_cmd: mysqld
+    shell: /bin/bash
+    ports:
+      - "3310:3306"
+    environment:
+      MYSQL_DATABASE: mailserver
+      MYSQL_ROOT_PASSWORD: mail_root_pass
+      MYSQL_USER: mailuser
+      MYSQL_PASSWORD: mail_secure_pass
+    volumes:
+      - name: mysql-mail-volume
+        path: /var/lib/mysql
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          set -e
+          echo "Initializing MySQL for Mail Stack..."
+          docker cp scripts/stack-mail-server/${CONTAINER_NAME}-init.sh "${CONTAINER_NAME}":/tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" chmod +x /tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
+          docker restart "${CONTAINER_NAME}"
+          echo "✓ MySQL initialized for Mail Stack"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           MySQL 8 - Mail Stack Database                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+      🔐 Connection:
+         Host: mysql-mail-stack
+         Port: 3306
+         Root: root / mail_root_pass
+         Database: mailserver
+         User: mailuser / mail_secure_pass
+
+         mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT 1;"
+
+  postfix-mail-stack:
+    category: communication
+    description: Postfix SMTP Server for outgoing mail
+    image: ubuntu:22.04
+    keep_alive_cmd: /bin/bash
+    shell: /bin/bash
+    ports:
+      - "25:25"
+      - "587:587"
+      - "465:465"
+    environment:
+      SMTP_HOSTNAME: mail.example.com
+      MYSQL_HOST: mysql-mail-stack
+      MYSQL_DATABASE: mailserver
+      MYSQL_USER: mailuser
+      MYSQL_PASSWORD: mail_secure_pass
+    volumes:
+      - name: postfix-mail-volume
+        path: /var/spool/postfix
+        type: named
+      - name: postfix-config-volume
+        path: /etc/postfix
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          set -e
+          docker cp scripts/stack-mail-server/${CONTAINER_NAME}-init.sh "${CONTAINER_NAME}":/tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" chmod +x /tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
+          #docker restart "${CONTAINER_NAME}"
+          echo "✓ Postfix SMTP configured and started"
+          
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║            Postfix SMTP Server - Mail Stack                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+      📧 SMTP Services:
+         Port 25: SMTP (plain)
+         Port 587: Submission (TLS/STARTTLS)
+         Port 465: SMTPS (implicit TLS)
+      
+      🔐 Configuration:
+         Hostname: mail.example.com
+         Database: mailserver on mysql-mail-stack
+
+  dovecot-mail-stack:
+    category: communication
+    description: Dovecot IMAP/POP3 Server for mail retrieval
+    image: ubuntu:22.04
+    keep_alive_cmd: /bin/bash
+    shell: /bin/bash
+    ports:
+      - "110:110"
+      - "143:143"
+      - "995:995"
+      - "993:993"
+    environment:
+      MYSQL_HOST: mysql-mail-stack
+      MYSQL_DATABASE: mailserver
+      MYSQL_USER: mailuser
+      MYSQL_PASSWORD: mail_secure_pass
+    volumes:
+      - name: dovecot-mail-volume
+        path: /var/mail/virtual
+        type: named
+      - name: dovecot-config-volume
+        path: /etc/dovecot
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          set -e
+          docker cp scripts/stack-mail-server/${CONTAINER_NAME}-init.sh "${CONTAINER_NAME}":/tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" chmod +x /tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
+          #docker restart "${CONTAINER_NAME}"
+          echo "✓ Dovecot IMAP/POP3 configured and started"
+          
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Dovecot IMAP/POP3 Server - Mail Stack              ║
+      ╚══════════════════════════════════════════════════════════════╝
+      📬 Mail Retrieval Services:
+         Port 110: POP3 (plain)
+         Port 143: IMAP (plain)
+         Port 993: IMAPS (TLS)
+         Port 995: POP3S (TLS)
+      
+      👤 Default Accounts:
+         admin@localhost / admin123
+         user1@localhost / user123
+
+  spamassassin-mail-stack:
+    category: communication
+    description: SpamAssassin Anti-spam Filter
+    image: ubuntu:22.04
+    keep_alive_cmd: /bin/bash
+    shell: /bin/bash
+    ports:
+      - "783:783"
+    environment:
+      MYSQL_HOST: mysql-mail-stack
+      MYSQL_DATABASE: mailserver
+      MYSQL_USER: mailuser
+      MYSQL_PASSWORD: mail_secure_pass
+    volumes:
+      - name: spamassassin-volume
+        path: /var/lib/spamassassin
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          set -e
+          docker cp scripts/stack-mail-server/${CONTAINER_NAME}-init.sh "${CONTAINER_NAME}":/tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" chmod +x /tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
+          #docker restart "${CONTAINER_NAME}"
+          echo "✓ SpamAssassin configured and started"
+
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         SpamAssassin Anti-Spam Filter - Mail Stack           ║
+      ╚══════════════════════════════════════════════════════════════╝
+      🛡️  Spam Protection:
+         Spamd Port: 783 (TCP)
+         Threshold: 5.0 points
+      
+      📊 Features Enabled:
+         ✓ Bayes Filter
+         ✓ Auto-learn
+         ✓ RBL Checks
+         ✓ DCC Integration
+         ✓ Pyzor Support
+
+  roundcube-mail-stack:
+    category: web
+    description: Roundcube Webmail Interface
+    image: php:8.2-apache
+    keep_alive_cmd: apache2-foreground
+    shell: /bin/bash
+    ports:
+      - "8082:80"
+    environment:
+      MYSQL_HOST: mysql-mail-stack
+      MYSQL_DATABASE: mailserver
+      MYSQL_USER: mailuser
+      MYSQL_PASSWORD: mail_secure_pass
+      IMAP_HOST: dovecot-mail-stack
+      IMAP_PORT: "143"
+      SMTP_HOST: postfix-mail-stack
+      SMTP_PORT: "25"
+    volumes:
+      - name: roundcube-volume
+        path: /var/www/html/roundcube
+        type: named
+      - name: roundcube-config-volume
+        path: /var/www/html/roundcube/config
+        type: named
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/bash
+          set -e
+          docker cp scripts/stack-mail-server/${CONTAINER_NAME}-init.sh "${CONTAINER_NAME}":/tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" chmod +x /tmp/${CONTAINER_NAME}-init.sh
+          docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
+          docker restart "${CONTAINER_NAME}"
+          echo "✓ Roundcube Webmail configuration completed!"
+          echo "✓ Dashboard: http://localhost:8082/"
+          echo "✓ Webmail: http://localhost:8082/roundcube/"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Roundcube Webmail - Mail Stack                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+      🌐 Webmail Access:
+         Dashboard: http://localhost:8082/
+         Roundcube: http://localhost:8082/roundcube/
+      
+      👤 Test Accounts:
+         admin@localhost / admin123
+         user1@localhost / user123
+      
+      🔧 Backend Services:
+         IMAP: dovecot-mail-stack:143
+         SMTP: postfix-mail-stack:25
+         Database: mysql-mail-stack:3310
+      
+      📄 Debug:
+         cat /var/www/html/roundcube/logs/errors.log
+         mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "UPDATE users SET password = '{SHA256-CRYPT}\$5\$9Dl7c17N.p4ZfBUv\$lZh4PqECVYn4ibaZUjgnsUXiWIg4KRHMNyxfAbvP/iD' WHERE email = 'user1@localhost';"
+         mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "UPDATE users SET password = '{SHA256-CRYPT}\$5\$p2SC/PdRuGNps6pv\$KJB6kWHohXbAzFse4bSoa5zrb.cxcQALJB87i2v0al6' WHERE email = 'admin@localhost';"
+         
+
+      
+      ✅ Status: Running
