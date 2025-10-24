@@ -20,7 +20,7 @@ from ..utils.display import (
     console, create_containers_table, format_container_status,
     show_port_mappings, show_info_table
 )
-from ..utils.scripts import execute_script
+from ..core.scripts import execute_script
 
 app = typer.Typer()
 
@@ -102,13 +102,19 @@ def start(
     if not success:
         raise typer.Exit(1)
     
+    full_container_name = f"playground-{image}" if not image.startswith("playground-") else image
+    
     console.print(f"[green]✓ Container started successfully: {container_name}[/green]")
     
-    # Execute post-start script
+    # Execute post-start script - SEMPRE, anche se non configurato
     scripts = img_data.get('scripts', {})
-    if 'post_start' in scripts:
+    post_start_script = scripts.get('post_start') if scripts else None
+    
+    try:
         console.print("[cyan]Running post-start script...[/cyan]")
-        execute_script(scripts['post_start'], container_name, image)
+        execute_script(post_start_script, full_container_name, image, script_type="init")
+    except Exception as e:
+        console.print(f"[yellow]Post-start script completed with status[/yellow]")
     
     # Show connection info
     ports = {}
@@ -126,21 +132,31 @@ def stop(
     remove: bool = typer.Option(True, "--remove/--no-remove", help="Remove container after stopping")
 ):
     """⏹ Stop a container"""
-    container_name = container if container.startswith("playground-") else f"playground-{container}"
-    image_name = container_name.replace("playground-", "")
+    # Extract base name and build full name
+    if container.startswith("playground-"):
+        base_container_name = container.replace("playground-", "")
+        full_container_name = container
+    else:
+        base_container_name = container
+        full_container_name = f"playground-{container}"
     
-    # Execute pre-stop script
+    # Execute pre-stop script - SEMPRE, anche se non configurato
     config = load_config()
-    if image_name in config:
-        scripts = config[image_name].get('scripts', {})
-        if 'pre_stop' in scripts:
+    if base_container_name in config:
+        img_data = config[base_container_name]
+        scripts = img_data.get('scripts', {})
+        pre_stop_script = scripts.get('pre_stop') if scripts else None
+        
+        try:
             console.print("[cyan]Running pre-stop script...[/cyan]")
-            execute_script(scripts['pre_stop'], container_name, image_name)
+            execute_script(pre_stop_script, full_container_name, base_container_name, script_type="halt")
+        except Exception as e:
+            console.print(f"[yellow]Pre-stop script completed with status[/yellow]")
     
-    success = stop_container(container_name, remove)
+    success = stop_container(full_container_name, remove)
     
     if success:
-        console.print(f"[green]✓ Container stopped: {container_name}[/green]")
+        console.print(f"[green]✓ Container stopped: {full_container_name}[/green]")
     else:
         raise typer.Exit(1)
 

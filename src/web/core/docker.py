@@ -25,6 +25,7 @@ docker_client = docker.from_env()
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 SHARED_DIR = BASE_DIR / "shared-volumes"
 NETWORK_NAME = "playground-network"
+SCRIPTS_DIR = BASE_DIR / "scripts"
 
 
 def ensure_network():
@@ -81,11 +82,9 @@ def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
         elif vol_type in ("bind", "file"):
             host_path = vol_data.get("host")
             if host_path:
-                # Convert relative paths to absolute
                 if not host_path.startswith("/"):
                     host_path = str(BASE_DIR / host_path)
                 
-                # Create directory/file if needed
                 try:
                     if vol_type == "bind":
                         Path(host_path).mkdir(parents=True, exist_ok=True)
@@ -106,7 +105,6 @@ def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
 def check_port_available(port: int) -> Tuple[bool, str]:
     """Check if a port is available on the host"""
     try:
-        # Check containers
         all_containers = docker_client.containers.list(all=True)
         for container in all_containers:
             ports = container.attrs.get('NetworkSettings', {}).get('Ports', {})
@@ -117,7 +115,6 @@ def check_port_available(port: int) -> Tuple[bool, str]:
                             if binding and binding.get('HostPort') == str(port):
                                 return False, container.name
         
-        # Check host system
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
         result = sock.connect_ex(('0.0.0.0', port))
@@ -156,35 +153,21 @@ def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> T
 
 
 def get_stop_timeout(img_data: Dict[str, Any]) -> int:
-    """Get appropriate stop timeout based on scripts
-    
-    Returns:
-        int: 30 seconds if pre-stop script exists, 10 seconds otherwise
-    """
+    """Get appropriate stop timeout based on scripts"""
     scripts = img_data.get("scripts", {})
     if scripts.get("pre_stop"):
-        return 30  # 30 seconds for containers with pre-stop scripts
-    return 10  # 10 seconds default
+        return 30
+    return 10
 
 
 def start_single_container_sync(container_name: str, img_data: Dict[str, Any], operation_id: str = None) -> Dict[str, Any]:
-    """Start a single container synchronously with volume support
-    
-    Args:
-        container_name: Name of the container (without 'playground-' prefix)
-        img_data: Container configuration dict
-        operation_id: Optional operation ID for tracking scripts
-    
-    Returns:
-        dict: Operation result with status and optional error info
-    """
+    """Start a single container synchronously with volume support"""
     from src.web.core.scripts import execute_script
     from src.web.core.state import add_script_tracking, complete_script_tracking
     
     full_container_name = f"playground-{container_name}"
     logger.info("Starting container: %s", container_name)
     
-    # Check if already running
     try:
         existing = docker_client.containers.get(full_container_name)
         if existing.status == "running":
@@ -196,30 +179,22 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     except docker.errors.NotFound:
         pass
     
-    # Check port availability
     ports_available, conflicts = validate_ports_available(img_data, container_name)
     if not ports_available:
-        conflict_details = ", ".join([f"port {c['host_port']} (used by {c['used_by']})" for c in conflicts])
-        error_msg = f"Port conflict: {conflict_details}"
+        conflict_list = [f"{c['host_port']} (used by {c['used_by']})" for c in conflicts]
+        error_msg = f"Port conflicts: {', '.join(conflict_list)}"
         logger.error("%s: %s", container_name, error_msg)
-        return {"status": "failed", "name": container_name, "error": error_msg, "conflicts": conflicts}
+        return {"status": "failed", "name": container_name, "error": error_msg}
     
-    # Ensure network
-    ensure_network()
-    
-    # Prepare volumes
     volumes_config = img_data.get("volumes", [])
     ensure_named_volumes(volumes_config)
-    compose_volumes = prepare_volumes(volumes_config)
     
-    # Build final volumes list
+    compose_volumes = prepare_volumes(volumes_config)
     all_volumes = [f"{SHARED_DIR}:/shared"]
     all_volumes.extend(compose_volumes)
     
-    # Parse ports
     ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}
     
-    # Start container
     try:
         logger.info("Running Docker image: %s as %s", img_data["image"], full_container_name)
         container = docker_client.containers.run(
@@ -245,7 +220,6 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
         logger.error("%s: %s", container_name, error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
     
-    # Wait for running - IMPORTANTE: usa time.sleep() non await!
     max_wait = 30
     elapsed = 0
     wait_interval = 0.5
@@ -256,29 +230,25 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
             if container.status == "running":
                 logger.info("Container %s is now running", full_container_name)
                 
-                # Execute post-start script with tracking
                 scripts = img_data.get('scripts', {})
-                if 'post_start' in scripts:
-                    try:
-                        logger.info(">>> CALLING post_start script for %s", full_container_name)
-                        
-                        # Track script execution if operation_id provided
-                        if operation_id:
-                            add_script_tracking(operation_id, full_container_name, "post_start")
-                        
-                        execute_script(scripts['post_start'], full_container_name, container_name)
-                        logger.info(">>> post_start script COMPLETED successfully for %s", full_container_name)
-                        
-                        # Mark script as completed
-                        if operation_id:
-                            complete_script_tracking(operation_id, full_container_name)
-                    except Exception as script_error:
-                        logger.error(">>> post_start script FAILED for %s: %s", full_container_name, str(script_error))
-                        
-                        # Mark script as failed but continue
-                        if operation_id:
-                            complete_script_tracking(operation_id, full_container_name)
+                post_start_script = scripts.get('post_start') if scripts else None
                 
+                try:
+                    logger.info(">>> CALLING post_start script for %s", full_container_name)
+                    
+                    if operation_id:
+                        add_script_tracking(operation_id, full_container_name, "post_start")
+                    
+                    execute_script(post_start_script, full_container_name, container_name, script_type="init")
+                    logger.info(">>> post_start script COMPLETED successfully for %s", full_container_name)
+                    
+                    if operation_id:
+                        complete_script_tracking(operation_id, full_container_name)
+                except Exception as script_error:
+                    logger.error(">>> post_start script FAILED for %s: %s", full_container_name, str(script_error))
+                    
+                    if operation_id:
+                        complete_script_tracking(operation_id, full_container_name)
                 return {"status": "started", "name": container_name}
             
             elif container.status in ["exited", "dead"]:
@@ -291,11 +261,9 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
             logger.error("%s: %s", container_name, error_msg)
             return {"status": "failed", "name": container_name, "error": error_msg}
         
-        # IMPORTANTE: sleep sincrono, non await!
         time.sleep(wait_interval)
         elapsed += wait_interval
     
-    # Timeout
     container.reload()
     error_msg = f"Container did not start in time (status: {container.status})"
     logger.error("%s: %s", container_name, error_msg)
@@ -307,8 +275,14 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
     from src.web.core.scripts import execute_script
     from src.web.core.state import add_script_tracking, complete_script_tracking
     
-    full_container_name = f"{container_name}"
-    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)", container_name, full_container_name)
+    if container_name.startswith("playground-"):
+        base_container_name = container_name.replace("playground-", "")
+        full_container_name = container_name
+    else:
+        base_container_name = container_name
+        full_container_name = f"playground-{container_name}"
+    
+    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)", base_container_name, full_container_name)
     
     try:
         cont = docker_client.containers.get(full_container_name)
@@ -316,75 +290,88 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
         
         if cont.status != "running":
             logger.info(">>> Container not running, returning not_running")
-            return {"status": "not_running", "name": container_name}
+            return {"status": "not_running", "name": base_container_name}
         
-        # Execute pre-stop script with tracking
         scripts = img_data.get('scripts', {})
-        if 'pre_stop' in scripts:
-            try:
-                logger.info(">>> CALLING pre_stop script for %s", full_container_name)
-                
-                # Track script execution if operation_id provided
-                if operation_id:
-                    add_script_tracking(operation_id, full_container_name, "pre_stop")
-                
-                execute_script(scripts['pre_stop'], full_container_name, container_name)
-                logger.info(">>> pre_stop script COMPLETED successfully for %s", full_container_name)
-                
-                # Mark script as completed
-                if operation_id:
-                    complete_script_tracking(operation_id, full_container_name)
-            except Exception as script_error:
-                logger.error(">>> pre_stop script FAILED for %s: %s", full_container_name, str(script_error))
-                
-                # Mark script as failed but continue
-                if operation_id:
-                    complete_script_tracking(operation_id, full_container_name)
+        pre_stop_script = scripts.get('pre_stop') if scripts else None
         
-        # Get appropriate timeout
+        try:
+            logger.info(">>> CALLING pre_stop script for %s", full_container_name)
+            
+            if operation_id:
+                add_script_tracking(operation_id, full_container_name, "pre_stop")
+            
+            execute_script(pre_stop_script, full_container_name, base_container_name, script_type="halt")
+            logger.info(">>> pre_stop script COMPLETED successfully for %s", full_container_name)
+            
+            if operation_id:
+                complete_script_tracking(operation_id, full_container_name)
+        except Exception as script_error:
+            logger.error(">>> pre_stop script FAILED for %s: %s", full_container_name, str(script_error))
+            
+            if operation_id:
+                complete_script_tracking(operation_id, full_container_name)
+        
         timeout = get_stop_timeout(img_data)
         logger.info("Stopping container %s with timeout %d seconds", full_container_name, timeout)
         
         cont.stop(timeout=timeout)
         cont.remove()
         
-        logger.info("Container %s stopped and removed", container_name)
-        return {"status": "stopped", "name": container_name}
+        logger.info("Container %s stopped and removed", base_container_name)
+        return {"status": "stopped", "name": base_container_name}
     
     except docker.errors.NotFound:
-        logger.warning("Container %s not found", container_name)
-        return {"status": "not_running", "name": container_name}
+        logger.warning("Container %s not found", full_container_name)
+        return {"status": "not_running", "name": base_container_name}
     
     except Exception as e:
-        error_msg = f"Error stopping {container_name}: {str(e)}"
+        error_msg = f"Error stopping {base_container_name}: {str(e)}"
         logger.error(error_msg)
-        return {"status": "failed", "name": container_name, "error": error_msg}
+        return {"status": "failed", "name": base_container_name, "error": error_msg}
 
-def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str, bool]:
-    """Get special features of a container
+
+def has_default_script(container_name: str, script_type: str) -> bool:
+    """Check if a default script exists for a container
+    
+    Args:
+        container_name: Container name without 'playground-' prefix (e.g., 'mysql-8')
+        script_type: 'init' or 'halt'
     
     Returns:
-        dict: Flags for MOTD, scripts, volumes etc.
+        bool: True if default script exists
     """
+    full_container_name = f"playground-{container_name}" if not container_name.startswith("playground-") else container_name
+    script_name = f"{container_name}/{full_container_name}-{script_type}.sh"
+    script_path = SCRIPTS_DIR / script_name
+    return script_path.exists()
+
+
+def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str, bool]:
+    """Get special features of a container, including default scripts"""
     img_data = config.get(image_name, {})
+    
+    # Check for YAML configured scripts
+    has_yaml_post_start = bool(img_data.get('scripts', {}).get('post_start'))
+    has_yaml_pre_stop = bool(img_data.get('scripts', {}).get('pre_stop'))
+    
+    # Check for default scripts
+    has_default_post_start = has_default_script(image_name, 'init')
+    has_default_pre_stop = has_default_script(image_name, 'halt')
+    
     return {
         'has_motd': bool(img_data.get('motd')),
-        'has_scripts': bool(img_data.get('scripts')),
-        'has_post_start': bool(img_data.get('scripts', {}).get('post_start')),
-        'has_pre_stop': bool(img_data.get('scripts', {}).get('pre_stop')),
+        'has_scripts': bool(img_data.get('scripts')) or has_default_post_start or has_default_pre_stop,
+        'has_post_start': has_yaml_post_start or has_default_post_start,
+        'has_pre_stop': has_yaml_pre_stop or has_default_pre_stop,
+        'has_default_post_start': has_default_post_start,
+        'has_default_pre_stop': has_default_pre_stop,
         'has_volumes': bool(img_data.get('volumes'))
     }
 
 
 def get_container_volumes(container_name: str) -> Dict[str, str]:
-    """Get volumes mounted in a container
-    
-    Args:
-        container_name: Name of the container (with or without 'playground-' prefix)
-    
-    Returns:
-        dict: Mapping of container paths to volume info
-    """
+    """Get volumes mounted in a container"""
     if not container_name.startswith("playground-"):
         container_name = f"playground-{container_name}"
     
@@ -409,5 +396,4 @@ def get_container_volumes(container_name: str) -> Dict[str, str]:
         return {}
 
 
-# Initialize network on import
 ensure_network()
