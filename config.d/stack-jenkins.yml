@@ -1,0 +1,70 @@
+images:
+  jenkins:
+    category: devops
+    description: Jenkins LTS - CI/CD Automation Server
+    image: jenkins/jenkins:lts-alpine
+    keep_alive_cmd: /sbin/tini -- /usr/local/bin/jenkins.sh
+    shell: /bin/bash
+    environment:
+      JENKINS_OPTS: "--webroot=/var/jenkins_home/war"
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8080:8080"   # Web UI
+      - "50000:50000" # Agent communication
+    volumes:
+      - type: named
+        name: jenkins_home
+        path: /var/jenkins_home
+
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║            Jenkins LTS - CI/CD Automation Server            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐  Web Interface: http://localhost:8080
+        Port: 8080
+        Agent Port: 50000
+
+      🔐  Initial Setup:
+        1. Open http://localhost:8080
+        2. Get admin password:
+           cat /var/jenkins_home/secrets/initialAdminPassword
+        3. Follow setup wizard → Install suggested plugins
+
+      📁  Important Directories:
+        /var/jenkins_home      # Jenkins home (jobs, config, plugins)
+        /var/jenkins_home/jobs # All job configurations
+        /var/log/jenkins       # Log files
+
+      📊  Quick Commands:
+        # Check if running:
+        curl -s http://localhost:8080/api/json | head -5
+        
+        # List all jobs:
+        curl -s http://localhost:8080/api/json | grep name
+        
+        # Jenkins version:
+        curl -s -I http://localhost:8080 | grep X-Jenkins
+
+      🎯  Learning Resources:
+        • Pipeline Docs: https://www.jenkins.io/doc/book/pipeline/
+        • Groovy Syntax: http://localhost:8080/job/YOUR_JOB/pipeline-syntax/
+        • Plugin Market: http://localhost:8080/pluginManager/
+
+      💾  Persistence:
+        All jobs, configs, plugins saved in /var/jenkins_home
+        Data persists across container restarts
+
+      🔧  Common Tasks:
+        # Create job from CLI
+        curl -X POST http://localhost:8080/createItem \
+          -H "Content-Type: application/xml" \
+          -d @job-config.xml -u admin:PASSWORD
+
+      🚀  Next Steps:
+        1. Connect to Git repo (GitHub, GitLab, Gitea)
+        2. Set up webhooks for auto-trigger
+        3. Add build parameters
+        4. Integrate Docker for containerized builds
+        5. Add notifications (Slack, email)
