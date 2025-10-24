@@ -206,8 +206,8 @@ images:
          Roundcube: http://localhost:8082/roundcube/
       
       👤 Test Accounts:
-         admin@localhost / admin123
-         user1@localhost / user123
+         admin@localhost.local / admin123
+         user1@localhost.local / user123
       
       🔧 Backend Services:
          IMAP: dovecot-postfix-mail-stack:143
