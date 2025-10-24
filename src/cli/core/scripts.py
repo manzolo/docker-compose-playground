@@ -1,15 +1,15 @@
-"""Script execution for container lifecycle management"""
+"""Script execution for container lifecycle management - CLI version"""
 from pathlib import Path
 import subprocess
 import os
 import logging
 
-# Logger che scrive direttamente su file (non dipende da uvicorn)
+# Logger
 logger = logging.getLogger("scripts")
 logger.setLevel(logging.DEBUG)
 
-# Configura il file handler per scrivere su venv/web.log
-LOG_FILE = Path(__file__).parent.parent.parent.parent / "venv" / "web.log"
+# Configura il file handler per scrivere su venv/cli.log
+LOG_FILE = Path(__file__).parent.parent.parent.parent / "venv" / "cli.log"
 if not logger.handlers:
     file_handler = logging.FileHandler(str(LOG_FILE), mode='a', encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)
@@ -29,7 +29,7 @@ def execute_script(script_config, full_container_name: str, container_name: str,
     1. Default script if exists: ./scripts/${CONTAINER_NAME}/playground-${CONTAINER_NAME}-${script_type}.sh
     2. Custom script from YAML config if provided
     
-    Both scripts are executed if they exist (no "either/or" logic).
+    Both scripts are executed if they exist.
     
     Args:
         script_config: Script configuration (dict, str, or None)
@@ -93,7 +93,6 @@ def execute_script(script_config, full_container_name: str, container_name: str,
                         timeout=300
                     )
                     
-                    # Log results
                     if result.returncode == 0:
                         logger.info("✓ %s inline script executed successfully (exit code: 0)", script_label)
                         if result.stdout:
@@ -119,7 +118,6 @@ def execute_script(script_config, full_container_name: str, container_name: str,
                             env={**os.environ, 'SHARED_DIR': str(SHARED_DIR)}
                         )
                         
-                        # Log results
                         if result.returncode == 0:
                             logger.info("✓ %s file script executed successfully (exit code: 0)", script_label)
                             if result.stdout:
