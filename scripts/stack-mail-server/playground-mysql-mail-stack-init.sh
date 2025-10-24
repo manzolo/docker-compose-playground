@@ -88,29 +88,29 @@ CREATE TABLE IF NOT EXISTS virtual_aliases (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default domains (use REPLACE to update if exists)
-REPLACE INTO virtual_domains (id, name) VALUES (1, 'localhost');
+REPLACE INTO virtual_domains (id, name) VALUES (1, 'localhost.local');
 REPLACE INTO virtual_domains (id, name) VALUES (2, 'example.com');
 
 -- Delete existing users to avoid conflicts
-DELETE FROM virtual_users WHERE email IN ('admin@localhost', 'user1@localhost', 'admin@example.com');
+DELETE FROM virtual_users WHERE email IN ('admin@localhost.local', 'user1@localhost.local', 'admin@example.com');
 
--- Insert users with correct encrypted passwords
--- Password for admin@localhost is 'admin123'
+-- Insert users with correct PLAIN-MD5 passwords that Dovecot recognizes
+-- Password for admin@localhost.local is 'admin123' → MD5: 0e81823a7bbd732151176f069df18b500
 INSERT INTO virtual_users (domain_id, email, password) VALUES 
-  (1, 'admin@localhost', '{SHA256-CRYPT}\$5\$p2SC/PdRuGNps6pv\$KJB6kWHohXbAzFse4bSoa5zrb.cxcQALJB87i2v0al6');
+  (1, 'admin@localhost.local', '{PLAIN-MD5}AZICOnu9cyUFFvBp3xi1AA==');
 
--- Password for user1@localhost is 'user123'
+-- Password for user1@localhost.local is 'user123' → MD5: 6ed14ba9986e3615423dfc a255b04e3f
 INSERT INTO virtual_users (domain_id, email, password) VALUES 
-  (1, 'user1@localhost', '{SHA256-CRYPT}\$5\$9Dl7c17N.p4ZfBUv\$lZh4PqECVYn4ibaZUjgnsUXiWIg4KRHMNyxfAbvP/iD');
+  (1, 'user1@localhost.local', '{PLAIN-MD5}atFLqZhuNhVCPfyiVtBOPw==');
 
 -- Password for admin@example.com is 'admin123'
 INSERT INTO virtual_users (domain_id, email, password) VALUES 
-  (2, 'admin@example.com', '{SHA256-CRYPT}\$5\$p2SC/PdRuGNps6pv\$KJB6kWHohXbAzFse4bSoa5zrb.cxcQALJB87i2v0al6');
+  (2, 'admin@example.com', '{PLAIN-MD5}AZICOnu9cyUFFvBp3xi1AA==');
 
 -- Insert default aliases
 INSERT IGNORE INTO virtual_aliases (domain_id, source, destination) VALUES 
-  (1, 'postmaster@localhost', 'admin@localhost'),
-  (1, 'webmaster@localhost', 'admin@localhost'),
+  (1, 'postmaster@localhost.local', 'admin@localhost.local'),
+  (1, 'webmaster@localhost.local', 'admin@localhost.local'),
   (2, 'postmaster@example.com', 'admin@example.com'),
   (2, 'webmaster@example.com', 'admin@example.com');
 
@@ -130,3 +130,4 @@ fi
 
 echo "✓ MySQL initialization completed successfully" | tee -a /tmp/mysql-init.log
 exit 0
+

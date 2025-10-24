@@ -8,8 +8,7 @@ group:
   category: communication
   containers:
     - mysql-mail-stack
-    - postfix-mail-stack
-    - dovecot-mail-stack
+    - dovecot-postfix-mail-stack
     - spamassassin-mail-stack
     - roundcube-mail-stack
 
@@ -55,9 +54,9 @@ images:
 
          mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "SELECT 1;"
 
-  postfix-mail-stack:
+  dovecot-postfix-mail-stack:
     category: communication
-    description: Postfix SMTP Server for outgoing mail
+    description: Postfix + Dovecot IMAP/POP3 Server for mail retrieval
     image: ubuntu:22.04
     keep_alive_cmd: /bin/bash
     shell: /bin/bash
@@ -65,50 +64,6 @@ images:
       - "25:25"
       - "587:587"
       - "465:465"
-    environment:
-      SMTP_HOSTNAME: mail.example.com
-      MYSQL_HOST: mysql-mail-stack
-      MYSQL_DATABASE: mailserver
-      MYSQL_USER: mailuser
-      MYSQL_PASSWORD: mail_secure_pass
-    volumes:
-      - name: postfix-mail-volume
-        path: /var/spool/postfix
-        type: named
-      - name: postfix-config-volume
-        path: /etc/postfix
-        type: named
-    scripts:
-      post_start:
-        inline: |
-          #!/bin/bash
-          set -e
-          docker cp scripts/stack-mail-server/${CONTAINER_NAME}-init.sh "${CONTAINER_NAME}":/tmp/${CONTAINER_NAME}-init.sh
-          docker exec "${CONTAINER_NAME}" chmod +x /tmp/${CONTAINER_NAME}-init.sh
-          docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
-          #docker restart "${CONTAINER_NAME}"
-          echo "✓ Postfix SMTP configured and started"
-          
-    motd: |
-      ╔══════════════════════════════════════════════════════════════╗
-      ║            Postfix SMTP Server - Mail Stack                 ║
-      ╚══════════════════════════════════════════════════════════════╝
-      📧 SMTP Services:
-         Port 25: SMTP (plain)
-         Port 587: Submission (TLS/STARTTLS)
-         Port 465: SMTPS (implicit TLS)
-      
-      🔐 Configuration:
-         Hostname: mail.example.com
-         Database: mailserver on mysql-mail-stack
-
-  dovecot-mail-stack:
-    category: communication
-    description: Dovecot IMAP/POP3 Server for mail retrieval
-    image: ubuntu:22.04
-    keep_alive_cmd: /bin/bash
-    shell: /bin/bash
-    ports:
       - "110:110"
       - "143:143"
       - "995:995"
@@ -118,12 +73,16 @@ images:
       MYSQL_DATABASE: mailserver
       MYSQL_USER: mailuser
       MYSQL_PASSWORD: mail_secure_pass
+      MAIL_HOSTNAME: mail.example.com
     volumes:
       - name: dovecot-mail-volume
         path: /var/mail/virtual
         type: named
       - name: dovecot-config-volume
         path: /etc/dovecot
+        type: named
+      - name: mail-spool-shared
+        path: /var/spool/postfix
         type: named
     scripts:
       post_start:
@@ -145,10 +104,19 @@ images:
          Port 143: IMAP (plain)
          Port 993: IMAPS (TLS)
          Port 995: POP3S (TLS)
+
+      📧 SMTP Services:
+         Port 25: SMTP (plain)
+         Port 587: Submission (TLS/STARTTLS)
+         Port 465: SMTPS (implicit TLS)
+      
+      🔐 Configuration:
+         Hostname: mail.example.com
+         Database: mailserver on mysql-mail-stack
       
       👤 Default Accounts:
-         admin@localhost / admin123
-         user1@localhost / user123
+         admin@localhost.local / admin123
+         user1@localhost.local / user123
 
   spamassassin-mail-stack:
     category: communication
@@ -206,9 +174,9 @@ images:
       MYSQL_DATABASE: mailserver
       MYSQL_USER: mailuser
       MYSQL_PASSWORD: mail_secure_pass
-      IMAP_HOST: dovecot-mail-stack
+      IMAP_HOST: dovecot-postfix-mail-stack
       IMAP_PORT: "143"
-      SMTP_HOST: postfix-mail-stack
+      SMTP_HOST: dovecot-postfix-mail-stack
       SMTP_PORT: "25"
     volumes:
       - name: roundcube-volume
@@ -242,14 +210,12 @@ images:
          user1@localhost / user123
       
       🔧 Backend Services:
-         IMAP: dovecot-mail-stack:143
-         SMTP: postfix-mail-stack:25
+         IMAP: dovecot-postfix-mail-stack:143
+         SMTP: dovecot-postfix-mail-stack:25
          Database: mysql-mail-stack:3310
       
       📄 Debug:
          cat /var/www/html/roundcube/logs/errors.log
-         mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "UPDATE users SET password = '{SHA256-CRYPT}\$5\$9Dl7c17N.p4ZfBUv\$lZh4PqECVYn4ibaZUjgnsUXiWIg4KRHMNyxfAbvP/iD' WHERE email = 'user1@localhost';"
-         mysql -h mysql-mail-stack -u mailuser -pmail_secure_pass mailserver -e "UPDATE users SET password = '{SHA256-CRYPT}\$5\$p2SC/PdRuGNps6pv\$KJB6kWHohXbAzFse4bSoa5zrb.cxcQALJB87i2v0al6' WHERE email = 'admin@localhost';"
          
 
       

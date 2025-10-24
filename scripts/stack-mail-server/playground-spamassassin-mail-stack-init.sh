@@ -162,3 +162,4 @@ fi
 touch /var/log/spamassassin/spamd.log
 echo "Monitoring SpamAssassin (tail -f /var/log/spamassassin/spamd.log)..."
 #tail -f /var/log/spamassassin/spamd.log
+

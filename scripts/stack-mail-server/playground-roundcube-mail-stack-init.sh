@@ -183,12 +183,12 @@ try {
 }
 
 // IMAP server configuration
-\$config['imap_host'] = 'dovecot-mail-stack:143';
+\$config['imap_host'] = 'dovecot-postfix-mail-stack:143';
 \$config['imap_auth_type'] = 'PLAIN';
 \$config['imap_delimiter'] = '/';
 
 // SMTP server configuration
-\$config['smtp_host'] = 'postfix-mail-stack:25';
+\$config['smtp_host'] = 'dovecot-postfix-mail-stack:25';
 \$config['smtp_auth_type'] = 'PLAIN';
 \$config['smtp_user'] = '%u';
 \$config['smtp_pass'] = '%p';
@@ -354,9 +354,9 @@ function safeCheckMySQL() {
 // Check services safely
 $services = [
     'MySQL Database' => safeCheckMySQL(),
-    'Postfix SMTP' => checkService('postfix-mail-stack', 25),
-    'Dovecot IMAP' => checkService('dovecot-mail-stack', 143),
-    'Dovecot POP3' => checkService('dovecot-mail-stack', 110),
+    'Postfix SMTP' => checkService('dovecot-postfix-mail-stack', 25),
+    'Dovecot IMAP' => checkService('dovecot-postfix-mail-stack', 143),
+    'Dovecot POP3' => checkService('dovecot-postfix-mail-stack', 110),
     'SpamAssassin' => checkService('spamassassin-mail-stack', 783),
 ];
 
@@ -651,3 +651,4 @@ echo "✓ Access webmail at: http://localhost:8082/roundcube/"
 echo "✓ Dashboard at: http://localhost:8082/"
 
 exit 0
+
