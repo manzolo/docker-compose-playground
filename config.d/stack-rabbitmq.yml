@@ -1,0 +1,129 @@
+# Metadati del gruppo
+group:
+  name: "RabbitMQ-Stack"
+  description: "RabbitMQ message broker with Management web interface"
+  category: message_queue
+  containers: 
+    - rabbitmq-server
+    - rabbitmq-management
+
+# Configurazioni dei container
+images:
+  rabbitmq-server:
+    category: message_queue
+    description: RabbitMQ 3.13 Message Broker
+    image: rabbitmq:3.13-alpine
+    keep_alive_cmd: rabbitmq-server
+    shell: /bin/sh
+    environment:
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "admin123"
+      RABBITMQ_DEFAULT_VHOST: "/"
+      RABBITMQ_ERLANG_COOKIE: "playground-secret-cookie-12345"
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - type: named
+        name: rabbitmq_data
+        path: /var/lib/rabbitmq
+      - type: named
+        name: rabbitmq_logs
+        path: /var/log/rabbitmq
+    scripts:
+      post_start:
+        inline: |
+          #!/bin/sh
+          
+          echo "Initializing RabbitMQ..."
+          
+          CONTAINER="${CONTAINER_NAME}"
+          
+          # Wait a bit for RabbitMQ to start
+          sleep 10
+          
+          # Enable management plugin (non-critical)
+          echo "Enabling management plugin..."
+          docker exec "${CONTAINER}" rabbitmq-plugins enable rabbitmq_management 2>/dev/null || true
+          
+          sleep 3
+          
+          # Create app user (non-critical)
+          echo "Creating app user..."
+          docker exec "${CONTAINER}" rabbitmqctl add_user app_user app_pass123 2>/dev/null || true
+          docker exec "${CONTAINER}" rabbitmqctl set_permissions -p / app_user ".*" ".*" ".*" 2>/dev/null || true
+          
+          echo "✓ RabbitMQ initialization completed"
+          exit 0
+      
+      pre_stop:
+        inline: |
+          #!/bin/sh
+          echo "Stopping RabbitMQ gracefully..."
+          docker exec "${CONTAINER_NAME}" rabbitmqctl stop_app 2>/dev/null || true
+          sleep 2
+    
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              RabbitMQ 3.13 Message Broker                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐  AMQP Connection:
+        Host: rabbitmq-server
+        Port: 5672
+        User: admin / app_user
+        Password: admin123 / app_pass123
+
+      🌐  Management UI: http://localhost:15672
+        User: admin
+        Password: admin123
+
+      📊  Quick Commands:
+        rabbitmqctl status
+        rabbitmqctl list_exchanges
+        rabbitmqctl list_queues
+        rabbitmqctl list_bindings
+        rabbitmqctl list_connections
+
+      🎯  Learning - Exchange Types:
+
+      🔹 DIRECT Exchange:
+        • Routes by routing key
+        • One message → one queue (if routing key matches)
+        • Use case: Task distribution (high/medium/low priority)
+
+      🔹 TOPIC Exchange:
+        • Routes by pattern matching
+        • Routing keys: "user.created", "user.deleted", "order.*"
+        • Use case: Event-driven systems
+
+      🔹 FANOUT Exchange:
+        • Broadcast to ALL bound queues
+        • Ignores routing key
+        • Use case: Notifications, live updates
+
+      📝  Publishing a Message via Management UI (easier):
+        Go to http://localhost:15672 → Exchanges → playground.direct → Publish message
+        
+        # Or use a client library (Python, Node.js, Java, Go, etc)
+
+  rabbitmq-management:
+    category: message_queue
+    description: RabbitMQ Management Dashboard (alias container)
+    image: rabbitmq:3.13-alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh
+    depends_on:
+      - rabbitmq-server
+    ports: []
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         RabbitMQ Management - Info Container                ║
+      ╚══════════════════════════════════════════════════════════════╝
+      
+      🌐  Dashboard: http://localhost:15672
+        User: admin
+        Password: admin123
+      
+      🔍 This is a helper container with CLI tools
+      Connect to rabbitmq-server for AMQP connections
