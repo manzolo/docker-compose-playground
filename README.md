@@ -24,6 +24,26 @@ A professional tool for managing multiple Docker development environments. Choos
 - 🧹 **Bulk Operations** - Stop all, cleanup, category management
 - 🚀 **Container Groups** - Organize and manage related containers together (e.g., start/stop entire groups like a development stack)
 
+## 📸 Screenshots
+
+<details>
+<summary>Click to view screenshots</summary>
+
+<img width="1312" height="897" alt="immagine" src="https://github.com/user-attachments/assets/e4abe08f-14cc-4f43-944d-16a34996e6e7" />
+
+<img width="1312" height="897" alt="immagine" src="https://github.com/user-attachments/assets/42dc7a5f-dfbb-4c40-a0bc-4ca7bc57d33c" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/1de7a0c3-a63e-40e9-b6c9-6868a80ac6bc" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/c7b078a5-fa1c-4005-b3eb-12278f733eff" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/a02bd18c-54df-4ce0-8f55-25042621076e" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/06105eca-0e84-49bd-b44f-1641565b6e4f" />
+
+
+</details>
+
 ## 🗃️ Main Containers and Stacks
 
 <details>
@@ -32,12 +52,12 @@ A professional tool for managing multiple Docker development environments. Choos
 The Docker Playground Manager includes over 100 pre-configured containers and stacks, organized by category. Below is a curated list of the most commonly used ones:
 
 ### Linux Distributions
-- **Ubuntu** (12, 14, 16, 18, 20, 22, 24, icewm, kde, mate, openbox, xfce)
+- **Ubuntu** (12, 14, 16, 18, 20, 22, 24, 24-fishell, 24-nushell, 24-tmux, 24-zsh, icewm, kde, mate, openbox, xfce)
 - **Alpine** (3.19, 3.22, edge, tools)
 - **Debian** (7, 8, 9, 10, 11, 12)
 - **Fedora** (39)
 - **Rocky Linux** (9)
-- **Arch Linux**
+- **Arch Linux** (arch, arch-nushell)
 - **AlmaLinux** (9)
 - **openSUSE** (leap)
 - **Kali** (rolling)
@@ -56,6 +76,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 ### Programming Languages
 - **Python** (2.7, 3.9, 3.10, 3.11, 3.12, 3.13, alpine)
 - **Node.js** (16, 18, 20, 22, alpine)
+- **Bun**
 - **Golang** (1.22, alpine)
 - **Ruby** (3.3, alpine)
 - **PHP** (5.6, 7.2, 7.4, 8.2, 8.3, fpm)
@@ -68,6 +89,8 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Swift**
 - **Perl**
 - **Lua**
+- **Clang**
+- **GCC**
 
 ### Web Servers
 - **Nginx** (latest, alpine)
@@ -87,14 +110,24 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Maven**
 - **Packer**
 - **Ansible**
+- **Deno**
+- **Dotnet** (8)
+- **Curl**
+- **Busybox**
+- **Docker DinD** (Docker in Docker)
 
 ### Stacks
 - **PHP-MySQL** (PHP + MySQL + phpMyAdmin)
 - **Wordpress** (WordPress + MySQL)
 - **ELK** (Elasticsearch, Logstash, Kibana)
-- **MinIO** (object storage)
+- **MinIO** (Object storage)
 - **PostgreSQL-pgAdmin** (PostgreSQL + pgAdmin)
 - **MySQL-phpMyAdmin** (MySQL + phpMyAdmin)
+- **Mail Server Stack** (Postfix, Dovecot, Roundcube)
+- **Node Express MongoDB** (Node.js + Express + MongoDB)
+- **RabbitMQ Stack**
+- **Redis Stack**
+- **Selenium Stack**
 
 ### Other Services
 - **RabbitMQ** (message broker)
@@ -106,6 +139,10 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Memcached** (caching)
 - **Zipkin** (tracing)
 - **Selenium** (Chrome, Firefox for testing)
+- **Nextcloud** (file sharing)
+- **CouchDB** (NoSQL)
+- **Netshoot** (network troubleshooting)
+- **Retro Terminal Games** (classic games)
 
 This list covers key containers and stacks, but many more are available in `config.d/` and can be customized in `custom.d/`.
 
