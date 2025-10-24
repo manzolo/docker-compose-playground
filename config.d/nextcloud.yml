@@ -1,0 +1,106 @@
+images:
+  nextcloud:
+    category: storage
+    description: Nextcloud - Self-hosted Cloud Storage & File Sharing
+    image: nextcloud:latest
+    keep_alive_cmd: apache2-foreground
+    shell: /bin/bash
+    environment:
+      NEXTCLOUD_ADMIN_USER: "admin"
+      NEXTCLOUD_ADMIN_PASSWORD: "admin123"
+      NEXTCLOUD_TRUSTED_DOMAINS: "localhost 127.0.0.1"
+      OVERWRITEPROTOCOL: "http"
+    ports:
+      - "8888:80"   # Web UI
+    volumes:
+      - type: named
+        name: nextcloud_data
+        path: /var/www/html
+      - type: named
+        name: nextcloud_uploads
+        path: /var/www/html/data
+
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║    Nextcloud - Self-hosted Cloud Storage & File Sharing     ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐  Web Interface: http://localhost:8888
+        Port: 8888
+
+      🔐  Admin Credentials:
+        Username: admin
+        Password: admin123
+
+      📁  Important Directories:
+        /var/www/html          # Nextcloud installation
+        /var/www/html/data     # User files & data
+        /var/www/html/config   # Configuration files
+
+      📊  Quick Commands:
+        # Check Nextcloud version:
+        php occ --version
+        
+        # List users:
+        php occ user:list
+        
+        # Add new user:
+        php occ user:add username
+        
+        # Set user quota:
+        php occ user:modify username --quota=10GB
+        
+        # Scan files:
+        php occ files:scan --all
+        
+        # Enable 2FA:
+        php occ twofactorauth:enable username totp
+
+      🎯  Features:
+        • File sync & sharing
+        • Calendar & Contacts
+        • Notes & Tasks
+        • Collaborative editing
+        • Video conferencing (Talk)
+        • User management
+        • Encryption
+        • Versioning & trash bin
+
+      💾  Persistence:
+        • /var/www/html        # All Nextcloud files
+        • /var/www/html/data   # User uploaded files
+        Data persists across restarts
+
+      🔌  Apps & Plugins:
+        Available in: Admin → Apps
+        Popular apps:
+          • Talk (Video conferencing)
+          • Calendar
+          • Contacts
+          • Notes
+          • Deck (Kanban boards)
+          • News (RSS reader)
+
+      📝  Users & Sharing:
+        1. Create users: Admin → Users
+        2. Set permissions: Admin → Users → username
+        3. Share files: Click file → Share
+        4. Public links: Share button → Create link
+
+      🔐  Security:
+        • Admin → Settings → Security
+        • Enable brute force protection
+        • Set password policy
+        • Enable 2FA for admin
+        • Configure SSL/TLS (production)
+
+      🚀  Next Steps:
+        1. Change admin password immediately
+        2. Configure backup strategy
+        3. Enable SSL/TLS for production
+        4. Set up external storage (optional)
+        5. Install recommended apps
+        6. Configure cron jobs for background tasks
+
+      📚  Documentation:
+        https://docs.nextcloud.com/
