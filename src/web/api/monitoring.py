@@ -116,14 +116,15 @@ async def get_containers_health():
             if cont.status == "running":
                 health_data["running"] += 1
                 
-                # Calculate uptime
+                # Calculate uptime - FIXED: Use standard library instead of dateutil
                 try:
                     inspect_data = docker_client.api.inspect_container(cont.name)
                     start_time = inspect_data['State']['StartedAt']
                     
                     # Parse ISO format and calculate uptime
-                    from dateutil import parser as date_parser
-                    start_dt = date_parser.isoparse(start_time)
+                    # Remove 'Z' suffix and parse as UTC
+                    start_time_clean = start_time.replace('Z', '+00:00')
+                    start_dt = datetime.fromisoformat(start_time_clean)
                     uptime = (datetime.now(start_dt.tzinfo) - start_dt).total_seconds()
                     cont_info["uptime_seconds"] = int(uptime)
                 except Exception as e:
