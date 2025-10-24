@@ -1,0 +1,272 @@
+# Metadati del gruppo
+group:
+  name: "Selenium-Stack"
+  description: "Selenium browser automation with Chrome, Firefox and Hub"
+  category: testing
+  containers:
+    - selenium-chrome
+    - selenium-firefox
+    - selenium-hub
+
+# Configurazioni dei container
+images:
+  selenium-chrome:
+    category: testing
+    description: Selenium Chrome - Browser Automation with Chrome
+    image: selenium/standalone-chrome:latest
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    shell: /bin/bash
+    environment:
+      SE_NODE_MAX_SESSIONS: "4"
+      SE_START_VNC: "true"
+      SE_VNC_NO_CNXN_ATTEMPTS: "3"
+      SE_VNC_CONNECTION_DELAY: "5"
+    ports:
+      - "4444:4444"   # Selenium Server API
+      - "7900:7900"   # VNC (live browser view)
+    volumes:
+      - type: named
+        name: selenium_chrome_data
+        path: /dev/shm
+
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         Selenium Standalone - Chrome Browser                ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐  Selenium API: http://localhost:4444
+        Remote WebDriver URL: http://localhost:4444
+        Status: http://localhost:4444/status
+
+      👁️  VNC Viewer (Live Browser):
+        Address: localhost:7900
+        Port: 7900
+        Password: secret
+
+      📊  Quick Commands:
+        # Check Selenium status:
+        curl -s http://localhost:4444/status | jq .
+        
+        # Get session info:
+        curl -s http://localhost:4444/sessions | jq .
+        
+        # Download VNC viewer for your OS:
+        TigerVNC, RealVNC, or any VNC client
+
+      🔧  Python Example:
+        from selenium import webdriver
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.chrome.options import Options
+
+        chrome_options = Options()
+        driver = webdriver.Remote(
+          command_executor='http://localhost:4444',
+          options=chrome_options
+        )
+        
+        driver.get('https://www.google.com')
+        search_box = driver.find_element(By.NAME, 'q')
+        search_box.send_keys('Selenium Docker')
+        search_box.submit()
+        
+        driver.quit()
+
+      🔧  Java Example:
+        WebDriver driver = new RemoteWebDriver(
+          new URL("http://localhost:4444"),
+          new ChromeOptions()
+        );
+        
+        driver.get("https://www.google.com");
+        WebElement searchBox = driver.findElement(By.name("q"));
+        searchBox.sendKeys("Selenium Docker");
+        searchBox.submit();
+        
+        driver.quit();
+
+      🔧  JavaScript (Node.js) Example:
+        const { Builder } = require('selenium-webdriver');
+        const chrome = require('selenium-webdriver/chrome');
+
+        let driver = new Builder()
+          .usingServer('http://localhost:4444')
+          .forBrowser('chrome')
+          .build();
+
+        driver.get('https://www.google.com');
+        driver.quit();
+
+      📁  Important Paths:
+        /dev/shm           # Shared memory for Chrome
+        /opt/selenium      # Selenium files
+        /var/log/supervisor # Logs
+
+      💾  Persistence:
+        Data in /dev/shm is temporary
+        For persistent storage, mount additional volumes
+
+      🎯  Learning Resources:
+        • Selenium Docs: https://www.selenium.dev/documentation/
+        • WebDriver API: https://www.w3.org/TR/webdriver/
+        • Best Practices: https://www.selenium.dev/documentation/webdriver/
+
+      🚀  Common Use Cases:
+        • Web application testing (E2E tests)
+        • Web scraping
+        • Screenshot capture
+        • Performance testing
+        • UI regression testing
+
+      ⚙️  Configuration:
+        SE_NODE_MAX_SESSIONS: 4 (parallel browsers)
+        SE_START_VNC: enabled (watch tests run)
+        Browser: Chrome (latest)
+
+  selenium-firefox:
+    category: testing
+    description: Selenium Firefox - Browser Automation with Firefox
+    image: selenium/standalone-firefox:latest
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    shell: /bin/bash
+    environment:
+      SE_NODE_MAX_SESSIONS: "4"
+      SE_START_VNC: "true"
+      SE_VNC_NO_CNXN_ATTEMPTS: "3"
+      SE_VNC_CONNECTION_DELAY: "5"
+    ports:
+      - "4445:4444"   # Selenium Server API (different port)
+      - "7901:7900"   # VNC (different port)
+    volumes:
+      - type: named
+        name: selenium_firefox_data
+        path: /dev/shm
+
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║       Selenium Standalone - Firefox Browser                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐  Selenium API: http://localhost:4445
+        Remote WebDriver URL: http://localhost:4445
+        Status: http://localhost:4445/status
+
+      👁️  VNC Viewer (Live Browser):
+        Address: localhost:7901
+        Port: 7901
+        Password: secret
+
+      📊  Quick Commands:
+        # Check Selenium status:
+        curl -s http://localhost:4445/status | jq .
+        
+        # Get session info:
+        curl -s http://localhost:4445/sessions | jq .
+
+      🔧  Python Example:
+        from selenium import webdriver
+        from selenium.webdriver.firefox.options import Options
+
+        firefox_options = Options()
+        driver = webdriver.Remote(
+          command_executor='http://localhost:4445',
+          options=firefox_options
+        )
+        
+        driver.get('https://www.google.com')
+        driver.quit()
+
+      🔧  Java Example:
+        WebDriver driver = new RemoteWebDriver(
+          new URL("http://localhost:4445"),
+          new FirefoxOptions()
+        );
+        
+        driver.get("https://www.google.com");
+        driver.quit();
+
+      📁  Important Paths:
+        /dev/shm           # Shared memory for Firefox
+        /opt/selenium      # Selenium files
+        /var/log/supervisor # Logs
+
+      💾  Persistence:
+        Data in /dev/shm is temporary
+        For persistent storage, mount additional volumes
+
+      🎯  Browser Comparison:
+        Chrome:
+          • Faster, more stable
+          • Better for automated testing
+          • More resources
+        
+        Firefox:
+          • More compatible
+          • Open source
+          • Lighter weight
+
+      🚀  Testing Strategy:
+        • Use Chrome for speed (default)
+        • Use Firefox for compatibility testing
+        • Run both in CI/CD pipeline
+        • Parallel execution with multiple instances
+
+      ⚙️  Configuration:
+        SE_NODE_MAX_SESSIONS: 4 (parallel browsers)
+        SE_START_VNC: enabled (watch tests run)
+        Browser: Firefox (latest)
+
+  selenium-hub:
+    category: testing
+    description: Selenium Hub - Distribute Tests Across Multiple Nodes
+    image: selenium/hub:latest
+    keep_alive_cmd: /opt/bin/entry_point.sh
+    shell: /bin/bash
+    ports:
+      - "4446:4444"   # Hub API (mapped to 4446 on host)
+
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         Selenium Hub - Grid Management                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐  Hub Console: http://localhost:4446
+        Grid API: http://localhost:4446
+        Status: http://localhost:4446/status
+
+      📊  Available Nodes:
+        • Chrome:  http://localhost:4444
+        • Firefox: http://localhost:4445
+
+      🔧  Architecture:
+        Hub (central server) ← Nodes (Chrome, Firefox, etc)
+        
+        • Receives test requests from clients
+        • Routes to appropriate browser nodes
+        • Balances load across nodes
+        • Manages browser sessions
+
+      💡  Use Cases:
+        • Distributed testing across multiple machines
+        • Cross-browser testing at scale
+        • Parallel test execution
+        • CI/CD pipeline integration
+
+      🚀  Next Steps:
+        1. Connect nodes to hub:
+           docker run --network host \
+             -e SE_HUB_HOST=localhost \
+             -e SE_HUB_PORT=4446 \
+             selenium/node-chrome
+
+        2. Send tests to hub from client:
+           driver = webdriver.Remote(
+             'http://localhost:4446'
+           )
+        
+        3. Monitor in console:
+           http://localhost:4446
+
+      ⚙️  Configuration:
+        Hub listens on port 4446
+        Connect nodes via: http://hub:4446
+        Load balancing: Automatic
