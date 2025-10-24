@@ -11,7 +11,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./custom.d:/app/custom.d
       - ./shared-volumes:/app/shared-volumes
-    restart: always
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
     #command: ["/app/start-webui.sh", "--log-level", "DEBUG"]

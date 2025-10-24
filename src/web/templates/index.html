@@ -250,6 +250,10 @@
                         onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
                         <span class="btn-icon">⏹</span> Stop
                     </button>
+                    <button class="btn btn-warning" data-action="restart"
+                        onclick="ContainerManager.restartContainer('{{ name }}')">
+                        <span class="btn-icon">🔄</span> Restart
+                    </button>
                     <button class="btn btn-primary" onclick="showLogs('{{ running_info.name }}')">
                         <span class="btn-icon">📋</span> Logs
                     </button>
