@@ -600,7 +600,7 @@ if ($activeCount == $totalCount) {
         <div class="accounts">
             <h2>Test Accounts</h2>
             <div class="account-item">
-                <span>admin@localhost / admin123</span>
+                <span>admin@localhost.local / admin123</span>
                 <?php if ($services['Dovecot IMAP']): ?>
                 <span style="color: #28a745;">✓ Available</span>
                 <?php else: ?>
@@ -608,7 +608,7 @@ if ($activeCount == $totalCount) {
                 <?php endif; ?>
             </div>
             <div class="account-item">
-                <span>user1@localhost / user123</span>
+                <span>user1@localhost.local / user123</span>
                 <?php if ($services['Dovecot IMAP']): ?>
                 <span style="color: #28a745;">✓ Available</span>
                 <?php else: ?>
