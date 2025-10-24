@@ -36,6 +36,133 @@ const ContainerManager = {
             this.handleStartError(error, image, btn, originalHTML);
         }
     },
+
+    /**
+     * Restart a container
+     */
+    async restartContainer(image) {
+        const card = DOM.query(`[data-name="${image}"]`);
+        const btn = card?.querySelector('[data-action="restart"]');
+        if (!btn) return;
+
+        const originalHTML = btn.innerHTML;
+        Utils.updateButtonState(btn, {
+            disabled: true,
+            text: 'Restarting...',
+            showSpinner: true
+        });
+
+        try {
+            // Avvia il restart SENZA mostrare il loader
+            const response = await ApiService.restartContainer(image);
+
+            if (response.operation_id) {
+                // Mostra il widget di monitoraggio
+                OperationMonitor.startMonitoring(response.operation_id, `Restarting ${image}`);
+                await this.pollRestartStatus(response.operation_id, image, btn, originalHTML);
+            } else {
+                throw new Error('No operation_id received from server');
+            }
+
+        } catch (error) {
+            hideLoader(); // Safety net
+            this.handleRestartError(error, image, btn, originalHTML);
+        }
+    },
+
+    /**
+     * Poll restart status
+     */
+    async pollRestartStatus(operationId, image, btn, originalHTML) {
+        try {
+            const statusData = await Utils.pollOperationStatus(
+                operationId,
+                (data) => this.formatRestartStatusMessage(data, image),
+                {
+                    maxAttempts: Config.POLLING.MAX_ATTEMPTS,
+                    interval: Config.POLLING.INTERVAL
+                }
+            );
+
+            if (statusData.status === 'completed') {
+                const restarted = statusData.restarted || 0;
+
+                if (restarted > 0) {
+                    //ToastManager.show(`✓ Container ${image} restarted successfully!`, 'success');
+                }
+
+                this.updateCardUI(image, true, statusData.container || `playground-${image}`);
+                ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
+
+            } else if (statusData.status === 'error') {
+                const errorMsg = statusData.error || 'Unknown error';
+                ToastManager.show(`✗ Failed to restart ${image}: ${errorMsg}`, 'error');
+
+                if (statusData.errors && statusData.errors.length > 0) {
+                    ToastManager.showErrorsSequentially(statusData.errors, `Errors restarting ${image}:`);
+                }
+
+                Utils.updateButtonState(btn, {
+                    disabled: false,
+                    originalHTML
+                });
+            }
+        } catch (error) {
+            hideLoader(); // Safety net
+            ToastManager.show(`✗ Error polling container status: ${error.message}`, 'error');
+            Utils.updateButtonState(btn, {
+                disabled: false,
+                originalHTML
+            });
+        }
+    },
+
+    /**
+     * Format restart status message
+     */
+    formatRestartStatusMessage(statusData, image) {
+        const total = statusData.total || 1;
+        const restarted = statusData.restarted || 0;
+        const failed = statusData.failed || 0;
+        const completed = restarted + failed;
+        const remaining = total - completed;
+
+        let message = '';
+
+        if (statusData.status === 'running') {
+            message = `Restarting '${image}': ${completed}/${total}\n` +
+                `✓ ${restarted} restarted | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
+
+            // Add script tracking info if available
+            const scriptStatus = Utils.formatScriptStatus(statusData);
+            if (scriptStatus) {
+                message += `\n${scriptStatus}`;
+            }
+        } else if (statusData.status === 'completed') {
+            message = `Container '${image}' restarted successfully! ✓`;
+        } else {
+            message = `Restarting container '${image}'...`;
+        }
+
+        return message;
+    },
+
+    /**
+     * Handle restart error
+     */
+    handleRestartError(error, image, btn, originalHTML) {
+        if (error.name === 'AbortError') {
+            ToastManager.show(`⏱ Timeout restarting ${image} - check container logs`, 'warning');
+            setTimeout(() => location.reload(), Config.TOAST.DELAY_BEFORE_RELOAD);
+        } else {
+            ToastManager.show(`✗ Error: ${error.message}`, 'error');
+        }
+        Utils.updateButtonState(btn, {
+            disabled: false,
+            originalHTML
+        });
+    },
+
     /**
      * Cleanup a container
      */
@@ -309,6 +436,9 @@ const ContainerManager = {
             actions.innerHTML = `
                 <button class="btn btn-danger" onclick="ContainerManager.stopContainer('${imageName}', '${containerName}')">
                     <span class="btn-icon">⏹</span> Stop
+                </button>
+                <button class="btn btn-warning" data-action="restart" onclick="ContainerManager.restartContainer('${imageName}')">
+                    <span class="btn-icon">🔄</span> Restart
                 </button>
                 <button class="btn btn-primary" onclick="showLogs('${containerName}')">
                     <span class="btn-icon">📋</span> Logs

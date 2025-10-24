@@ -2,7 +2,7 @@
 CONTAINER_NAME="$1"
 echo "💾 Backing up MySQL databases from $CONTAINER_NAME..."
 
-BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/mysql-8"
+BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups/${CONTAINER_NAME#playground-}"
 mkdir -p "$BACKUP_DIR"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)

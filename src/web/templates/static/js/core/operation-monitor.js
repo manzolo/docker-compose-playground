@@ -174,6 +174,19 @@ const OperationMonitor = {
             if (scriptStatus) {
                 message += `\n${scriptStatus}`;
             }
+        } else if (operation === 'restart' || operation === 'restart_all') {
+            const restarted = statusData.restarted || 0;
+            const failed = statusData.failed || 0;
+            const completed = restarted + failed;
+            const remaining = total !== '?' ? total - completed : '?';
+
+            message = `Restarting: ${completed}/${total} (${elapsed})\n`;
+            message += `🔄 ${restarted} restarted | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
+
+            const scriptStatus = Utils.formatScriptStatus(statusData);
+            if (scriptStatus) {
+                message += `\n${scriptStatus}`;
+            }
         } else if (operation === 'cleanup') {
             const removed = statusData.removed || 0;
             const failed = statusData.failed || 0;

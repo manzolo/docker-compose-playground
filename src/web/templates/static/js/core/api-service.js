@@ -64,9 +64,19 @@ const ApiService = {
      * POST request for stopping container
      */
     async stopContainer(containerName) {
-        return this.fetchJson(`/stop/${encodeURIComponent(containerName)}`, {
+        return this.fetchJson(`/api/stop/${encodeURIComponent(containerName)}`, {
             method: 'POST',
             timeout: Config.POLLING.TIMEOUT.STOP
+        });
+    },
+
+    /**
+     * POST request for restarting container
+     */
+    async restartContainer(image) {
+        return this.fetchJson(`/api/restart/${encodeURIComponent(image)}`, {
+            method: 'POST',
+            timeout: Config.POLLING.TIMEOUT.START
         });
     },
 

@@ -1,15 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Improved Web Panel Starter
+# Version: 1.0.0
+# Author: xAI
+# License: MIT
+# Description: A robust script to start a Python-based web server with process management, logging, and health checks.
 
 #############################################
-# Improved Web Panel Starter
-# Enhanced process management & reliability
+# Configuration Section
 #############################################
 
 set -o pipefail
 
-# =============================================================================
-# Configuration Section
-# =============================================================================
+# Load configuration from .env file if present
+if [[ -f "${PROJECT_DIR}/.env" ]]; then
+    set -a
+    source "${PROJECT_DIR}/.env"
+    set +a
+fi
 
 readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_BASE_DIR="${PROJECT_DIR}/venv/environments"
@@ -18,10 +26,12 @@ readonly LOG_FILE="${PROJECT_DIR}/venv/web.log"
 readonly ERROR_LOG_FILE="${PROJECT_DIR}/venv/web_error.log"
 readonly JSON_LOG_FILE="${PROJECT_DIR}/venv/web.jsonl"
 readonly PID_FILE="${PROJECT_DIR}/venv/web.pid"
-readonly PORT=8000
-readonly HEALTH_CHECK_URL="http://localhost:${PORT}/"
+readonly PORT="${PORT:-8000}"
+readonly HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_ENDPOINT:-/}"
+readonly HEALTH_CHECK_URL="http://localhost:${PORT}${HEALTH_CHECK_ENDPOINT}"
 readonly HEALTH_CHECK_TIMEOUT=30
 readonly STARTUP_TIMEOUT=60
+readonly USE_DOCKER="${USE_DOCKER:-false}"
 
 # Process management
 WEB_PID=""
@@ -30,31 +40,7 @@ SHUTDOWN_IN_PROGRESS=false
 TAIL_PROCESS_PID=""
 ENABLE_TAIL=false
 
-# =============================================================================
-# Detect Python
-# =============================================================================
-detect_python() {
-    local python_cmd
-    for cmd in python3.12 python3.11 python3.10 python3; do
-        if command -v "$cmd" >/dev/null 2>&1; then
-            python_cmd="$cmd"
-            break
-        fi
-    done
-    [[ -z "$python_cmd" ]] && { log_error "No Python interpreter found. Please install Python 3.10+"; }
-    local version=$("$python_cmd" -c "import sys; print(f'python-{sys.version_info.major}.{sys.version_info.minor}')")
-    echo "$python_cmd:$version"
-}
-
-python_info=$(detect_python)
-readonly PYTHON_CMD="${python_info%:*}"
-readonly VENV_NAME="${python_info#*:}"
-readonly VENV_PATH="${VENV_BASE_DIR}/${VENV_NAME}"
-
-# =============================================================================
-# Log Configuration
-# =============================================================================
-
+# Log configuration
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
 declare -A LOG_PRIORITY=(
     [DEBUG]=0 [INFO]=1 [WARNING]=2 [ERROR]=3 [CRITICAL]=4
@@ -67,14 +53,20 @@ declare -A LOG_LEVELS=(
     ["CRITICAL"]="critical:CRITICAL"
 )
 
-# =============================================================================
+#############################################
 # Logging System
-# =============================================================================
+#############################################
 
 rotate_logs() {
     local max_size=1048576  # 1 MB
     local backup_count=5
-    if [[ -f "$LOG_FILE" && $(stat -c%s "$LOG_FILE") -ge $max_size ]]; then
+    local stat_cmd
+    if [[ "$(uname)" == "Darwin" ]]; then
+        stat_cmd="stat -f%z"
+    else
+        stat_cmd="stat -c%s"
+    fi
+    if [[ -f "$LOG_FILE" && $(${stat_cmd} "$LOG_FILE") -ge $max_size ]]; then
         mv "$LOG_FILE" "${LOG_FILE}.0"
         for ((i=backup_count; i>0; i--)); do
             [[ -f "${LOG_FILE}.$((i-1))" ]] && mv "${LOG_FILE}.$((i-1))" "${LOG_FILE}.$i"
@@ -111,9 +103,21 @@ log() {
 
     local output="[$timestamp] [PID:$$] [$caller] [$level] $message"
     
-    printf "%s\n" "$output" | tee -a "$LOG_FILE"
+    # Color coding for console
+    local color
+    case "$level" in
+        "DEBUG")    color="\033[0;36m" ;; # Cyan
+        "INFO")     color="\033[0;32m" ;; # Green
+        "WARNING")  color="\033[0;33m" ;; # Yellow
+        "ERROR")    color="\033[0;31m" ;; # Red
+        "CRITICAL") color="\033[1;31m" ;; # Bold Red
+    esac
+    # Output to console with color
+    printf "${color}%s\033[0m\n" "$output"
+    # Write to log file without console output
+    printf "%s\n" "$output" >> "$LOG_FILE"
 
-    [[ "$level" =~ ^(ERROR|CRITICAL)$ ]] && echo "$output" >> "$ERROR_LOG_FILE"
+    [[ "$level" =~ ^(ERROR|CRITICAL)$ ]] && printf "%s\n" "$output" >> "$ERROR_LOG_FILE"
     log_json "$level" "$message"
 }
 
@@ -122,9 +126,9 @@ log_info() { log "INFO" "$*"; }
 log_warning() { log "WARNING" "$*"; }
 log_error() { log "ERROR" "$*"; exit 1; }
 
-# =============================================================================
+#############################################
 # Utility Functions
-# =============================================================================
+#############################################
 
 setup_logging() {
     IFS=':' read -r UVICORN_LOG_LEVEL PYTHON_LOG_LEVEL <<< "${LOG_LEVELS[$LOG_LEVEL]:-info:WARNING}"
@@ -141,19 +145,49 @@ show_environment() {
     log_info "  Virtualenv: $VENV_NAME"
     log_info "  Project: $PROJECT_DIR"
     log_info "  Port: $PORT"
+    log_info "  Health check endpoint: $HEALTH_CHECK_ENDPOINT"
     [[ "$ENABLE_TAIL" == true ]] && log_info "  Live logs: ENABLED (tail -f)"
+    [[ "$USE_DOCKER" == true ]] && log_info "  Docker support: ENABLED"
+}
+
+detect_python() {
+    local python_cmd
+    python_cmd=$(command -v python3 || command -v python)
+    if [[ -z "$python_cmd" ]]; then
+        log_error "No Python interpreter found. Please install Python 3.10 or higher."
+    fi
+    local version
+    version=$("$python_cmd" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    if [[ "${version%%.*}" -lt 3 || "${version##*.}" -lt 10 ]]; then
+        log_error "Python version $version is not supported. Please install Python 3.10 or higher."
+    fi
+    echo "$python_cmd:python-$version"
 }
 
 kill_port() {
     local port=$1
     local pids
-    pids=$(lsof -ti:"$port" 2>/dev/null)
+    if command -v lsof >/dev/null 2>&1; then
+        pids=$(lsof -ti:"$port" 2>/dev/null)
+    elif command -v ss >/dev/null 2>&1; then
+        pids=$(ss -tuln | grep ":$port" | awk '{print $NF}' | cut -d'/' -f1)
+    elif command -v netstat >/dev/null 2>&1; then
+        pids=$(netstat -tuln | grep ":$port" | awk '{print $NF}' | cut -d'/' -f1)
+    else
+        log_warning "No lsof, ss, or netstat found. Cannot check for port conflicts."
+        return
+    fi
     if [[ -n "$pids" ]]; then
-        log_warning "Found processes on port $port. Terminating gracefully first..."
+        log_warning "Port $port is in use by processes: $pids"
+        read -p "Do you want to terminate these processes? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_error "Port $port is in use. Exiting."
+        fi
+        log_warning "Terminating processes on port $port gracefully..."
         echo "$pids" | xargs kill -TERM 2>/dev/null || true
         sleep 2
-        # Force kill if still running
-        pids=$(lsof -ti:"$port" 2>/dev/null)
+        pids=$(lsof -ti:"$port" 2>/dev/null || true)
         if [[ -n "$pids" ]]; then
             log_warning "Force killing remaining processes on port $port"
             echo "$pids" | xargs kill -9 2>/dev/null || true
@@ -163,7 +197,7 @@ kill_port() {
 }
 
 check_dependencies() {
-    local deps=("$PYTHON_CMD" "docker" "lsof" "curl")
+    local deps=("$PYTHON_CMD" "lsof" "curl")
     local missing=()
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" >/dev/null 2>&1; then
@@ -175,9 +209,13 @@ check_dependencies() {
         log_error "Missing dependencies: ${missing[*]}"
     fi
     
-    # Check Docker daemon
-    if ! docker info >/dev/null 2>&1; then
-        log_error "Docker daemon is not running. Please start Docker."
+    if [[ "$USE_DOCKER" == true ]]; then
+        if ! command -v docker >/dev/null 2>&1; then
+            log_error "Docker is required but not installed."
+        fi
+        if ! docker info >/dev/null 2>&1; then
+            log_error "Docker daemon is not running. Please start Docker."
+        fi
     fi
 }
 
@@ -192,14 +230,20 @@ create_virtualenv() {
     
     source "$VENV_PATH/bin/activate"
     
+    if [[ -z "$VIRTUAL_ENV" ]]; then
+        log_error "Failed to activate virtual environment"
+    fi
+    
     if ! pip install --upgrade pip --quiet; then
         log_error "Failed to upgrade pip"
     fi
 }
 
 install_dependencies() {
-    log_info "Installing dependencies from requirements..."
-    cat > "$REQ_FILE" << 'EOF'
+    log_info "Checking for requirements file at $REQ_FILE..."
+    if [[ ! -f "$REQ_FILE" ]]; then
+        log_info "Creating default requirements.txt..."
+        cat > "$REQ_FILE" << 'EOF'
 typer>=0.12.5
 docker>=7.1.0
 pyyaml>=6.0.2
@@ -207,11 +251,11 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.30.6
 jinja2>=3.1.4
 EOF
-    
+    fi
+    log_info "Installing dependencies from $REQ_FILE..."
     if ! pip install -r "$REQ_FILE" --quiet; then
         log_error "Failed to install dependencies"
     fi
-    
     log_info "Dependencies installed successfully"
 }
 
@@ -265,7 +309,7 @@ EOF
 
 health_check() {
     local elapsed=0
-    log_info "Waiting for server to be ready (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
+    log_info "Waiting for server to be ready at $HEALTH_CHECK_URL (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
     
     while [[ $elapsed -lt $HEALTH_CHECK_TIMEOUT ]]; do
         if curl -sf "$HEALTH_CHECK_URL" >/dev/null 2>&1; then
@@ -273,7 +317,6 @@ health_check() {
             return 0
         fi
         
-        # Check if process is still alive
         if ! ps -p "$WEB_PID" >/dev/null 2>&1; then
             log_error "Server process died before becoming healthy. Check logs."
         fi
@@ -285,14 +328,23 @@ health_check() {
     log_error "Server health check timed out after ${HEALTH_CHECK_TIMEOUT}s"
 }
 
-# =============================================================================
+monitor_resources() {
+    while ps -p "$WEB_PID" >/dev/null 2>&1; do
+        local cpu mem
+        cpu=$(ps -p "$WEB_PID" -o %cpu | tail -n1)
+        mem=$(ps -p "$WEB_PID" -o %mem | tail -n1)
+        log_debug "Resource usage - CPU: $cpu%, Memory: $mem%"
+        sleep 60
+    done
+}
+
+#############################################
 # Tail Logs Management
-# =============================================================================
+#############################################
 
 start_tail_logs() {
     if [[ "$ENABLE_TAIL" == true ]]; then
         log_info "Starting live log viewer (tail -f)..."
-        # Aspetta un po' che il file di log sia creato
         sleep 1
         tail -f "$LOG_FILE" &
         TAIL_PROCESS_PID=$!
@@ -307,11 +359,13 @@ stop_tail_logs() {
     fi
 }
 
-# =============================================================================
+#############################################
 # Web Server Management
-# =============================================================================
+#############################################
 
 start_server() {
+    local start_time
+    start_time=$(date +%s)
     log_info "Starting web server at http://localhost:$PORT..."
     IFS=':' read -r UVICORN_LOG_LEVEL PYTHON_LOG_LEVEL <<< "${LOG_LEVELS[$LOG_LEVEL]}"
     local python_log_config
@@ -341,16 +395,18 @@ start_server() {
     echo "$WEB_PID" > "$PID_FILE"
     log_info "Server process started with PID: $WEB_PID"
     
-    # Start tail if enabled
     start_tail_logs
+    monitor_resources &
     
-    # Wait for server to be healthy
-    if ! health_check; then
+    if health_check; then
+        local end_time
+        end_time=$(date +%s)
+        log_info "Server startup completed in $((end_time - start_time)) seconds"
+    else
         kill "$WEB_PID" 2>/dev/null || true
         exit 1
     fi
     
-    # Monitor the process
     wait "$WEB_PID"
     EXIT_CODE=$?
     
@@ -369,7 +425,6 @@ graceful_shutdown() {
     
     log_info "Interrupt received. Starting graceful shutdown..."
     
-    # Stop tail first
     stop_tail_logs
     
     if [[ -f "$PID_FILE" ]]; then
@@ -380,14 +435,12 @@ graceful_shutdown() {
             log_info "Sending SIGTERM to process $pid for graceful shutdown..."
             kill -TERM "$pid" 2>/dev/null
             
-            # Wait up to 15 seconds for graceful shutdown
             local wait_count=0
             while ps -p "$pid" >/dev/null 2>&1 && [[ $wait_count -lt 15 ]]; do
                 sleep 1
                 ((wait_count++))
             done
             
-            # Force kill if still running
             if ps -p "$pid" >/dev/null 2>&1; then
                 log_warning "Process did not exit gracefully. Force killing..."
                 kill -9 "$pid" 2>/dev/null || true
@@ -404,22 +457,43 @@ graceful_shutdown() {
 
 show_help() {
     cat << EOF
+Improved Web Panel Starter (v1.0.0)
+
+A Bash script to start a Python-based web server with robust process management,
+logging, and health checks.
+
 Usage: $0 [OPTIONS]
 
 Options:
   --debug              Enable debug logging (sets log level to DEBUG)
   --log-level LEVEL    Set log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
                        (default: INFO)
-  --tail               Show live logs in terminal (tail -f venv/web.log)
-  --help               Show this help message
+  --tail               Enable live log viewing (tail -f $LOG_FILE)
+  --use-docker         Enable Docker dependency checks
+  --health-check-endpoint ENDPOINT
+                       Set custom health check endpoint (default: /)
+  --help               Display this help message and exit
+
+Environment Variables:
+  LOG_LEVEL            Set default log level (default: INFO)
+  USE_DOCKER          Enable Docker support (default: false)
+  PORT                Set server port (default: $PORT)
+  HEALTH_CHECK_ENDPOINT
+                      Set health check endpoint (default: /)
 
 Examples:
-  $0                        # Run with default settings
-  $0 --debug                # Run with debug logging
-  $0 --tail                 # Run with live log viewer
-  $0 --debug --tail         # Run with debug + live logs
-  $0 --log-level WARNING    # Run with warning level
+  $0                        # Start server with default settings
+  $0 --debug --tail         # Start with debug logging and live logs
+  $0 --log-level WARNING    # Start with WARNING log level
+  $0 --use-docker           # Start with Docker support enabled
+  $0 --health-check-endpoint /health  # Use custom health check endpoint
 
+Logs are written to:
+  - $LOG_FILE
+  - $ERROR_LOG_FILE (errors only)
+  - $JSON_LOG_FILE (JSON format)
+
+For more information, visit https://x.ai or contact support@x.ai.
 EOF
 }
 
@@ -443,6 +517,14 @@ parse_arguments() {
                 ENABLE_TAIL=true
                 shift
                 ;;
+            --use-docker)
+                USE_DOCKER=true
+                shift
+                ;;
+            --health-check-endpoint)
+                HEALTH_CHECK_ENDPOINT="$2"
+                shift 2
+                ;;
             --help)
                 show_help
                 exit 0
@@ -456,19 +538,22 @@ parse_arguments() {
     done
 }
 
-# =============================================================================
+#############################################
 # Main
-# =============================================================================
+#############################################
 
 main() {
     parse_arguments "$@"
     
-    # Clean logs at startup
     rm -f "$LOG_FILE" "$ERROR_LOG_FILE" "$JSON_LOG_FILE"
     mkdir -p "$PROJECT_DIR/venv"
     
-    # Set up signal handlers
     trap graceful_shutdown SIGINT SIGTERM EXIT
+    
+    python_info=$(detect_python)
+    readonly PYTHON_CMD="${python_info%:*}"
+    readonly VENV_NAME="${python_info#*:}"
+    readonly VENV_PATH="${VENV_BASE_DIR}/${VENV_NAME}"
     
     setup_logging
     show_environment
@@ -477,7 +562,6 @@ main() {
     create_virtualenv
     install_dependencies
     
-    # Verify app.py exists
     if [[ ! -f "$PROJECT_DIR/src/web/app.py" ]]; then
         log_error "Missing application file: $PROJECT_DIR/src/web/app.py"
     fi

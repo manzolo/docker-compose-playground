@@ -1,15 +1,11 @@
 #!/bin/bash
 
 ################################################################################
-# TEST SUITE - Docker Playground API (FIXED FOR GROUPS + CONTAINERS)
+# TEST SUITE - Docker Playground API FOR GROUPS + CONTAINERS)
 # 
-# ✓ Testa singoli container (alpine-3.22)
-# ✓ Testa gruppi
-# ✓ Esclude network dalla ricerca
-#
 # Usage:
-#   ./test-webui-real-fixed.sh              # Run all tests
-#   ./test-webui-real-fixed.sh -v           # Verbose output
+#   ./test-webui.sh              # Run all tests
+#   ./test-webui.sh -v           # Verbose output
 ################################################################################
 
 set -uo pipefail
@@ -99,10 +95,6 @@ print_test() {
 }
 
 # ============================================================================
-# UTILITY
-# ============================================================================
-
-# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -112,14 +104,12 @@ extract_json_value() {
     echo "$json" | grep -o "\"${key}\"[[:space:]]*:[[:space:]]*[^,}]*" | cut -d: -f2- | sed 's/[" ]//g' | head -1
 }
 
-# Robustly extract JSON values (from old tests)
 parse_json() {
     local json="$1"
     local key="$2"
     echo "$json" | grep -o "\"$key\":[^,}]*" | head -1 | cut -d: -f2- | tr -d ' "' || echo ""
 }
 
-# Wait for asynchronous operation to complete
 wait_for_operation() {
     local operation_id=$1
     local max_wait=${2:-90}
@@ -196,11 +186,11 @@ run_phase_1() {
 }
 
 # ============================================================================
-# PHASE 2: SINGLE CONTAINER (alpine-3.22)
+# PHASE 2: SINGLE CONTAINER (alpine-3.22) + RESTART TEST
 # ============================================================================
 
 run_phase_2() {
-    print_section "PHASE 2: Single Container - $TEST_CONTAINER"
+    print_section "PHASE 2: Single Container - $TEST_CONTAINER (with RESTART test)"
     
     print_test "Start container: $TEST_CONTAINER"
     local response=$(curl -s -X POST "$BASE_URL/api/start/$TEST_CONTAINER")
@@ -222,6 +212,45 @@ run_phase_2() {
         log_debug "Stats response: $stats"
     fi
     
+    print_test "Restart container: $TEST_CONTAINER"
+    local response=$(curl -s -X POST "$API_URL/restart/$TEST_CONTAINER")
+    log_debug "Response: $response"
+    
+    if echo "$response" | grep -q "operation_id"; then
+        log_success "Container restart initiated"
+        local operation_id=$(parse_json "$response" "operation_id")
+        log_info "  Operation ID: $operation_id"
+        
+        print_test "Poll restart operation until completed"
+        local op_response=$(wait_for_operation "$operation_id" 60)
+        
+        if [ $? -eq 0 ]; then
+            local op_status=$(parse_json "$op_response" "status")
+            local restarted=$(parse_json "$op_response" "restarted")
+            log_info "  Restart status: $op_status | Restarted: $restarted"
+            
+            if [ "$op_status" = "completed" ] && [ "$restarted" = "1" ]; then
+                log_success "Container restart completed successfully"
+            else
+                log_warning "Restart completed but restarted count: $restarted"
+            fi
+        else
+            log_error "Restart operation timeout"
+        fi
+        
+        sleep 2
+        
+        print_test "Verify container running after restart via stats"
+        local stats=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
+        if echo "$stats" | grep -q "cpu\|memory"; then
+            log_success "Container confirmed running after restart"
+        else
+            log_error "Container not running after restart"
+        fi
+    else
+        log_warning "Container restart initiation unclear"
+    fi
+    
     print_test "Stop container: $TEST_CONTAINER"
     local response=$(curl -s -X POST "$BASE_URL/api/stop/$TEST_CONTAINER")
     log_debug "Response: $response"
@@ -229,7 +258,6 @@ run_phase_2() {
     if echo "$response" | grep -q "operation_id\|started"; then
         log_success "Container stop initiated"
         
-        # Verify it's actually stopped - retry fino a 30 sec
         print_test "Verify container stopped (should get 404 from stats) - retry up to 30 sec"
         local elapsed=0
         local max_wait=30
@@ -279,7 +307,6 @@ run_phase_3() {
             local details=$(curl -s "$API_URL/groups/$group")
             if echo "$details" | grep -q "containers"; then
                 log_success "Group details retrieved"
-                # Skip first name (è il nome del gruppo), prendi dai container reali
                 local containers=$(echo "$details" | grep -o '"name":"[^"]*"' | tail -n +2 | cut -d'"' -f4 | head -3)
                 log_info "  Containers in group:"
                 echo "$containers" | while read -r c; do
@@ -295,9 +322,7 @@ run_phase_3() {
                 log_success "Group start initiated"
                 sleep 5
                 
-                # Verificare che almeno un container del gruppo sia running
                 print_test "Verify group containers are running"
-                # Il primo container del gruppo (elasticsearch-stack o kibana-stack)
                 local first_container="elasticsearch-stack"
                 
                 local stats=$(curl -s "$API_URL/container-stats/playground-$first_container")
@@ -315,7 +340,6 @@ run_phase_3() {
             if echo "$response" | grep -q "operation_id\|started"; then
                 log_success "Group stop initiated"
                 
-                # Verificare che siano effettivamente fermi - retry fino a 30 sec
                 print_test "Verify group containers are stopped - retry up to 30 sec"
                 local first_container="elasticsearch-stack"
                 local elapsed=0
@@ -371,7 +395,6 @@ run_phase_4() {
         log_success "Restart-all executed"
         sleep 5
         
-        # Verify alpine is STILL running after restart
         print_test "Verify alpine still running after restart-all"
         local stats=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
         if echo "$stats" | grep -q "cpu\|memory"; then
@@ -380,7 +403,6 @@ run_phase_4() {
             log_warning "Alpine was stopped by restart-all (unexpected)"
         fi
         
-        # Verify ELK is back up
         print_test "Verify ELK containers restarted"
         local stats=$(curl -s "$API_URL/container-stats/playground-elasticsearch-stack")
         if echo "$stats" | grep -q "cpu\|memory"; then
@@ -407,7 +429,6 @@ run_phase_4b() {
     if echo "$response" | grep -q "success\|operation"; then
         log_success "Stop-all executed"
         
-        # Waiter: verifica che alpine sia fermo (è sempre presente)
         print_test "Waiting for containers to stop (up to 40 sec)..."
         local elapsed=0
         local max_wait=40
@@ -461,13 +482,12 @@ run_phase_5() {
 }
 
 # ============================================================================
-# PHASE 6: EXECUTE COMMAND (richiede container running)
+# PHASE 6: EXECUTE COMMAND
 # ============================================================================
 
 run_phase_6() {
     print_section "PHASE 6: Execute Command in Container"
     
-    # Prima, ferma alpine se è ancora running da fasi precedenti
     print_test "Ensure alpine-3.22 is stopped before starting for exec tests"
     curl -s -X POST "$BASE_URL/api/stop/$TEST_CONTAINER" > /dev/null 2>&1
     sleep 3
@@ -616,7 +636,7 @@ run_phase_9() {
 }
 
 # ============================================================================
-# PHASE 10: OPERATION POLLING (verify actual completion)
+# PHASE 10: OPERATION POLLING
 # ============================================================================
 
 run_phase_10() {
@@ -677,17 +697,14 @@ run_phase_11() {
 cleanup() {
     log_info "Running final cleanup..."
     
-    # Ferma alpine
     log_info "Stopping alpine-3.22..."
     curl -s -X POST "$BASE_URL/api/stop/$TEST_CONTAINER" > /dev/null 2>&1
     sleep 3
     
-    # Ferma tutti i container
     log_info "Stopping all remaining containers..."
     curl -s -X POST "$BASE_URL/api/stop-all" > /dev/null 2>&1
     sleep 5
     
-    # Uccidi il server
     log_info "Terminating web server..."
     if [ -f "${SCRIPT_DIR}/venv/web.pid" ]; then
         pid=$(cat "${SCRIPT_DIR}/venv/web.pid" 2>/dev/null)
@@ -728,9 +745,8 @@ done
 # ============================================================================
 
 main() {
-    print_header "DOCKER PLAYGROUND - TEST SUITE (CONTAINER + GROUPS)"
+    print_header "DOCKER PLAYGROUND - TEST SUITE (CONTAINER + RESTART + GROUPS)"
     
-    # Start server
     log_info "Starting WebUI server..."
     bash "${SERVER_SCRIPT}" --tail &
     SERVER_PID=$!
@@ -748,7 +764,6 @@ main() {
         return 1
     fi
     
-    # Run tests
     run_phase_1
     run_phase_2
     run_phase_3
@@ -762,7 +777,6 @@ main() {
     run_phase_10
     run_phase_11
     
-    # Summary
     print_header "TEST RESULTS"
     
     local total=$((TESTS_PASSED + TESTS_FAILED))
