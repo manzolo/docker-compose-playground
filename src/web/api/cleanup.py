@@ -106,7 +106,7 @@ async def cleanup_single_background(operation_id: str, container):
             
             # Rimuovi il container
             logger.info(f"🧹 Removing container {container_name}")
-            c.remove()
+            c.remove(force=True)
             removed_items = [container_name]
             
             # Rimuovi i volumi

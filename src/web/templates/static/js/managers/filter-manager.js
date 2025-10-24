@@ -161,6 +161,7 @@ const FilterManager = {
             filterInput.value = containerName;
             filterInput.focus();
             this.applyFilters();
+            FilterPersistenceManager.saveFilterState();
             this.highlightMatchingCard(containerName);
             ToastManager.show(`🔍 Filtered to: ${containerName}`, 'info');
         }
