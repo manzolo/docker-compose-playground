@@ -385,7 +385,7 @@ async def restart_all_background(operation_id: str, containers):
 
 @router.post("/api/cleanup-all")
 async def cleanup_all():
-    """Cleanup all containers"""
+    """Cleanup all managed containers, their images and volumes"""
     containers = docker_client.containers.list(all=True, filters={"label": "playground.managed=true"})
     operation_id = str(uuid.uuid4())
     
@@ -408,12 +408,28 @@ async def cleanup_all():
 
 
 async def cleanup_all_background(operation_id: str, containers):
-    """Background cleanup"""
+    """Background cleanup of containers, images and volumes"""
     removed = []
     failed = []
+    images_removed = []
+    volumes_removed = []
     
     def cleanup_cont(c):
         try:
+            # Raccogli info sul container prima di rimuoverlo
+            container_name = c.name
+            image_id = c.image.id
+            
+            # Estrai i volumi collegati al container
+            container_volumes = []
+            mounts = c.attrs.get('Mounts', [])
+            for mount in mounts:
+                if mount.get('Type') == 'volume':
+                    vol_name = mount.get('Name')
+                    if vol_name:
+                        container_volumes.append(vol_name)
+            
+            # Esegui gli script pre-stop se il container è in running
             if c.status == "running":
                 try:
                     config_data = load_config()
@@ -430,11 +446,46 @@ async def cleanup_all_background(operation_id: str, containers):
                     timeout = 10
                 
                 c.stop(timeout=timeout)
-            c.remove()
-            return {"status": "removed", "name": c.name}
+            
+            # Rimuovi il container
+            c.remove(force=True)
+            logger.info(f"Container rimosso: {container_name}")
+            
+            # Rimuovi i volumi associati al container
+            volumes_removed_for_container = []
+            for vol_name in container_volumes:
+                try:
+                    volume = docker_client.volumes.get(vol_name)
+                    volume.remove(force=True)
+                    volumes_removed_for_container.append(vol_name)
+                    logger.info(f"Volume rimosso: {vol_name}")
+                except Exception as e:
+                    logger.warning(f"Impossibile rimuovere volume {vol_name}: {e}")
+            
+            # Rimuovi l'immagine associata al container
+            image_removed = False
+            try:
+                docker_client.images.remove(image_id, force=True, noprune=False)
+                image_removed = True
+                logger.info(f"Immagine rimossa: {image_id}")
+            except Exception as e:
+                logger.warning(f"Impossibile rimuovere immagine {image_id}: {e}")
+            
+            return {
+                "status": "removed",
+                "name": container_name,
+                "image_removed": image_removed,
+                "volumes_removed": volumes_removed_for_container
+            }
         except Exception as e:
             logger.error(f"Failed to cleanup {c.name}: {e}")
-            return {"status": "failed", "name": c.name, "error": str(e)}
+            return {
+                "status": "failed",
+                "name": c.name,
+                "error": str(e),
+                "image_removed": False,
+                "volumes_removed": []
+            }
     
     loop = asyncio.get_event_loop()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
@@ -446,6 +497,9 @@ async def cleanup_all_background(operation_id: str, containers):
             
             if result["status"] == "removed":
                 removed.append(result["name"])
+                if result.get("image_removed"):
+                    images_removed.append(result["name"])
+                volumes_removed.extend(result.get("volumes_removed", []))
             elif result["status"] == "failed":
                 failed.append(result["name"])
             
@@ -454,8 +508,19 @@ async def cleanup_all_background(operation_id: str, containers):
                 operation_id,
                 removed=len(removed),
                 failed=len(failed),
+                images_removed=len(images_removed),
+                volumes_removed=len(volumes_removed),
                 containers=removed
             )
+    
+    complete_operation(
+        operation_id,
+        removed=len(removed),
+        failed=len(failed),
+        images_removed=len(images_removed),
+        volumes_removed=len(volumes_removed),
+        containers=removed
+    )
     
     complete_operation(operation_id, removed=len(removed), failed=len(failed), containers=removed)
 

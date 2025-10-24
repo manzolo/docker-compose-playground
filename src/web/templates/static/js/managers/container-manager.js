@@ -36,6 +36,44 @@ const ContainerManager = {
             this.handleStartError(error, image, btn, originalHTML);
         }
     },
+    /**
+     * Cleanup a container
+     */
+    async cleanupContainer(containerName) {
+        try {
+            const confirmed = await showConfirmModal(
+                'Cleanup Container',
+                `Are you sure you want to cleanup container <strong>${containerName}</strong>? This will remove docker image and volume data.`,
+                'warning'
+            );
+            if (!confirmed) return;
+
+            await this.performCleanup(containerName);
+        } catch (error) {
+            hideLoader(); // Safety net
+            ToastManager.show(`✗ Error: ${error.message}`, 'error');
+        }
+    },
+
+    /**
+     * Perform cleanup
+     */
+    async performCleanup(containerName) {
+        try {
+            const response = await ApiService.cleanupContainer(containerName);
+
+            // ApiService.cleanupContainer ritorna direttamente l'oggetto JSON
+            if (response.operation_id) {
+                OperationMonitor.startMonitoring(response.operation_id, `Cleaning up ${containerName}`);
+
+            } else {
+                throw new Error('No operation_id received');
+            }
+        } catch (error) {
+            console.error("Error in performCleanup:", error);
+            ToastManager.show(`✗ Error: ${error.message}`, 'error');
+        }
+    },
 
     /**
      * Poll container status
@@ -277,6 +315,9 @@ const ContainerManager = {
                 </button>
                 <button class="btn btn-success" onclick="ConsoleManager.open('${containerName}', '${imageName}')">
                     <span class="btn-icon">💻</span> Console
+                </button>
+                <button class="btn btn-info" onclick="ContainerManager.cleanupContainer('${containerName}', '${imageName}')">
+                    <span class="btn-icon">🧹</span> Clean
                 </button>
             `;
         } else {

@@ -5,7 +5,7 @@ import logging
 
 # Import routers
 from src.web.api import web, containers, groups, system, config_mgmt, websocket
-from src.web.api import monitoring, execute_command, health_check
+from src.web.api import cleanup, monitoring, execute_command, health_check
 
 # Configure logging
 logging.basicConfig(
@@ -35,6 +35,7 @@ app.include_router(config_mgmt.router, tags=["config"])
 app.include_router(websocket.router, tags=["websocket"])
 app.include_router(monitoring.router, tags=["monitoring"])
 app.include_router(execute_command.router, tags=["commands"])
+app.include_router(cleanup.router, tags=["commands"])
 app.include_router(health_check.router, tags=["health"])
 
 

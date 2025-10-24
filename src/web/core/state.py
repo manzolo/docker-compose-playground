@@ -72,6 +72,7 @@ def create_operation(operation_id: str, operation_type: str, **kwargs) -> dict:
     elif operation_type == "cleanup":
         operation.update({
             "removed": 0,
+            "failed": 0,
             "containers": [],
         })
     

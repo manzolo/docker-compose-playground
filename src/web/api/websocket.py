@@ -12,6 +12,27 @@ router = APIRouter()
 logger = logging.getLogger("uvicorn")
 
 
+def parse_control_message(data: str) -> dict | None:
+    """
+    Parse control messages from WebSocket data.
+    Returns the parsed JSON dict if it's a valid control message, None otherwise.
+    """
+    try:
+        json_data = json.loads(data)
+        # Ensure json_data is a dictionary before returning
+        if isinstance(json_data, dict):
+            return json_data
+        else:
+            logger.debug("Received non-dict JSON data: %s (type: %s)", json_data, type(json_data).__name__)
+            return None
+    except json.JSONDecodeError:
+        # Not valid JSON, will be treated as regular shell input
+        return None
+    except Exception as e:
+        logger.warning("Unexpected error parsing JSON: %s", str(e))
+        return None
+
+
 @router.websocket("/ws/console/{container}")
 async def websocket_console(websocket: WebSocket, container: str):
     """WebSocket endpoint for container terminal console"""
@@ -144,11 +165,19 @@ async def websocket_console(websocket: WebSocket, container: str):
                     if data:
                         try:
                             # Try to parse as JSON for control messages
-                            try:
-                                json_data = json.loads(data)
-                                if json_data.get("type") == "resize":
+                            json_data = parse_control_message(data)
+                            
+                            # Handle control messages (e.g., terminal resize)
+                            if json_data and json_data.get("type") == "resize":
+                                try:
                                     cols = int(json_data.get("cols", 80))
                                     rows = int(json_data.get("rows", 24))
+                                    
+                                    # Validate dimensions
+                                    if cols <= 0 or rows <= 0:
+                                        logger.warning("Invalid terminal dimensions: %dx%d", cols, rows)
+                                        continue
+                                    
                                     # Resize the exec instance
                                     docker_client.api.exec_resize(
                                         exec_instance['Id'],
@@ -157,14 +186,27 @@ async def websocket_console(websocket: WebSocket, container: str):
                                     )
                                     logger.debug("Resized terminal for %s: %dx%d", container, cols, rows)
                                     continue  # Skip sending resize to container
-                            except json.JSONDecodeError:
-                                pass  # Not a JSON message, treat as regular input
+                                
+                                except (ValueError, TypeError) as e:
+                                    logger.warning("Invalid resize parameters: %s", str(e))
+                                    continue
+                                except Exception as e:
+                                    logger.error("Error resizing terminal for %s: %s", container, str(e))
+                                    continue
                             
-                            # Send regular input to container
-                            sock.send(data.encode('utf-8'))
+                            # Send regular input to container (not a resize message)
+                            if data and json_data is None:
+                                # Only send non-JSON data to container
+                                sock.send(data.encode('utf-8'))
+                            elif json_data and json_data.get("type") != "resize":
+                                # Unknown control message type, treat as regular input
+                                logger.debug("Unknown control message type: %s", json_data.get("type"))
+                                sock.send(data.encode('utf-8'))
+                        
                         except OSError as e:
                             logger.error("Socket error writing to container %s: %s", container, str(e))
                             break
+                
                 except WebSocketDisconnect:
                     logger.info("WebSocket disconnected while writing to container %s", container)
                     break

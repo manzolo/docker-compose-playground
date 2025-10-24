@@ -7,7 +7,7 @@
     <title>🐳 Docker Playground Dashboard</title>
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="/static/css/vendor/xterm-5.3.0.css">
-    
+
     <!-- CSS Modulari -->
     <link rel="stylesheet" href="/static/css/core/base.css">
     <link rel="stylesheet" href="/static/css/core/header.css">
@@ -55,7 +55,8 @@
             <div class="search-section">
                 <input type="text" id="filter" placeholder="🔍 Search containers..." autocomplete="off">
                 <span class="search-count" id="search-count"></span>
-                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()" title="Clear search">
+                <button class="search-clear-btn" id="search-clear" onclick="FilterManager.clearSearch()"
+                    title="Clear search">
                     ✕
                 </button>
             </div>
@@ -85,7 +86,8 @@
             </div>
 
             <div class="bulk-actions">
-                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()" title="Stop all running containers">
+                <button class="btn btn-sm btn-danger" onclick="BulkOperations.stopAllRunning()"
+                    title="Stop all running containers">
                     <span class="btn-icon">⏹</span> Stop All
                 </button>
             </div>
@@ -128,10 +130,12 @@
                     </div>
 
                     <div class="group-actions">
-                        <button onclick="GroupOperations.startGroup('{{ group_name }}')" class="btn btn-success btn-block group-start-btn">
+                        <button onclick="GroupOperations.startGroup('{{ group_name }}')"
+                            class="btn btn-success btn-block group-start-btn">
                             <span class="btn-icon">🚀</span> Start Stack
                         </button>
-                        <button onclick="GroupOperations.stopGroup('{{ group_name }}')" class="btn btn-danger btn-sm group-stop-btn">
+                        <button onclick="GroupOperations.stopGroup('{{ group_name }}')"
+                            class="btn btn-danger btn-sm group-stop-btn">
                             <span class="btn-icon">⏹</span> Stop All
                         </button>
                     </div>
@@ -154,7 +158,8 @@
             {% set feature = features.get(name, {}) %}
             {% set running_info = running.get(name) %}
 
-            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}" data-container="playground-{{ name }}">
+            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
+                data-container="playground-{{ name }}">
                 <div class="card-header">
                     <h3>{{ name }}</h3>
                     <div class="header-badges">
@@ -214,7 +219,7 @@
                         </div>
                         <span class="stat-cpu-text">--</span>
                     </div>
-                    
+
                     <div class="stat-item">
                         <span class="stat-label">Memory</span>
                         <div class="stat-bar">
@@ -222,17 +227,17 @@
                         </div>
                         <span class="stat-memory-text">--</span>
                     </div>
-                    
+
                     <div class="stat-item">
                         <span class="stat-label">Network</span>
                         <span class="stat-network-text">--</span>
                     </div>
-                    
+
                     <div class="stat-item">
                         <span class="stat-label">I/O</span>
                         <span class="stat-io-text">--</span>
                     </div>
-                    
+
                     <div class="stat-item">
                         <span class="stat-label">Processes</span>
                         <span class="stat-processes-text">--</span>
@@ -241,14 +246,19 @@
 
                 <div class="card-actions">
                     {% if running_info %}
-                    <button class="btn btn-danger" onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
+                    <button class="btn btn-danger"
+                        onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
                         <span class="btn-icon">⏹</span> Stop
                     </button>
                     <button class="btn btn-primary" onclick="showLogs('{{ running_info.name }}')">
                         <span class="btn-icon">📋</span> Logs
                     </button>
-                    <button class="btn btn-success" onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
+                    <button class="btn btn-success"
+                        onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
                         <span class="btn-icon">💻</span> Console
+                    </button>
+                    <button class="btn btn-info" title="Cleanup container"
+                        onclick="ContainerManager.cleanupContainer('{{ running_info.name }}')">🧹 Clean
                     </button>
                     {% else %}
                     <button class="btn btn-success btn-block" onclick="ContainerManager.startContainer('{{ name }}')">
@@ -293,7 +303,8 @@
                         <span class="follow-icon">▶</span> Follow
                     </button>
                     <span id="followStatus" class="follow-status"></span>
-                    <button id="logFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⊡</button>
+                    <button id="logFullscreenBtn" class="modal-fullscreen-btn"
+                        onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⊡</button>
                 </div>
                 <button class="modal-close" onclick="LogsManager.close()">&times;</button>
             </div>
@@ -312,7 +323,8 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>💻 Interactive Console</h2>
-                <button id="consoleFullscreenBtn" class="modal-fullscreen-btn" onclick="FullscreenManager.toggleConsoleFullscreen()" title="Toggle fullscreen">⊡</button>
+                <button id="consoleFullscreenBtn" class="modal-fullscreen-btn"
+                    onclick="FullscreenManager.toggleConsoleFullscreen()" title="Toggle fullscreen">⊡</button>
                 <button class="modal-close" onclick="ConsoleManager.close()">&times;</button>
             </div>
             <div class="modal-body">
@@ -336,7 +348,8 @@
                 <h2>⚡ Execute Command</h2>
                 <div class="modal-header-left">
                     <div class="log-info">
-                        Container: <strong id="commandContainerName"></strong> | Image: <strong id="commandImageName"></strong>
+                        Container: <strong id="commandContainerName"></strong> | Image: <strong
+                            id="commandImageName"></strong>
                     </div>
                 </div>
                 <button class="modal-close" onclick="ExecuteCommandManager.close()">&times;</button>
@@ -347,7 +360,7 @@
                     <input type="text" id="commandInput" placeholder="e.g., apt list --installed" autocomplete="off">
                     <div class="command-input-help">💡 Examples: ps aux, df -h, netstat -tuln, env</div>
                 </div>
-                
+
                 <div class="command-output-group">
                     <label>Output:</label>
                     <pre id="commandOutput" class="command-output"></pre>
@@ -355,7 +368,8 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-sm" onclick="ExecuteCommandManager.clearOutput()">Clear</button>
-                <button class="btn btn-secondary btn-sm" onclick="ExecuteCommandManager.copyOutput()">Copy Output</button>
+                <button class="btn btn-secondary btn-sm" onclick="ExecuteCommandManager.copyOutput()">Copy
+                    Output</button>
                 <button class="btn btn-primary" onclick="ExecuteCommandManager.executeCommand()">Execute</button>
                 <button class="btn btn-secondary" onclick="ExecuteCommandManager.close()">Close</button>
             </div>
@@ -370,21 +384,26 @@
                 <h2>🔍 Container Diagnostics</h2>
                 <div class="modal-header-left">
                     <div class="log-info">
-                        Container: <strong id="diagnosticsContainerName"></strong> | Image: <strong id="diagnosticsImageName"></strong>
+                        Container: <strong id="diagnosticsContainerName"></strong> | Image: <strong
+                            id="diagnosticsImageName"></strong>
                     </div>
                 </div>
                 <button class="modal-close" onclick="ExecuteCommandManager.closeDiagnostics()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="diagnostics-tabs">
-                    <button class="diagnostics-tab-btn active" onclick="ExecuteCommandManager.switchTab('processes')">Processes</button>
+                    <button class="diagnostics-tab-btn active"
+                        onclick="ExecuteCommandManager.switchTab('processes')">Processes</button>
                     <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('disk')">Disk</button>
-                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('network')">Network</button>
-                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('environment')">Environment</button>
-                    <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('uptime')">Uptime</button>
+                    <button class="diagnostics-tab-btn"
+                        onclick="ExecuteCommandManager.switchTab('network')">Network</button>
+                    <button class="diagnostics-tab-btn"
+                        onclick="ExecuteCommandManager.switchTab('environment')">Environment</button>
+                    <button class="diagnostics-tab-btn"
+                        onclick="ExecuteCommandManager.switchTab('uptime')">Uptime</button>
                     <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('logs')">Logs</button>
                 </div>
-                
+
                 <div id="diagnosticsProcesses" class="diagnostics-tab"></div>
                 <div id="diagnosticsDisk" class="diagnostics-tab" style="display: none;"></div>
                 <div id="diagnosticsNetwork" class="diagnostics-tab" style="display: none;"></div>
