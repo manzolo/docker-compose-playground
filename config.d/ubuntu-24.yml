@@ -17,7 +17,6 @@ images:
          apt search package_name                   # Search package
 
       🔧 System Info:
-         lsb_release -a                            # Ubuntu version
          uname -a                                  # Kernel info
          df -h                                     # Disk usage
          free -h                                   # Memory usage
