@@ -29,6 +29,18 @@ A professional tool for managing multiple Docker development environments. Choos
 <details>
 <summary>Click to view screenshots</summary>
 
+<img width="1312" height="897" alt="immagine" src="https://github.com/user-attachments/assets/e4abe08f-14cc-4f43-944d-16a34996e6e7" />
+
+<img width="1312" height="897" alt="immagine" src="https://github.com/user-attachments/assets/42dc7a5f-dfbb-4c40-a0bc-4ca7bc57d33c" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/1de7a0c3-a63e-40e9-b6c9-6868a80ac6bc" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/c7b078a5-fa1c-4005-b3eb-12278f733eff" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/a02bd18c-54df-4ce0-8f55-25042621076e" />
+
+<img width="1887" height="903" alt="immagine" src="https://github.com/user-attachments/assets/06105eca-0e84-49bd-b44f-1641565b6e4f" />
+
 
 </details>
 
