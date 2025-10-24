@@ -198,7 +198,7 @@ def stop_group(
                 cont.stop(timeout=10)  # 10 seconds for dev environments
                 
                 if remove:
-                    cont.remove()
+                    cont.remove(force=True)
                 
                 progress.update(task, description=f"[green]Stopped {container_name}[/green]")
                 success_count += 1

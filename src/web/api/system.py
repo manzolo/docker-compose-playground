@@ -448,7 +448,7 @@ async def cleanup_all_background(operation_id: str, containers):
                 c.stop(timeout=timeout)
             
             # Rimuovi il container
-            c.remove()
+            c.remove(force=True)
             logger.info(f"Container rimosso: {container_name}")
             
             # Rimuovi i volumi associati al container
