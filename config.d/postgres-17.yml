@@ -52,5 +52,5 @@ images:
     - 5432:5432
     scripts:
       post_start: postgres_init.sh
-      pre_stop: postgres_backup.sh
+      pre_stop: postgres_halt.sh
     shell: /bin/bash

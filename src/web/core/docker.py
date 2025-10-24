@@ -25,6 +25,7 @@ docker_client = docker.from_env()
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 SHARED_DIR = BASE_DIR / "shared-volumes"
 NETWORK_NAME = "playground-network"
+SCRIPTS_DIR = BASE_DIR / "scripts"
 
 
 def ensure_network():
@@ -329,14 +330,42 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
         logger.error(error_msg)
         return {"status": "failed", "name": base_container_name, "error": error_msg}
 
+
+def has_default_script(container_name: str, script_type: str) -> bool:
+    """Check if a default script exists for a container
+    
+    Args:
+        container_name: Container name without 'playground-' prefix (e.g., 'mysql-8')
+        script_type: 'init' or 'halt'
+    
+    Returns:
+        bool: True if default script exists
+    """
+    full_container_name = f"playground-{container_name}" if not container_name.startswith("playground-") else container_name
+    script_name = f"{container_name}/{full_container_name}-{script_type}.sh"
+    script_path = SCRIPTS_DIR / script_name
+    return script_path.exists()
+
+
 def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str, bool]:
-    """Get special features of a container"""
+    """Get special features of a container, including default scripts"""
     img_data = config.get(image_name, {})
+    
+    # Check for YAML configured scripts
+    has_yaml_post_start = bool(img_data.get('scripts', {}).get('post_start'))
+    has_yaml_pre_stop = bool(img_data.get('scripts', {}).get('pre_stop'))
+    
+    # Check for default scripts
+    has_default_post_start = has_default_script(image_name, 'init')
+    has_default_pre_stop = has_default_script(image_name, 'halt')
+    
     return {
         'has_motd': bool(img_data.get('motd')),
-        'has_scripts': bool(img_data.get('scripts')),
-        'has_post_start': bool(img_data.get('scripts', {}).get('post_start')),
-        'has_pre_stop': bool(img_data.get('scripts', {}).get('pre_stop')),
+        'has_scripts': bool(img_data.get('scripts')) or has_default_post_start or has_default_pre_stop,
+        'has_post_start': has_yaml_post_start or has_default_post_start,
+        'has_pre_stop': has_yaml_pre_stop or has_default_pre_stop,
+        'has_default_post_start': has_default_post_start,
+        'has_default_pre_stop': has_default_pre_stop,
         'has_volumes': bool(img_data.get('volumes'))
     }
 
