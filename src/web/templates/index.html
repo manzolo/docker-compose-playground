@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/static/css/core/dark-mode.css">
     <link rel="stylesheet" href="/static/css/core/operation-monitor.css">
     <link rel="stylesheet" href="/static/css/components/card_actions_tabs.css">
+    <link rel="stylesheet" href="/static/css/components/motd.css">
 
 </head>
 
@@ -203,10 +204,9 @@
                             <span class="motd-preview">({{ data.motd_commands|length }} commands)</span>
                         </div>
                     </div>
-
                     <div class="motd-content">
                         <div class="motd-body">
-                            <div class="motd-text">{{ data.motd|escape }}</div>
+                            <div class="motd-text">{{ data.motd|motd_to_html }}</div>
                         </div>
                     </div>
                 </div>

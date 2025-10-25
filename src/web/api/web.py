@@ -7,7 +7,7 @@ import logging
 from src.web.core.config import load_config
 from src.web.core.docker import docker_client, get_container_features
 from src.web.utils.helpers import natural_sort_key
-from src.web.utils.motd_processor import parse_motd_commands, clean_motd_text
+from src.web.utils.motd_processor import parse_motd_commands, clean_motd_text, motd_to_html
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
@@ -15,6 +15,9 @@ logger = logging.getLogger("uvicorn")
 # Templates setup
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+# Registra i filtri Jinja2
+templates.env.filters['motd_to_html'] = motd_to_html
 
 
 def enrich_image_data(config):
