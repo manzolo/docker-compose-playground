@@ -446,9 +446,6 @@ const ContainerManager = {
                 <button class="btn btn-success" onclick="ConsoleManager.open('${containerName}', '${imageName}')">
                     <span class="btn-icon">💻</span> Console
                 </button>
-                <button class="btn btn-info" onclick="ContainerManager.cleanupContainer('${containerName}', '${imageName}')">
-                    <span class="btn-icon">🧹</span> Clean
-                </button>
             `;
         } else {
             card.removeAttribute('data-container');
@@ -458,6 +455,9 @@ const ContainerManager = {
             actions.innerHTML = `
                 <button class="btn btn-success btn-block" onclick="ContainerManager.startContainer('${imageName}')">
                     <span class="btn-icon">▶</span> Start Container
+                </button>
+                <button class="btn btn-info" onclick="ContainerManager.cleanupContainer('${imageName}', '${imageName}')">
+                    <span class="btn-icon">🧹</span> Clean
                 </button>
             `;
         }

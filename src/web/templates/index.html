@@ -261,14 +261,16 @@
                         onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
                         <span class="btn-icon">💻</span> Console
                     </button>
-                    <button class="btn btn-info" title="Cleanup container"
-                        onclick="ContainerManager.cleanupContainer('{{ running_info.name }}')">🧹 Clean
-                    </button>
                     {% else %}
                     <button class="btn btn-success btn-block" onclick="ContainerManager.startContainer('{{ name }}')">
                         <span class="btn-icon">▶</span> Start Container
                     </button>
                     {% endif %}
+                    <button class="btn btn-sm btn-outline btn-clean" 
+                            onclick="ContainerManager.cleanupContainer('{{ name if not running_info else running_info.name }}', '{{ name }}')" 
+                            title="Clean container logs and temporary files">
+                        <span class="btn-icon">🧹</span> Clean
+                    </button>
                 </div>
 
                 <!-- Quick Actions (for running containers) -->
