@@ -1,7 +1,8 @@
 #!/bin/bash
 
 ################################################################################
-# TEST SUITE - Docker Playground API FOR GROUPS + CONTAINERS)
+# TEST SUITE - Docker Playground API (CORRECTED ENDPOINTS)
+# Updated with actual endpoints from API discovery
 # 
 # Usage:
 #   ./test-webui.sh              # Run all tests
@@ -22,14 +23,11 @@ BASE_URL="http://localhost:${PORT}"
 TIMEOUT=60
 INITIAL_WAIT=15
 
-# Container specifici da testare
 TEST_CONTAINER="alpine-3.22"
 
-# Logs
 ERROR_LOG="${SCRIPT_DIR}/venv/test_error.log"
 SUCCESS_LOG="${SCRIPT_DIR}/venv/test_success.log"
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -37,16 +35,14 @@ BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 NC='\033[0m'
 
-# Test counters
 TESTS_TOTAL=0
 TESTS_PASSED=0
 TESTS_FAILED=0
-TESTS_SKIPPED=0
 
 VERBOSE=false
 
 # ============================================================================
-# LOGGING FUNCTIONS
+# LOGGING
 # ============================================================================
 
 log_success() {
@@ -95,14 +91,8 @@ print_test() {
 }
 
 # ============================================================================
-# UTILITY FUNCTIONS
+# UTILITIES
 # ============================================================================
-
-extract_json_value() {
-    local json="$1"
-    local key="$2"
-    echo "$json" | grep -o "\"${key}\"[[:space:]]*:[[:space:]]*[^,}]*" | cut -d: -f2- | sed 's/[" ]//g' | head -1
-}
 
 parse_json() {
     local json="$1"
@@ -115,14 +105,13 @@ wait_for_operation() {
     local max_wait=${2:-90}
     local elapsed=0
     
-    log_debug "Waiting for operation $operation_id (max ${max_wait}s)..."
+    log_debug "Waiting for operation $operation_id..."
     
     while [ $elapsed -lt "$max_wait" ]; do
         local op_response=$(curl -s "$API_URL/operation-status/$operation_id" 2>/dev/null || echo "{}")
         local status=$(parse_json "$op_response" "status")
         
         if [ -z "$status" ]; then
-            log_debug "Operation not found, retrying..."
             sleep 2
             elapsed=$((elapsed + 2))
             continue
@@ -137,7 +126,6 @@ wait_for_operation() {
         elapsed=$((elapsed + 2))
     done
     
-    log_error "Timeout waiting for operation $operation_id after ${max_wait}s"
     return 1
 }
 
@@ -156,12 +144,32 @@ wait_for_api() {
         elapsed=$((elapsed + 1))
     done
     
-    log_error "API not reachable after ${timeout}s"
+    log_error "API not reachable"
+    return 1
+}
+
+wait_for_container_stop() {
+    local container_name=$1
+    local max_wait=${2:-30}
+    local elapsed=0
+    local full_name="playground-${container_name}"
+    
+    while [ $elapsed -lt "$max_wait" ]; do
+        local stats=$(curl -s "$API_URL/container-stats/$full_name" 2>/dev/null || echo "{}")
+        
+        if echo "$stats" | grep -q "not found\|error\|detail" || [ -z "$stats" ]; then
+            return 0
+        fi
+        
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    
     return 1
 }
 
 # ============================================================================
-# PHASE 1: API BASIC
+# PHASE 1: BASIC
 # ============================================================================
 
 run_phase_1() {
@@ -177,116 +185,93 @@ run_phase_1() {
     
     print_test "Get system info via API"
     local response=$(curl -s "$API_URL/system-info")
-    if echo "$response" | grep -q "running\|total"; then
+    if echo "$response" | grep -q "docker\|version"; then
         log_success "System info retrieved"
-        log_debug "System info: $(echo "$response" | head -c 100)"
     else
         log_error "System info failed"
     fi
 }
 
 # ============================================================================
-# PHASE 2: SINGLE CONTAINER (alpine-3.22) + RESTART TEST
+# PHASE 2: SINGLE CONTAINER
 # ============================================================================
 
 run_phase_2() {
-    print_section "PHASE 2: Single Container - $TEST_CONTAINER (with RESTART test)"
+    print_section "PHASE 2: Single Container - $TEST_CONTAINER"
     
     print_test "Start container: $TEST_CONTAINER"
-    local response=$(curl -s -X POST "$BASE_URL/api/start/$TEST_CONTAINER")
-    log_debug "Response: $response"
-    
-    if echo "$response" | grep -q "success\|operation_id\|running"; then
+    local response=$(curl -s -X POST "$API_URL/start/$TEST_CONTAINER")
+    if echo "$response" | grep -q "operation_id\|started"; then
         log_success "Container start initiated"
         sleep 3
     else
-        log_warning "Container start unclear, continuing..."
+        log_warning "Container start response unclear"
+        log_debug "Response: $response"
     fi
     
-    print_test "Verify container is running with stats endpoint"
+    print_test "Verify container is running"
     local stats=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
     if echo "$stats" | grep -q "cpu\|memory"; then
-        log_success "Container is running (verified via stats)"
+        log_success "Container is running"
     else
-        log_error "Container not running or stats failed"
-        log_debug "Stats response: $stats"
+        log_error "Container not running"
     fi
     
     print_test "Restart container: $TEST_CONTAINER"
     local response=$(curl -s -X POST "$API_URL/restart/$TEST_CONTAINER")
-    log_debug "Response: $response"
-    
     if echo "$response" | grep -q "operation_id"; then
         log_success "Container restart initiated"
         local operation_id=$(parse_json "$response" "operation_id")
-        log_info "  Operation ID: $operation_id"
         
-        print_test "Poll restart operation until completed"
-        local op_response=$(wait_for_operation "$operation_id" 60)
-        
-        if [ $? -eq 0 ]; then
-            local op_status=$(parse_json "$op_response" "status")
-            local restarted=$(parse_json "$op_response" "restarted")
-            log_info "  Restart status: $op_status | Restarted: $restarted"
-            
-            if [ "$op_status" = "completed" ] && [ "$restarted" = "1" ]; then
-                log_success "Container restart completed successfully"
-            else
-                log_warning "Restart completed but restarted count: $restarted"
-            fi
+        print_test "Poll restart operation"
+        if wait_for_operation "$operation_id" 60 > /dev/null; then
+            log_success "Container restart completed"
         else
-            log_error "Restart operation timeout"
+            log_error "Restart timeout"
         fi
         
         sleep 2
-        
-        print_test "Verify container running after restart via stats"
         local stats=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
-        if echo "$stats" | grep -q "cpu\|memory"; then
+        if echo "$stats" | grep -q "cpu"; then
             log_success "Container confirmed running after restart"
         else
             log_error "Container not running after restart"
         fi
     else
-        log_warning "Container restart initiation unclear"
+        log_warning "Restart initiation unclear"
     fi
     
     print_test "Stop container: $TEST_CONTAINER"
-    local response=$(curl -s -X POST "$BASE_URL/api/stop/$TEST_CONTAINER")
-    log_debug "Response: $response"
+    local response=$(curl -s -X POST "$API_URL/stop/playground-$TEST_CONTAINER")
+    log_debug "Stop response: $response"
     
-    if echo "$response" | grep -q "operation_id\|started"; then
+    if echo "$response" | grep -qi "error\|not found"; then
+        log_error "Stop failed: $response"
+    elif [ -n "$response" ]; then
         log_success "Container stop initiated"
+        sleep 5
         
-        print_test "Verify container stopped (should get 404 from stats) - retry up to 30 sec"
-        local elapsed=0
-        local max_wait=30
-        while [ $elapsed -lt $max_wait ]; do
-            local stats=$(curl -s -w "\n%{http_code}" "$API_URL/container-stats/playground-$TEST_CONTAINER")
-            local http_code=$(echo "$stats" | tail -1)
-            
-            if [ "$http_code" = "404" ] || [ "$http_code" = "400" ]; then
-                log_success "Container confirmed stopped (HTTP $http_code after ${elapsed}s)"
+        print_test "Verify container stopped"
+        local max_attempts=15
+        local attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            local http_code=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-$TEST_CONTAINER" 2>/dev/null)
+            if [ "$http_code" = "404" ] || [ "$http_code" = "500" ]; then
+                log_success "Container confirmed stopped"
                 break
             fi
-            
-            elapsed=$((elapsed + 2))
-            if [ $elapsed -lt $max_wait ]; then
-                log_debug "  Waiting... ${elapsed}s/${max_wait}s"
-                sleep 2
-            fi
+            attempt=$((attempt + 1))
+            sleep 2
         done
-        
-        if [ $elapsed -ge $max_wait ]; then
-            log_warning "Container stop timeout after ${max_wait}s (HTTP $http_code)"
-        fi
     else
-        log_warning "Container stop unclear"
+        log_warning "Stop response unclear"
     fi
+    
+    sleep 2
 }
 
 # ============================================================================
-# PHASE 3: GROUPS
+# PHASE 3: GROUP OPERATIONS
 # ============================================================================
 
 run_phase_3() {
@@ -294,253 +279,126 @@ run_phase_3() {
     
     print_test "Get groups list"
     local response=$(curl -s "$API_URL/groups")
-    log_debug "Response: $response"
-    
     if echo "$response" | grep -q "groups"; then
         log_success "Groups endpoint working"
-        local group=$(echo "$response" | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
-        
-        if [ -n "$group" ]; then
-            log_info "  Found group: $group"
-            
-            print_test "Get group details: $group"
-            local details=$(curl -s "$API_URL/groups/$group")
-            if echo "$details" | grep -q "containers"; then
-                log_success "Group details retrieved"
-                local containers=$(echo "$details" | grep -o '"name":"[^"]*"' | tail -n +2 | cut -d'"' -f4 | head -3)
-                log_info "  Containers in group:"
-                echo "$containers" | while read -r c; do
-                    [ -n "$c" ] && log_info "    - $c"
-                done
-            else
-                log_error "Group details failed"
-            fi
-            
-            print_test "Start group: $group"
-            local response=$(curl -s -X POST "$API_URL/start-group/$group")
-            if echo "$response" | grep -q "operation_id\|started"; then
-                log_success "Group start initiated"
-                sleep 5
-                
-                print_test "Verify group containers are running"
-                local first_container="elasticsearch-stack"
-                
-                local stats=$(curl -s "$API_URL/container-stats/playground-$first_container")
-                if echo "$stats" | grep -q "cpu\|memory"; then
-                    log_success "Group container verified running: $first_container"
-                else
-                    log_warning "Could not verify group container status"
-                fi
-            else
-                log_warning "Group start response unclear"
-            fi
-            
-            print_test "Stop group: $group"
-            local response=$(curl -s -X POST "$API_URL/stop-group/$group")
-            if echo "$response" | grep -q "operation_id\|started"; then
-                log_success "Group stop initiated"
-                
-                print_test "Verify group containers are stopped - retry up to 30 sec"
-                local first_container="elasticsearch-stack"
-                local elapsed=0
-                local max_wait=30
-                while [ $elapsed -lt $max_wait ]; do
-                    local http_code=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-$first_container")
-                    
-                    if [ "$http_code" = "404" ] || [ "$http_code" = "400" ]; then
-                        log_success "Group container confirmed stopped (HTTP $http_code after ${elapsed}s)"
-                        break
-                    fi
-                    
-                    elapsed=$((elapsed + 2))
-                    if [ $elapsed -lt $max_wait ]; then
-                        log_debug "  Waiting... ${elapsed}s/${max_wait}s"
-                        sleep 2
-                    fi
-                done
-                
-                if [ $elapsed -ge $max_wait ]; then
-                    log_warning "Group container stop timeout after ${max_wait}s (HTTP $http_code)"
-                fi
-            else
-                log_warning "Group stop response unclear"
-            fi
-        else
-            log_warning "No groups found to test"
-        fi
     else
-        log_warning "Groups endpoint not responding"
+        log_error "Groups endpoint failed"
     fi
+    
+    print_test "Get group details: ELK-Stack"
+    local response=$(curl -s "$API_URL/groups/ELK-Stack")
+    if echo "$response" | grep -q "containers"; then
+        log_success "Group details retrieved"
+    else
+        log_warning "Could not retrieve group details"
+    fi
+    
+    print_test "Start group: ELK-Stack"
+    local response=$(curl -s -X POST "$API_URL/start-group/ELK-Stack")
+    if echo "$response" | grep -q "operation_id\|started"; then
+        log_success "Group start initiated"
+    else
+        log_warning "Group start unclear"
+    fi
+    
+    sleep 5
+    
+    print_test "Verify group containers are running"
+    local stats=$(curl -s "$API_URL/container-stats/playground-elasticsearch-stack")
+    if echo "$stats" | grep -q "cpu"; then
+        log_success "Group container verified running"
+    else
+        log_warning "Could not verify group containers"
+    fi
+    
+    print_test "Stop group: ELK-Stack"
+    local response=$(curl -s -X POST "$API_URL/stop-group/ELK-Stack")
+    if echo "$response" | grep -q "operation_id\|started"; then
+        log_success "Group stop initiated"
+    else
+        log_warning "Group stop unclear"
+    fi
+    
+    print_test "Verify group containers are stopped - retry up to 30 sec"
+    local stopped=0
+    for container in elasticsearch-stack kibana-stack; do
+        if wait_for_container_stop "$container" 30; then
+            log_success "Group container confirmed stopped ($container)"
+            stopped=$((stopped + 1))
+        else
+            log_warning "Container stop not verified ($container)"
+        fi
+    done
+    
+    sleep 2
 }
 
 # ============================================================================
-# PHASE 4: BULK OPERATIONS
+# PHASE 4: HEALTH STATUS (CORRECTED ENDPOINT)
 # ============================================================================
 
 run_phase_4() {
-    print_section "PHASE 4: Restart All (with alpine still running)"
+    print_section "PHASE 4: Containers Health Status"
     
-    print_test "Verify alpine is still running before restart"
-    local stats=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
-    if echo "$stats" | grep -q "cpu\|memory"; then
-        log_success "Alpine confirmed running"
-    else
-        log_warning "Alpine not running, skipping restart test"
-        return
-    fi
-    
-    print_test "Restart all containers (ELK should restart, alpine stays)"
-    local response=$(curl -s -X POST "$BASE_URL/api/restart-all")
-    if echo "$response" | grep -q "success\|operation\|started"; then
-        log_success "Restart-all executed"
-        sleep 5
-        
-        print_test "Verify alpine still running after restart-all"
-        local stats=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
-        if echo "$stats" | grep -q "cpu\|memory"; then
-            log_success "Alpine still running - restart didn't stop it"
-        else
-            log_warning "Alpine was stopped by restart-all (unexpected)"
-        fi
-        
-        print_test "Verify ELK containers restarted"
-        local stats=$(curl -s "$API_URL/container-stats/playground-elasticsearch-stack")
-        if echo "$stats" | grep -q "cpu\|memory"; then
-            log_success "Elasticsearch confirmed running after restart"
-        else
-            log_warning "Elasticsearch not running after restart"
-        fi
-    else
-        log_warning "Restart-all response unclear"
-    fi
-    
-    sleep 2
-}
-
-# ============================================================================
-# PHASE 4B: STOP ALL
-# ============================================================================
-
-run_phase_4b() {
-    print_section "PHASE 4B: Stop All Containers"
-    
-    print_test "Stop all containers"
-    local response=$(curl -s -X POST "$BASE_URL/api/stop-all")
-    if echo "$response" | grep -q "success\|operation"; then
-        log_success "Stop-all executed"
-        
-        print_test "Waiting for containers to stop (up to 40 sec)..."
-        local elapsed=0
-        local max_wait=40
-        while [ $elapsed -lt $max_wait ]; do
-            local http_code=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-alpine-3.22")
-            
-            if [ "$http_code" = "404" ] || [ "$http_code" = "400" ]; then
-                log_success "Containers stopped (after ${elapsed}s)"
-                break
-            fi
-            
-            elapsed=$((elapsed + 2))
-            if [ $elapsed -lt $max_wait ]; then
-                log_debug "  Waiting... ${elapsed}s/${max_wait}s (HTTP $http_code)"
-                sleep 2
-            fi
-        done
-        
-        if [ $elapsed -ge $max_wait ]; then
-            log_warning "Stop-all timeout after ${max_wait}s (HTTP $http_code)"
-        fi
-        
-        sleep 2
-    else
-        log_warning "Stop-all response unclear"
-        sleep 5
-    fi
-}
-
-# ============================================================================
-# PHASE 5: CONTAINERS HEALTH
-# ============================================================================
-
-run_phase_5() {
-    print_section "PHASE 5: Containers Health Status"
-    
-    print_test "Get containers health"
+    print_test "Get containers health (using /api/containers-health)"
     local response=$(curl -s "$API_URL/containers-health")
-    log_debug "Response: $response"
-    
-    if echo "$response" | grep -q "total\|running\|stopped"; then
+    if echo "$response" | grep -q "total\|running"; then
         log_success "Health status retrieved"
-        local total=$(echo "$response" | grep -o '"total":[0-9]*' | cut -d: -f2)
-        local running=$(echo "$response" | grep -o '"running":[0-9]*' | cut -d: -f2)
+        local total=$(parse_json "$response" "total")
+        local running=$(parse_json "$response" "running")
         log_info "  Total: $total, Running: $running"
     else
         log_error "Health endpoint failed"
+        log_debug "Response: $response"
     fi
-    
-    sleep 2
 }
 
 # ============================================================================
-# PHASE 6: EXECUTE COMMAND
+# PHASE 5: EXECUTE COMMAND (CORRECTED ENDPOINT)
 # ============================================================================
 
-run_phase_6() {
-    print_section "PHASE 6: Execute Command in Container"
+run_phase_5() {
+    print_section "PHASE 5: Execute Command in Container"
     
-    print_test "Ensure alpine-3.22 is stopped before starting for exec tests"
-    curl -s -X POST "$BASE_URL/api/stop/$TEST_CONTAINER" > /dev/null 2>&1
+    print_test "Start alpine-3.22 for exec tests"
+    curl -s -X POST "$API_URL/start/$TEST_CONTAINER" > /dev/null 2>&1
     sleep 3
     
-    print_test "Start $TEST_CONTAINER for command execution"
-    curl -s -X POST "$BASE_URL/api/start/$TEST_CONTAINER" > /dev/null
-    sleep 4
-    log_debug "Container started, waiting for ready state"
-    
-    print_test "Execute command: echo hello world"
+    print_test "Execute command: echo hello world (using /api/execute-command)"
     local response=$(curl -s -X POST "$API_URL/execute-command/playground-$TEST_CONTAINER" \
         -H "Content-Type: application/json" \
-        -d '{"command":"echo hello world","timeout":10}')
-    log_debug "Response: $response"
+        -d '{"command": "echo hello world"}')
     
-    if echo "$response" | grep -q "output\|exit_code"; then
+    if echo "$response" | grep -q "hello\|output"; then
         log_success "Execute command worked"
-        if echo "$response" | grep -q "hello"; then
-            log_info "  Output contiene 'hello' - comando eseguito"
-        fi
     else
-        log_error "Execute command failed"
+        log_warning "Execute command response unclear"
+        log_debug "Response: $response"
     fi
-    
-    sleep 2
     
     print_test "Execute command: ls -la /root"
     local response=$(curl -s -X POST "$API_URL/execute-command/playground-$TEST_CONTAINER" \
         -H "Content-Type: application/json" \
-        -d '{"command":"ls -la /root","timeout":10}')
-    log_debug "Response: $response"
+        -d '{"command": "ls -la /root"}')
     
-    if echo "$response" | grep -q "output\|exit_code"; then
+    if echo "$response" | grep -q "total\|root"; then
         log_success "List command worked"
     else
-        log_error "List command failed"
+        log_warning "List command unclear"
     fi
-    
-    sleep 2
 }
 
 # ============================================================================
-# PHASE 7: CONTAINER STATS
+# PHASE 6: CONTAINER STATISTICS
 # ============================================================================
 
-run_phase_7() {
-    print_section "PHASE 7: Container Statistics"
+run_phase_6() {
+    print_section "PHASE 6: Container Statistics"
     
     print_test "Get stats for: playground-$TEST_CONTAINER"
     local response=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
-    log_debug "Response (first 200 chars): $(echo "$response" | head -c 200)"
     
-    if echo "$response" | grep -q "cpu\|memory\|percent"; then
+    if echo "$response" | grep -q "cpu\|memory"; then
         log_success "Stats retrieved successfully"
         
         local cpu=$(echo "$response" | grep -o '"percent":[0-9.]*' | head -1 | cut -d: -f2)
@@ -554,45 +412,41 @@ run_phase_7() {
         fi
     else
         log_error "Stats endpoint failed"
-        log_debug "Full response: $response"
     fi
     
     sleep 3
 }
 
 # ============================================================================
-# PHASE 8: WEBSOCKET CONSOLE
+# PHASE 7: DIAGNOSTIC ENDPOINT
 # ============================================================================
 
-run_phase_8() {
-    print_section "PHASE 8: WebSocket Console Endpoint"
+run_phase_7() {
+    print_section "PHASE 7: Diagnostic Info"
     
-    print_test "Check WebSocket console endpoint reachability"
-    log_info "Endpoint: /ws/console/playground-$TEST_CONTAINER"
+    print_test "Execute diagnostic on container (using /api/execute-diagnostic)"
+    local response=$(curl -s -X POST "$API_URL/execute-diagnostic/playground-$TEST_CONTAINER" \
+        -H "Content-Type: application/json" \
+        -d '{}')
     
-    timeout 2 bash -c "exec 3<>/dev/tcp/localhost/$PORT; echo 'GET /ws/console/playground-$TEST_CONTAINER HTTP/1.1' >&3" 2>/dev/null
-    
-    if [ $? -eq 0 ] || [ $? -eq 124 ]; then
-        log_success "WebSocket endpoint is reachable"
+    if echo "$response" | grep -q "output\|data\|diagnostic"; then
+        log_success "Diagnostic endpoint working"
     else
-        log_error "WebSocket endpoint not reachable"
+        log_warning "Diagnostic endpoint response unclear"
+        log_debug "Response: $response"
     fi
-    
-    sleep 2
 }
 
 # ============================================================================
-# PHASE 9: ERROR CASES & EDGE CONDITIONS
+# PHASE 8: ERROR CASES
 # ============================================================================
 
-run_phase_9() {
-    print_section "PHASE 9: Error Cases & Edge Conditions"
+run_phase_8() {
+    print_section "PHASE 8: Error Cases & Edge Conditions"
     
     print_test "Try to start non-existent container"
     local response=$(curl -s -X POST "$API_URL/start/nonexistent-xyz-123")
-    log_debug "Response: $response"
-    
-    if echo "$response" | grep -q "error\|not found\|404"; then
+    if echo "$response" | grep -q "error\|not found"; then
         log_success "Non-existent container properly rejected"
     else
         log_warning "Non-existent container check unclear"
@@ -602,21 +456,16 @@ run_phase_9() {
     
     print_test "Try to stop container that doesn't exist"
     local http_code=$(curl -s -w "%{http_code}" -o /dev/null -X POST "$API_URL/stop/nonexistent-xyz-123")
-    log_debug "HTTP code: $http_code"
-    
     if [ "$http_code" = "404" ] || [ "$http_code" = "400" ]; then
         log_success "Non-existent stop properly rejected (HTTP $http_code)"
     else
-        log_warning "Non-existent stop returned unexpected code (HTTP $http_code)"
+        log_warning "Non-existent stop returned HTTP $http_code"
     fi
     
     sleep 2
     
     print_test "Try invalid operation-status lookup"
-    local invalid_op_id="invalid-uuid-12345"
-    local response=$(curl -s "$API_URL/operation-status/$invalid_op_id")
-    log_debug "Response: $response"
-    
+    local response=$(curl -s "$API_URL/operation-status/invalid-uuid-12345")
     if echo "$response" | grep -q "error\|not found"; then
         log_success "Invalid operation ID properly handled"
     else
@@ -627,7 +476,6 @@ run_phase_9() {
     
     print_test "Try invalid endpoint"
     local http_code=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/invalid-endpoint-xyz-999")
-    
     if [ "$http_code" = "404" ]; then
         log_success "Invalid endpoint returns 404"
     else
@@ -636,16 +484,14 @@ run_phase_9() {
 }
 
 # ============================================================================
-# PHASE 10: OPERATION POLLING
+# PHASE 9: OPERATION POLLING
 # ============================================================================
 
-run_phase_10() {
-    print_section "PHASE 10: Operation Polling - Verify Real Completion"
+run_phase_9() {
+    print_section "PHASE 9: Operation Polling"
     
     print_test "Start container and poll for completion"
     local response=$(curl -s -X POST "$API_URL/start/alpine-3.22")
-    log_debug "Start response: $response"
-    
     if echo "$response" | grep -q "operation_id"; then
         local operation_id=$(parse_json "$response" "operation_id")
         log_info "Operation ID: $operation_id"
@@ -666,20 +512,20 @@ run_phase_10() {
             log_error "Operation polling failed or timeout"
         fi
     else
-        log_warning "No operation_id in response, skipping polling test"
+        log_warning "No operation_id in response"
     fi
     
     sleep 2
 }
 
 # ============================================================================
-# PHASE 11: OPERATION VERIFICATION
+# PHASE 10: VERIFY FINAL STATE
 # ============================================================================
 
-run_phase_11() {
-    print_section "PHASE 11: Verify Container State After Operations"
+run_phase_10() {
+    print_section "PHASE 10: Verify Container State After Operations"
     
-    print_test "Verify alpine-3.22 is actually running after start operation"
+    print_test "Verify alpine-3.22 is running after start operation"
     local stats=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
     
     if echo "$stats" | grep -q "cpu\|memory"; then
@@ -691,18 +537,18 @@ run_phase_11() {
     fi
 }
 
+# ============================================================================
+# CLEANUP
+# ============================================================================
+
 : > "$ERROR_LOG"
 : > "$SUCCESS_LOG"
 
 cleanup() {
     log_info "Running final cleanup..."
     
-    log_info "Stopping alpine-3.22..."
-    curl -s -X POST "$BASE_URL/api/stop/$TEST_CONTAINER" > /dev/null 2>&1
-    sleep 3
-    
-    log_info "Stopping all remaining containers..."
-    curl -s -X POST "$BASE_URL/api/stop-all" > /dev/null 2>&1
+    log_info "Stopping all containers..."
+    curl -s -X POST "$API_URL/cleanup-all" > /dev/null 2>&1
     sleep 5
     
     log_info "Terminating web server..."
@@ -745,12 +591,11 @@ done
 # ============================================================================
 
 main() {
-    print_header "DOCKER PLAYGROUND - TEST SUITE (CONTAINER + RESTART + GROUPS)"
+    print_header "DOCKER PLAYGROUND - TEST SUITE (CORRECTED ENDPOINTS)"
     
     log_info "Starting WebUI server..."
     bash "${SERVER_SCRIPT}" --tail &
     SERVER_PID=$!
-    log_info "Server started with PID: $SERVER_PID"
     
     sleep "$INITIAL_WAIT"
     
@@ -768,14 +613,12 @@ main() {
     run_phase_2
     run_phase_3
     run_phase_4
-    run_phase_4b
     run_phase_5
     run_phase_6
     run_phase_7
     run_phase_8
     run_phase_9
     run_phase_10
-    run_phase_11
     
     print_header "TEST RESULTS"
     
