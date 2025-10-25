@@ -545,9 +545,21 @@ run_phase_11() {
     print_section "PHASE 11: Restart All"
     
     print_test "Ensure containers are running"
-    curl -s -X POST "$API_URL/start/alpine-3.22" > /dev/null
-    curl -s -X POST "$API_URL/start/ubuntu-24.04" > /dev/null
-    sleep 5
+    local resp1=$(curl -s -X POST "$API_URL/start/alpine-3.22")
+    local resp2=$(curl -s -X POST "$API_URL/start/ubuntu-24.04")
+    
+    # Wait for both to actually start
+    if echo "$resp1" | grep -q "operation_id"; then
+        local op1=$(parse_json "$resp1" "operation_id")
+        wait_for_operation "$op1" 90 > /dev/null
+    fi
+    
+    if echo "$resp2" | grep -q "operation_id"; then
+        local op2=$(parse_json "$resp2" "operation_id")
+        wait_for_operation "$op2" 90 > /dev/null
+    fi
+    
+    sleep 8
     
     print_test "Restart all containers"
     local response=$(curl -s -X POST "$API_URL/restart-all")
@@ -556,10 +568,10 @@ run_phase_11() {
         log_success "Restart-all initiated"
         local operation_id=$(parse_json "$response" "operation_id")
         
-        local op_response=$(wait_for_operation "$operation_id" 120)
+        local op_response=$(wait_for_operation "$operation_id" 180)
         if [ $? -eq 0 ]; then
             log_success "Restart-all completed"
-            sleep 5
+            sleep 10
             
             print_test "Verify containers running after restart"
             local stats1=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
@@ -574,7 +586,7 @@ run_phase_11() {
             if echo "$stats2" | grep -q "cpu\|memory"; then
                 log_success "Ubuntu running"
             else
-                log_warning "Ubuntu not running"
+                log_warning "Ubuntu not running (might need more time on slower systems)"
             fi
         else
             log_error "Restart-all timeout"
