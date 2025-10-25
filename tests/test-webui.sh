@@ -1,8 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# TEST SUITE - Docker Playground API (CORRECTED ENDPOINTS)
-# Updated with actual endpoints from API discovery
+# TEST SUITE - Docker Playground API
 # 
 # Usage:
 #   ./test-webui.sh              # Run all tests
