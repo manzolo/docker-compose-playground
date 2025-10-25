@@ -1,0 +1,7 @@
+images:
+  debian-13:
+    category: linux
+    description: Debian 13 (Trixie)
+    image: debian:13
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
