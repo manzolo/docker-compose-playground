@@ -3,7 +3,7 @@ images:
     category: linux
     description: Alpine Linux 3.22 (Lightweight - 8MB)
     image: alpine:3.22
-    keep_alive_cmd: tail -f /dev/null
+    keep_alive_cmd: sleep infinity
     motd: |-
       ╔══════════════════════════════════════════════════════════════╗
       ║                 Alpine Linux Quick Reference                  ║
