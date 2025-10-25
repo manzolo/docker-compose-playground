@@ -14,7 +14,7 @@ images:
          set -e
          echo "Initializing Go 1.22 Playground..."
          CONTAINER_NAME="$1"
-         docker exec "${CONTAINER_NAME}" bash -c '
+         docker exec -e CONTAINER_NAME=${CONTAINER_NAME} "${CONTAINER_NAME}" bash -c '
          set -e
          #!/bin/bash
          
@@ -22,7 +22,11 @@ images:
          apt-get install -y -qq \
             curl wget nano git \
             >/dev/null 2>&1
-         cat << 'EOF' > /shared/server.go
+
+         CUSTOM_FOLDER="/shared/data/${CONTAINER_NAME#playground-}"
+         mkdir -p ${CUSTOM_FOLDER}
+
+         cat << 'EOF' > ${CUSTOM_FOLDER}/server.go
          package main
          
          import (
@@ -39,10 +43,10 @@ images:
          EOF
          
          # Imposta i permessi corretti
-         chown -R 1000:1000 /shared
-         chmod -R 755 /shared
+         chown -R 1000:1000 ${CUSTOM_FOLDER}
+         chmod -R 755 ${CUSTOM_FOLDER}
 
-         go run /shared/server.go &
+         go run ${CUSTOM_FOLDER}/server.go &
          
          # Verifica la versione di Go
          go version
