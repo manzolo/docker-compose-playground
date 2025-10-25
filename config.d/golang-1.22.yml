@@ -1,17 +1,71 @@
+# Metadati del gruppo
 images:
   golang-1.22:
     category: programming
     description: Go 1.22 (Latest)
     image: golang:1.22
     keep_alive_cmd: sleep infinity
-    motd: |-
+    shell: /bin/bash
+    ports:
+      - "8080:8080"  # Porta per il server HTTP
+    scripts:
+      post_start:
+        inline: |
+         set -e
+         echo "Initializing Go 1.22 Playground..."
+         CONTAINER_NAME="$1"
+         docker exec "${CONTAINER_NAME}" bash -c '
+         set -e
+         #!/bin/bash
+         
+         apt-get update -qq >/dev/null 2>&1
+         apt-get install -y -qq \
+            curl wget nano git \
+            >/dev/null 2>&1
+         cat << 'EOF' > /shared/server.go
+         package main
+         
+         import (
+            "fmt"
+            "net/http"
+         )
+         
+         func main() {
+            http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+               fmt.Fprintf(w, "Hello from Go 1.22 Playground!")
+            })
+            http.ListenAndServe(":8080", nil)
+         }
+         EOF
+         
+         # Imposta i permessi corretti
+         chown -R 1000:1000 /shared
+         chmod -R 755 /shared
+
+         go run /shared/server.go &
+         
+         # Verifica la versione di Go
+         go version
+         
+         echo "✓ Go Playground ready"
+         exit 0
+         '
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   Go 1.22 Quick Reference                     ║
+      ║                   Go 1.22 Playground                         ║
       ╚══════════════════════════════════════════════════════════════╝
 
       🔵 Go Environment:
          go version                                    # Check Go version
          go env                                        # Show environment
+
+      📂 Shared Directory:
+         /shared                                       # Persistent storage
+         /shared/server.go                             # Sample HTTP server
+
+      🚀 Quick Start:
+         # Access sample server (go run /shared/server.go):
+         http://localhost:8080
 
       📦 Module Management:
          go mod init myapp                             # Initialize module
@@ -19,7 +73,7 @@ images:
          go get package@version                        # Add dependency
          go mod download                               # Download dependencies
 
-      🚀 Build & Run:
+      🏗️ Build & Run:
          go run main.go                                # Run directly
          go build -o myapp                             # Build executable
          go build -o /shared/myapp                     # Build to shared
@@ -30,20 +84,14 @@ images:
          go test -cover                                # With coverage
          go test -bench=.                              # Run benchmarks
 
-      📝 Quick HTTP Server:
-         Create /shared/server.go:
-           package main
-           import ("fmt"; "net/http")
-           func main() {
-             http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-               fmt.Fprintf(w, "Hello from Go!")
-             })
-             http.ListenAndServe(":8080", nil)
-           }
-         go run /shared/server.go
-
       🔧 Useful Commands:
          go fmt ./...                                  # Format code
          go vet ./...                                  # Examine code
          go doc package                                # View documentation
-    shell: /bin/bash
+
+      📝 Create Your Own Code:
+         nano /shared/myapp.go                         # Edit a new Go file
+         go run /shared/myapp.go                       # Run your code
+
+      💾 Persistence:
+         All files in /shared persist across restarts

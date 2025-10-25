@@ -119,7 +119,7 @@ images:
     category: web
     description: "Node.js 20 with Express"
     image: node:20
-    keep_alive_cmd: tail -f /dev/null
+    keep_alive_cmd: sleep infinity
     shell: /bin/bash
     ports:
       - "3000:3000"

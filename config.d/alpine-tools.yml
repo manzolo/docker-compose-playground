@@ -3,5 +3,5 @@ images:
     category: utility
     description: Alpine + common tools (curl, wget, etc)
     image: alpine:latest
-    keep_alive_cmd: tail -f /dev/null
+    keep_alive_cmd: sleep infinity
     shell: /bin/sh

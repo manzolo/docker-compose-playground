@@ -1,0 +1,49 @@
+images:
+  golang-1.20:
+    category: programming
+    description: Go 1.20 (Latest)
+    image: golang:1.20
+    keep_alive_cmd: sleep infinity
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Go 1.20 Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔵 Go Environment:
+         go version                                    # Check Go version
+         go env                                        # Show environment
+
+      📦 Module Management:
+         go mod init myapp                             # Initialize module
+         go mod tidy                                   # Clean dependencies
+         go get package@version                        # Add dependency
+         go mod download                               # Download dependencies
+
+      🚀 Build & Run:
+         go run main.go                                # Run directly
+         go build -o myapp                             # Build executable
+         go build -o /shared/myapp                     # Build to shared
+
+      🧪 Testing:
+         go test                                       # Run tests
+         go test -v                                    # Verbose output
+         go test -cover                                # With coverage
+         go test -bench=.                              # Run benchmarks
+
+      📝 Quick HTTP Server:
+         Create /shared/server.go:
+           package main
+           import ("fmt"; "net/http")
+           func main() {
+             http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+               fmt.Fprintf(w, "Hello from Go!")
+             })
+             http.ListenAndServe(":8080", nil)
+           }
+         go run /shared/server.go
+
+      🔧 Useful Commands:
+         go fmt ./...                                  # Format code
+         go vet ./...                                  # Examine code
+         go doc package                                # View documentation
+    shell: /bin/bash

@@ -3,5 +3,5 @@ images:
     category: devops
     description: Packer - Image automation
     image: hashicorp/packer:latest
-    keep_alive_cmd: tail -f /dev/null
+    keep_alive_cmd: sleep infinity
     shell: /bin/sh
