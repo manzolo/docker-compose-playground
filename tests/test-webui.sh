@@ -1,15 +1,14 @@
 #!/bin/bash
 
 ################################################################################
-# TEST SUITE - Docker Playground API (CORRECTED ENDPOINTS)
-# Updated with actual endpoints from API discovery
+# TEST SUITE - Docker Playground API
 # 
 # Usage:
 #   ./test-webui.sh              # Run all tests
 #   ./test-webui.sh -v           # Verbose output
 ################################################################################
 
-set -uo pipefail
+set -euo pipefail
 
 # ============================================================================
 # CONFIGURATION
@@ -538,6 +537,107 @@ run_phase_10() {
 }
 
 # ============================================================================
+# PHASE 11: RESTART ALL
+# ============================================================================
+
+run_phase_11() {
+    print_section "PHASE 11: Restart All"
+    
+    print_test "Ensure containers are running"
+    local resp1=$(curl -s -X POST "$API_URL/start/alpine-3.22")
+    local resp2=$(curl -s -X POST "$API_URL/start/ubuntu-24")
+    
+    # Wait for both to actually start
+    if echo "$resp1" | grep -q "operation_id"; then
+        local op1=$(parse_json "$resp1" "operation_id")
+        wait_for_operation "$op1" 90 > /dev/null
+    fi
+    
+    if echo "$resp2" | grep -q "operation_id"; then
+        local op2=$(parse_json "$resp2" "operation_id")
+        wait_for_operation "$op2" 90 > /dev/null
+    fi
+    
+    sleep 8
+    
+    print_test "Restart all containers"
+    local response=$(curl -s -X POST "$API_URL/restart-all")
+    
+    if echo "$response" | grep -q "operation_id"; then
+        log_success "Restart-all initiated"
+        local operation_id=$(parse_json "$response" "operation_id")
+        
+        local op_response=$(wait_for_operation "$operation_id" 180)
+        if [ $? -eq 0 ]; then
+            log_success "Restart-all completed"
+            sleep 10
+            
+            print_test "Verify containers running after restart"
+            local stats1=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
+            local stats2=$(curl -s "$API_URL/container-stats/playground-ubuntu-24")
+            
+            if echo "$stats1" | grep -q "cpu\|memory"; then
+                log_success "Alpine running"
+            else
+                log_warning "Alpine not running"
+            fi
+            
+            if echo "$stats2" | grep -q "cpu\|memory"; then
+                log_success "Ubuntu running"
+            else
+                log_warning "Ubuntu not running (might need more time on slower systems)"
+            fi
+        else
+            log_error "Restart-all timeout"
+        fi
+    else
+        log_error "Restart-all failed"
+    fi
+}
+
+# ============================================================================
+# PHASE 12: STOP ALL
+# ============================================================================
+
+run_phase_12() {
+    print_section "PHASE 12: Stop All"
+    
+    print_test "Stop all containers"
+    local response=$(curl -s -X POST "$API_URL/stop-all")
+    
+    if echo "$response" | grep -q "operation_id"; then
+        log_success "Stop-all initiated"
+        local operation_id=$(parse_json "$response" "operation_id")
+        
+        local op_response=$(wait_for_operation "$operation_id" 120)
+        if [ $? -eq 0 ]; then
+            log_success "Stop-all completed"
+            sleep 3
+            
+            print_test "Verify containers stopped"
+            local stats1=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-alpine-3.22")
+            local stats2=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-ubuntu-24.04")
+            
+            if [ "$stats1" = "404" ] || [ "$stats1" = "500" ]; then
+                log_success "Alpine stopped"
+            else
+                log_warning "Alpine might be running"
+            fi
+            
+            if [ "$stats2" = "404" ] || [ "$stats2" = "500" ]; then
+                log_success "Ubuntu stopped"
+            else
+                log_warning "Ubuntu might be running"
+            fi
+        else
+            log_error "Stop-all timeout"
+        fi
+    else
+        log_error "Stop-all failed"
+    fi
+}
+
+# ============================================================================
 # CLEANUP
 # ============================================================================
 
@@ -619,6 +719,8 @@ main() {
     run_phase_8
     run_phase_9
     run_phase_10
+    run_phase_11
+    run_phase_12
     
     print_header "TEST RESULTS"
     
