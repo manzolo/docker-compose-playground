@@ -8,23 +8,19 @@ const ContainerManager = {
      */
     async startContainer(image) {
         const card = DOM.query(`[data-name="${image}"]`);
-        const btn = card?.querySelector('.btn-success');
+        const btn = card?.querySelector('.btn-start-minimal');
         if (!btn) return;
 
         const originalHTML = btn.innerHTML;
-        Utils.updateButtonState(btn, {
-            disabled: true,
-            text: 'Starting...',
-            showSpinner: true
-        });
+
+        // Mostra solo lo spinner
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-icon-large spinner">⏳</span>';
 
         try {
-            // Avvia il container SENZA mostrare il loader
             const response = await ApiService.startContainer(image);
 
             if (response.operation_id) {
-                //ToastManager.show(`Starting container ${image}...`, 'info');
-                // Mostra il widget di monitoraggio
                 OperationMonitor.startMonitoring(response.operation_id, `Starting ${image}`);
                 await this.pollContainerStatus(response.operation_id, image, btn, originalHTML);
             } else {
@@ -32,7 +28,7 @@ const ContainerManager = {
             }
 
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleStartError(error, image, btn, originalHTML);
         }
     },
@@ -41,23 +37,28 @@ const ContainerManager = {
      * Restart a container
      */
     async restartContainer(image) {
-        const card = DOM.query(`[data-name="${image}"]`);
-        const btn = card?.querySelector('[data-action="restart"]');
-        if (!btn) return;
-
-        const originalHTML = btn.innerHTML;
-        Utils.updateButtonState(btn, {
-            disabled: true,
-            text: 'Restarting...',
-            showSpinner: true
-        });
-
         try {
-            // Avvia il restart SENZA mostrare il loader
+            // Chiedi conferma prima di procedere
+            const confirmed = await showConfirmModal(
+                'Restart Container',
+                `Are you sure you want to restart container <strong>${image}</strong>?`,
+                'warning'
+            );
+            if (!confirmed) return;
+
+            const card = DOM.query(`[data-name="${image}"]`);
+            const btn = card?.querySelector('[data-action="restart"]');
+            if (!btn) return;
+
+            const originalHTML = btn.innerHTML;
+
+            // Mostra solo lo spinner senza testo
+            btn.disabled = true;
+            btn.innerHTML = '<span class="btn-icon-large spinner">⏳</span>';
+
             const response = await ApiService.restartContainer(image);
 
             if (response.operation_id) {
-                // Mostra il widget di monitoraggio
                 OperationMonitor.startMonitoring(response.operation_id, `Restarting ${image}`);
                 await this.pollRestartStatus(response.operation_id, image, btn, originalHTML);
             } else {
@@ -65,7 +66,7 @@ const ContainerManager = {
             }
 
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleRestartError(error, image, btn, originalHTML);
         }
     },
@@ -313,7 +314,7 @@ const ContainerManager = {
 
             await this.performStopContainer(imageName, containerName);
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
             this.resetStopButton(imageName);
         }
@@ -324,37 +325,26 @@ const ContainerManager = {
      */
     async performStopContainer(imageName, containerName) {
         const card = DOM.query(`[data-name="${imageName}"]`);
-        const btn = card?.querySelector('.btn-danger');
+        const btn = card?.querySelector('.btn-stop-minimal');
         if (!btn) return;
 
         const originalHTML = btn.innerHTML;
-        Utils.updateButtonState(btn, {
-            disabled: true,
-            text: 'Stopping...',
-            showSpinner: true
-        });
+
+        // Mostra solo lo spinner
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-icon-large spinner">⏳</span>';
 
         try {
-            //console.log("🔴 Calling /stop/" + containerName);
             const response = await ApiService.stopContainer(containerName);
 
-            //console.log("🔴 Response received:", response);
-
-            const data = response instanceof Response ? await response.json() : response;
-            //console.log("🔴 Data parsed:", data);
-
-            if (data.operation_id) {
-                //console.log("🔴 operation_id:", data.operation_id);
-                //ToastManager.show(`Stopping ${containerName}...`, 'info');
-                OperationMonitor.startMonitoring(data.operation_id, `Stopping ${containerName}`);
-                //console.log("🔴 Widget monitoring started");
+            if (response.operation_id) {
+                OperationMonitor.startMonitoring(response.operation_id, `Stopping ${containerName}`);
+                //await this.pollStopStatus(response.operation_id, imageName, containerName, btn, originalHTML);
             } else {
-                console.error("🔴 No operation_id in response:", data);
-                throw new Error('No operation_id received');
+                throw new Error('No operation_id received from server');
             }
 
         } catch (error) {
-            console.error("🔴 Error in performStopContainer:", error);
             hideLoader();
             this.handleStopError(error, containerName, btn, originalHTML);
         }
@@ -426,44 +416,81 @@ const ContainerManager = {
 
         const statusIndicator = card.querySelector('.status-indicator');
         const statusText = card.querySelector('.status-text');
-        const actions = card.querySelector('.card-actions');
+        const actionsContainer = card.querySelector('.card-actions-minimal');
+
+        if (!actionsContainer) {
+            console.error('card-actions-minimal not found for', imageName);
+            return;
+        }
 
         if (isRunning) {
+            // CONTAINER IN ESECUZIONE
             card.setAttribute('data-container', containerName);
             DOM.addClass(statusIndicator, 'status-running');
             DOM.removeClass(statusIndicator, 'status-stopped');
-            statusText.textContent = 'Running';
-            actions.innerHTML = `
-                <button class="btn btn-danger" onclick="ContainerManager.stopContainer('${imageName}', '${containerName}')">
-                    <span class="btn-icon">⏹</span> Stop
+            if (statusText) statusText.textContent = 'Running';
+
+            actionsContainer.innerHTML = `
+            <div class="actions-bar">
+                <button class="btn-primary-action btn-stop-minimal"
+                    onclick="ContainerManager.stopContainer('${imageName}', '${containerName}')">
+                    <span class="btn-icon-large">⏹</span>
+                    <span class="btn-label">Stop</span>
                 </button>
-                <button class="btn btn-warning" data-action="restart" onclick="ContainerManager.restartContainer('${imageName}')">
-                    <span class="btn-icon">🔄</span> Restart
+
+                <button class="btn-quick-action btn-restart-minimal" 
+                    data-action="restart"
+                    onclick="ContainerManager.restartContainer('${imageName}')"
+                    title="Restart container">
+                    <span class="btn-icon-large">🔄</span>
                 </button>
-                <button class="btn btn-primary" onclick="showLogs('${containerName}')">
-                    <span class="btn-icon">📋</span> Logs
+
+                <button class="btn-quick-action btn-logs-minimal" 
+                    onclick="showLogs('${containerName}')"
+                    title="View logs">
+                    <span class="btn-icon-large">📋</span>
                 </button>
-                <button class="btn btn-success" onclick="ConsoleManager.open('${containerName}', '${imageName}')">
-                    <span class="btn-icon">💻</span> Console
+
+                <button class="btn-quick-action btn-console-minimal" 
+                    onclick="ConsoleManager.open('${containerName}', '${imageName}')"
+                    title="Open console">
+                    <span class="btn-icon-large">💻</span>
                 </button>
-                <button class="btn btn-info" onclick="ContainerManager.cleanupContainer('${containerName}', '${imageName}')">
-                    <span class="btn-icon">🧹</span> Clean
+
+                <button class="btn-quick-action btn-clean-minimal" 
+                    onclick="ContainerManager.cleanupContainer('${containerName}', '${imageName}')"
+                    title="Clean container data">
+                    <span class="btn-icon-large">🧹</span>
                 </button>
-            `;
+            </div>
+        `;
         } else {
+            // CONTAINER FERMO
             card.removeAttribute('data-container');
             DOM.removeClass(statusIndicator, 'status-running');
             DOM.addClass(statusIndicator, 'status-stopped');
-            statusText.textContent = 'Stopped';
-            actions.innerHTML = `
-                <button class="btn btn-success btn-block" onclick="ContainerManager.startContainer('${imageName}')">
-                    <span class="btn-icon">▶</span> Start Container
+            if (statusText) statusText.textContent = 'Stopped';
+
+            actionsContainer.innerHTML = `
+            <div class="actions-bar">
+                <button class="btn-primary-action btn-start-minimal btn-start-large"
+                    onclick="ContainerManager.startContainer('${imageName}')">
+                    <span class="btn-icon-large">▶</span>
+                    <span class="btn-label">Start Container</span>
                 </button>
-            `;
+
+                <button class="btn-quick-action btn-clean-minimal" 
+                    onclick="ContainerManager.cleanupContainer('${imageName}', '${imageName}')"
+                    title="Clean container data">
+                    <span class="btn-icon-large">🧹</span>
+                </button>
+            </div>
+        `;
         }
 
         FilterManager.applyFilters();
     }
+
 };
 
 window.ContainerManager = ContainerManager;

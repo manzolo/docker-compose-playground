@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="/static/css/pages/dashboard.css">
     <link rel="stylesheet" href="/static/css/core/dark-mode.css">
     <link rel="stylesheet" href="/static/css/core/operation-monitor.css">
+    <link rel="stylesheet" href="/static/css/components/card_actions_tabs.css">
+
 </head>
 
 <body>
@@ -244,48 +246,63 @@
                     </div>
                 </div>
 
-                <div class="card-actions">
+                <div class="card-actions-minimal">
                     {% if running_info %}
-                    <button class="btn btn-danger"
-                        onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
-                        <span class="btn-icon">⏹</span> Stop
-                    </button>
-                    <button class="btn btn-warning" data-action="restart"
-                        onclick="ContainerManager.restartContainer('{{ name }}')">
-                        <span class="btn-icon">🔄</span> Restart
-                    </button>
-                    <button class="btn btn-primary" onclick="showLogs('{{ running_info.name }}')">
-                        <span class="btn-icon">📋</span> Logs
-                    </button>
-                    <button class="btn btn-success"
-                        onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')">
-                        <span class="btn-icon">💻</span> Console
-                    </button>
-                    <button class="btn btn-info" title="Cleanup container"
-                        onclick="ContainerManager.cleanupContainer('{{ running_info.name }}')">🧹 Clean
-                    </button>
+                    <!-- CONTAINER IN ESECUZIONE -->
+
+                    <div class="actions-bar">
+                        <!-- Azione primaria -->
+                        <button class="btn-primary-action btn-stop-minimal"
+                            onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
+                            <span class="btn-icon-large">⏹</span>
+                            <span class="btn-label">Stop</span>
+                        </button>
+
+                        <!-- Azioni rapide visibili -->
+                        <button class="btn-quick-action btn-restart-minimal" data-action="restart"
+                            onclick="ContainerManager.restartContainer('{{ name }}')" title="Restart container">
+                            <span class="btn-icon-large">🔄</span>
+                        </button>
+
+                        <button class="btn-quick-action btn-logs-minimal" onclick="showLogs('{{ running_info.name }}')"
+                            title="View logs">
+                            <span class="btn-icon-large">📋</span>
+                        </button>
+
+                        <button class="btn-quick-action btn-console-minimal"
+                            onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')" title="Open console">
+                            <span class="btn-icon-large">💻</span>
+                        </button>
+
+                        <!-- Pulsante Clean -->
+                        <button class="btn-quick-action btn-clean-minimal"
+                            onclick="ContainerManager.cleanupContainer('{{ running_info.name }}', '{{ name }}')"
+                            title="Clean container data">
+                            <span class="btn-icon-large">🧹</span>
+                        </button>
+                    </div>
+
                     {% else %}
-                    <button class="btn btn-success btn-block" onclick="ContainerManager.startContainer('{{ name }}')">
-                        <span class="btn-icon">▶</span> Start Container
-                    </button>
+                    <!-- CONTAINER FERMO -->
+
+                    <div class="actions-bar">
+                        <!-- Azione primaria -->
+                        <button class="btn-primary-action btn-start-minimal btn-start-large"
+                            onclick="ContainerManager.startContainer('{{ name }}')">
+                            <span class="btn-icon-large">▶</span>
+                            <span class="btn-label">Start Container</span>
+                        </button>
+
+                        <!-- Pulsante Clean -->
+                        <button class="btn-quick-action btn-clean-minimal"
+                            onclick="ContainerManager.cleanupContainer('{{ name }}', '{{ name }}')"
+                            title="Clean container data">
+                            <span class="btn-icon-large">🧹</span>
+                        </button>
+                    </div>
+
                     {% endif %}
                 </div>
-
-                <!-- Quick Actions (for running containers) -->
-                {% if running_info %}
-                <!--
-                <div class="card-quick-actions">
-                    <button class="btn btn-sm btn-info" onclick="MonitoringStatsManager.startMonitoring('{{ running_info.name }}')" title="Show live stats">
-                        <span class="btn-icon">📊</span> Stats
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="ExecuteCommandManager.open('{{ running_info.name }}', '{{ name }}')" title="Execute command">
-                        <span class="btn-icon">⚡</span> Command
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="ExecuteCommandManager.openDiagnostics('{{ running_info.name }}', '{{ name }}')" title="Run diagnostics">
-                        <span class="btn-icon">🔍</span> Diagnose
-                    </button>
-                </div>-->
-                {% endif %}
             </div>
             {% endfor %}
         </div>
