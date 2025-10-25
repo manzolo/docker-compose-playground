@@ -89,6 +89,7 @@ async def get_group_details(group_name: str):
     try:
         config_data = load_config()
         groups = config_data.get("groups", {})
+        images = config_data.get("images", {})
         
         if group_name not in groups:
             raise HTTPException(404, f"Group '{group_name}' not found")
@@ -111,10 +112,14 @@ async def get_group_details(group_name: str):
             if is_running:
                 running_count += 1
             
+            image_name = "N/A"
+            if container_name in images:
+                image_name = images[container_name].get("image", "N/A")
+            
             container_status.append({
                 "name": container_name,
                 "full_name": full_name,
-                "image": "N/A",  # Could be retrieved from config if needed
+                "image": image_name,
                 "running": is_running,
                 "status": "running" if is_running else "stopped"
             })
