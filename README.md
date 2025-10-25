@@ -54,7 +54,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 ### Linux Distributions
 - **Ubuntu** (12, 14, 16, 18, 20, 22, 24, 24-fishell, 24-nushell, 24-tmux, 24-zsh, icewm, kde, mate, openbox, xfce)
 - **Alpine** (3.19, 3.22, edge, tools)
-- **Debian** (7, 8, 9, 10, 11, 12)
+- **Debian** (7, 8, 9, 10, 11, 12, 13)
 - **Fedora** (39)
 - **Rocky Linux** (9)
 - **Arch Linux** (arch, arch-nushell)
