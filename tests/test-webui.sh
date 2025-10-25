@@ -546,7 +546,7 @@ run_phase_11() {
     
     print_test "Ensure containers are running"
     local resp1=$(curl -s -X POST "$API_URL/start/alpine-3.22")
-    local resp2=$(curl -s -X POST "$API_URL/start/ubuntu-24.04")
+    local resp2=$(curl -s -X POST "$API_URL/start/ubuntu-24")
     
     # Wait for both to actually start
     if echo "$resp1" | grep -q "operation_id"; then
@@ -575,7 +575,7 @@ run_phase_11() {
             
             print_test "Verify containers running after restart"
             local stats1=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
-            local stats2=$(curl -s "$API_URL/container-stats/playground-ubuntu-24.04")
+            local stats2=$(curl -s "$API_URL/container-stats/playground-ubuntu-24")
             
             if echo "$stats1" | grep -q "cpu\|memory"; then
                 log_success "Alpine running"
