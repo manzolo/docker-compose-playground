@@ -179,6 +179,7 @@ async def stop_container_background(operation_id: str, container_name: str):
         logger.error(f"Failed to stop {container_name}: {str(e)}")
         fail_operation(operation_id, str(e))
 
+
 @router.post("/api/restart/{image_name}")
 async def restart_container(image_name: str):
     """Restart a single container by image name"""
@@ -520,6 +521,155 @@ async def restart_category_background(operation_id: str, containers, category: s
     
     complete_operation(operation_id, restarted=len(restarted), failed=len(failed), containers=restarted)
 
+# AGGIUNGI QUESTO CODICE PRIMA DELLA RIGA 524 (prima di @router.post("/api/cleanup-all"))
+
+@router.post("/api/stop-all")
+async def stop_all():
+    """Stop all running containers"""
+    containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
+    operation_id = str(uuid.uuid4())
+    
+    create_operation(
+        operation_id,
+        "stop_all",
+        total=len(containers)
+    )
+    
+    asyncio.create_task(stop_all_background(operation_id, containers))
+    return {"operation_id": operation_id, "status": "started"}
+
+
+async def stop_all_background(operation_id: str, containers):
+    """Background task to stop all containers"""
+    stopped = []
+    failed = []
+    not_running = []
+    
+    def stop_and_remove(container):
+        try:
+            try:
+                config_data = load_config()
+                image_name = container.name.replace("playground-", "")
+                img_data = config_data["images"].get(image_name, {})
+                scripts = img_data.get("scripts", {})
+                
+                # Execute pre-stop script if exists
+                if "pre_stop" in scripts:
+                    execute_script(scripts["pre_stop"], container.name, image_name)
+                
+                timeout = get_stop_timeout(img_data)
+            except Exception as e:
+                logger.warning(f"Pre-stop script error for {container.name}: {e}")
+                timeout = 10
+            
+            # Stop container
+            container.stop(timeout=timeout)
+            container.remove()
+            return {"status": "stopped", "name": container.name}
+        except Exception as e:
+            logger.error(f"Failed to stop {container.name}: {e}")
+            return {"status": "failed", "name": container.name, "error": str(e)}
+    
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+        futures = [loop.run_in_executor(executor, stop_and_remove, c) for c in containers]
+        
+        # Process results as they complete
+        for future in asyncio.as_completed(futures):
+            result = await future
+            
+            if result["status"] == "stopped":
+                stopped.append(result["name"])
+            elif result["status"] == "failed":
+                failed.append(result["name"])
+            
+            # Update progress after each container
+            update_operation(
+                operation_id,
+                stopped=len(stopped),
+                not_running=len(not_running),
+                failed=len(failed),
+                containers=stopped
+            )
+    
+    complete_operation(operation_id, stopped=len(stopped), not_running=len(not_running), failed=len(failed), containers=stopped)
+
+
+@router.post("/api/restart-all")
+async def restart_all():
+    """Restart all running containers"""
+    containers = docker_client.containers.list(filters={"label": "playground.managed=true"})
+    operation_id = str(uuid.uuid4())
+    
+    create_operation(
+        operation_id,
+        "restart_all",
+        total=len(containers)
+    )
+    
+    asyncio.create_task(restart_all_background(operation_id, containers))
+    return {"operation_id": operation_id, "status": "started"}
+
+
+async def restart_all_background(operation_id: str, containers):
+    """Background task to restart all containers"""
+    restarted = []
+    failed = []
+    
+    def restart_cont(c):
+        try:
+            config_data = load_config()
+            image_name = c.name.replace("playground-", "")
+            img_data = config_data["images"].get(image_name, {})
+            scripts = img_data.get("scripts", {})
+            
+            # Execute pre-stop script if exists
+            if "pre_stop" in scripts:
+                try:
+                    execute_script(scripts["pre_stop"], c.name, image_name)
+                except Exception as e:
+                    logger.warning(f"Pre-stop script error: {e}")
+            
+            timeout = get_stop_timeout(img_data)
+            c.restart(timeout=timeout)
+            
+            # Execute post-start script if exists
+            if "post_start" in scripts:
+                try:
+                    import time
+                    time.sleep(2)
+                    execute_script(scripts["post_start"], c.name, image_name)
+                except Exception as e:
+                    logger.warning(f"Post-start script error: {e}")
+            
+            return {"status": "restarted", "name": c.name}
+        except Exception as e:
+            logger.error(f"Failed to restart {c.name}: {e}")
+            return {"status": "failed", "name": c.name, "error": str(e)}
+    
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+        futures = [loop.run_in_executor(executor, restart_cont, c) for c in containers]
+        
+        # Process results as they complete
+        for future in asyncio.as_completed(futures):
+            result = await future
+            
+            if result["status"] == "restarted":
+                restarted.append(result["name"])
+            elif result["status"] == "failed":
+                failed.append(result["name"])
+            
+            # Update progress after each container
+            update_operation(
+                operation_id,
+                restarted=len(restarted),
+                failed=len(failed),
+                containers=restarted
+            )
+    
+    complete_operation(operation_id, restarted=len(restarted), failed=len(failed), containers=restarted)
+    
 @router.post("/api/cleanup-all")
 async def cleanup_all():
     """Cleanup all managed containers, their images and volumes"""
