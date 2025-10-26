@@ -16,7 +16,7 @@ const QuickCommandsManager = {
         let commandsJson = element.getAttribute('data-commands');
         
         // Debug
-        console.log('Raw commands JSON:', commandsJson);
+        //console.log('Raw commands JSON:', commandsJson);
         
         // Fallback se vuoto
         if (!commandsJson || commandsJson.trim() === '' || commandsJson === '[]' || commandsJson === 'None') {

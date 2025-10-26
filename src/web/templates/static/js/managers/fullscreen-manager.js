@@ -1,7 +1,6 @@
 // =========================================================
 // FULLSCREEN MANAGER - Toggle fullscreen for logs and console
 // =========================================================
-
 const FullscreenManager = {
     logFullscreenActive: false,
     consoleFullscreenActive: false,
@@ -12,9 +11,7 @@ const FullscreenManager = {
     toggleLogFullscreen() {
         const modal = DOM.get('logModal');
         const content = modal.querySelector('.modal-content');
-
         this.logFullscreenActive = !this.logFullscreenActive;
-
         if (this.logFullscreenActive) {
             DOM.addClass(content, 'fullscreen');
             this.updateFullscreenButton('logFullscreenBtn', true);
@@ -30,20 +27,25 @@ const FullscreenManager = {
     toggleConsoleFullscreen() {
         const modal = DOM.get('consoleModal');
         const content = modal.querySelector('.modal-content');
-
         this.consoleFullscreenActive = !this.consoleFullscreenActive;
-
         if (this.consoleFullscreenActive) {
             DOM.addClass(content, 'fullscreen');
             this.updateFullscreenButton('consoleFullscreenBtn', true);
         } else {
             DOM.removeClass(content, 'fullscreen');
             this.updateFullscreenButton('consoleFullscreenBtn', false);
-        }
 
+            // Focus back to term when exiting fullscreen (like in initializeTerminal)
+            setTimeout(() => {
+                if (ConsoleManager.term) {
+                    ConsoleManager.term.focus();
+                }
+            }, 50);
+        }
         setTimeout(() => {
             if (ConsoleManager.fitAddon) {
                 ConsoleManager.fitAddon.fit();
+                ConsoleManager.term.focus();
             }
         }, 100);
     },

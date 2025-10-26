@@ -1,0 +1,161 @@
+/* =========================================================
+   LOGS MODAL - Sticky toolbar and auto-scroll
+   ========================================================= */
+
+/* Sticky toolbar che rimane in vista */
+.log-toolbar {
+    position: sticky;
+    top: 0;
+    background-color: #f9fafb;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Logs content area con scroll */
+.logs-content {
+    display: block;
+    width: 100%;
+    height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
+    background-color: #1f2937;
+    color: #f3f4f6;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 16px;
+    margin: 0;
+    border: none;
+    white-space: pre;
+    word-wrap: normal;
+    overflow-wrap: normal;
+    box-sizing: border-box;
+}
+
+/* Dark mode scrollbar styling */
+.logs-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.logs-content::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.logs-content::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+}
+
+.logs-content::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* =========================================================
+   AUTO-SCROLL TOGGLE SWITCH - Logs Modal
+   ========================================================= */
+
+.auto-scroll-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Hide the native checkbox */
+.toggle-checkbox {
+    display: none;
+}
+
+/* Label and switch styling */
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* The switch container */
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    width: 44px;
+    height: 24px;
+    background-color: #cbd5e1;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+    padding: 2px;
+    box-sizing: border-box;
+}
+
+/* The switch circle/button */
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 10px;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* When checked - active state */
+.toggle-checkbox:checked + .toggle-label .toggle-switch {
+    background-color: #10b981;
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-switch::after {
+    transform: translateX(20px);
+}
+
+/* Hover effect */
+.toggle-label:hover .toggle-switch {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Text styling */
+.toggle-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+/* Focus state for accessibility */
+.toggle-checkbox:focus + .toggle-label {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Dark mode support (if your app has dark mode) */
+@media (prefers-color-scheme: dark) {
+    .log-toolbar {
+        background-color: #374151;
+        border-bottom-color: #4b5563;
+    }
+
+    .toggle-switch {
+        background-color: #4b5563;
+    }
+
+    .toggle-switch::after {
+        background-color: #f3f4f6;
+    }
+
+    .toggle-text {
+        color: #e5e7eb;
+    }
+
+    .toggle-label:hover .toggle-switch {
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+}
