@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="/static/css/components/motd.css">
     <link rel="stylesheet" href="/static/css/core/diagnostics-tables.css">
     <link rel="stylesheet" href="/static/css/core/command-output.css">
+    <link rel="stylesheet" href="/static/css/core/quick-commands.css">
 
 </head>
 
@@ -171,7 +172,11 @@
                         <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
 
                         {% if feature.get('has_motd') %}
-                        <span class="feature-icon feature-motd" title="Has MOTD">📋</span>
+                        <!-- Quick Commands Icon - Opens Modal -->
+                        <span class="feature-icon feature-motd" data-commands='{{ data.motd_commands_json|safe }}'
+                            data-container="{{ running_info.name if running_info else name }}" data-image="{{ name }}"
+                            onclick="QuickCommandsManager.openFromElement(this)" title="View quick commands"
+                            style="cursor: pointer;">📋</span>
                         {% endif %}
 
                         {% if feature.get('has_post_start') %}
@@ -183,6 +188,7 @@
                         {% endif %}
 
                         {% if running_info %}
+                        <!-- Execute Command Icon - Only if running -->
                         <span class="feature-icon feature-execute-command"
                             onclick="ExecuteCommandManager.open('{{ running_info.name }}', '{{ name }}')"
                             title="Execute command" style="cursor: pointer;">⚡</span>
@@ -206,24 +212,6 @@
                     <span class="status-text">Stopped</span>
                     {% endif %}
                 </div>
-
-                <!-- MOTD Section (Collapsed by default) -->
-                {% if feature.get('has_motd') %}
-                <div class="motd-section">
-                    <div class="motd-header" onclick="MOTDManager.toggle(this)">
-                        <div class="motd-header-content">
-                            <span class="motd-toggle-icon">▼</span>
-                            <span class="motd-label">📋 Quick Commands</span>
-                            <span class="motd-preview">({{ data.motd_commands|length }} commands)</span>
-                        </div>
-                    </div>
-                    <div class="motd-content">
-                        <div class="motd-body">
-                            <div class="motd-text">{{ data.motd|motd_to_html }}</div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
 
                 <div class="card-actions-minimal">
                     {% if running_info %}
@@ -376,6 +364,31 @@
         </div>
     </div>
 
+    <!-- Quick Commands Modal -->
+    <div id="quickCommandsModal" class="modal">
+        <div class="modal-overlay" onclick="QuickCommandsManager.close()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <h2>📋 Quick Commands</h2>
+                    <div class="log-info">
+                        Container: <strong id="quickCommandsContainerName"></strong>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="QuickCommandsManager.close()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="quickCommandsList" class="quick-commands-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="QuickCommandsManager.copyAll()">
+                    <span class="btn-icon">📋</span> Copy All
+                </button>
+                <button class="btn btn-secondary" onclick="QuickCommandsManager.close()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Diagnostics Modal -->
     <div id="diagnosticsModal" class="modal">
         <div class="modal-overlay" onclick="ExecuteCommandManager.closeDiagnostics()"></div>
@@ -447,6 +460,7 @@
     <script src="/static/js/managers/monitoring-stats.js"></script>
     <script src="/static/js/managers/execute-command.js"></script>
     <script src="/static/js/managers/health-monitor.js"></script>
+    <script src="/static/js/managers/quick-commands-manager.js"></script>
     <script src="/static/js/core/operation-monitor.js"></script>
 
     <!-- Page-Specific Initialization -->

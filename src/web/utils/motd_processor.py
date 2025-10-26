@@ -83,22 +83,43 @@ def highlight_command_with_comment(line: str) -> str:
     return line
 
 
-def parse_motd_commands(motd_text: str) -> list[str]:
-    """Parse MOTD text and extract command lines (non-empty, non-title lines)"""
+def parse_motd_commands(motd_text: str) -> list[dict]:
+    """Parse MOTD text and extract command lines with descriptions"""
     if not motd_text:
         return []
     
     commands = []
     for line in motd_text.split('\n'):
         line = line.strip()
-        # Extract lines that look like commands: contain 'apk ', 'apt ', 'npm ', '--', etc.
-        # Exclude empty lines, title lines (with ║, ═), notes and sections
+        # Extract lines that look like commands or URLs
+        # Exclude: empty lines, box drawing chars, section headers
         if (line and
-            not any(c in line for c in ['║', '═', '╔', '╚', '╗', '╝']) and
+            not any(c in line for c in ['║', '═', '╔', '╚', '╗', '╝', '─', '┌', '┐', '└', '┘']) and
             not line.startswith('Note:') and
             not line.startswith('⚠️') and
-            ' # ' in line):  # Has explanatory comment
-            commands.append(line)
+            not line.startswith('💡') and
+            not line.startswith('Section:') and
+            len(line) > 3):  # Almeno 3 caratteri
+            
+            # Controlla se è un comando o una URL
+            is_command = any(cmd in line for cmd in ['apk ', 'apt ', 'apt-get ', 'npm ', 'pip ', 'docker ', 
+                                                      'curl ', 'wget ', 'chmod ', 'chown ', 'mkdir ', 'cd ',
+                                                      './']) or ' # ' in line
+            is_url = any(protocol in line for protocol in ['http://', 'https://', 'ftp://'])
+            
+            if is_command or is_url:
+                # Separa comando/URL e descrizione
+                if ' # ' in line:
+                    command, description = line.split(' # ', 1)
+                    commands.append({
+                        'command': command.strip(),
+                        'description': description.strip()
+                    })
+                else:
+                    commands.append({
+                        'command': line,
+                        'description': ''
+                    })
     
     return commands
 
