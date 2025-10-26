@@ -1,0 +1,476 @@
+/* ============================================
+   CONTAINER CARDS - Omogenei ai Group Cards
+   ============================================ */
+
+/* ============================================
+   CONTAINER GRID
+   ============================================ */
+
+.containers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+/* ============================================
+   CONTAINER CARD
+   ============================================ */
+
+.container-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.container-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.container-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: #cbd5e1;
+}
+
+.container-card:hover::before {
+    opacity: 1;
+}
+
+.container-card.hidden {
+    display: none;
+}
+
+/* ============================================
+   CONTAINER HEADER
+   ============================================ */
+
+.container-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+}
+
+.container-name-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--primary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.container-name-badge:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.container-name-badge:active {
+    transform: translateY(0);
+}
+
+/* Status dot nel name badge */
+.container-name-badge .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.container-name-badge .status-dot.running {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(72, 187, 120, 0.5);
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.container-name-badge .status-dot.stopped {
+    background: #cbd5e1;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(0.9);
+    }
+}
+
+/* ============================================
+   CATEGORIA BADGE A DESTRA
+   ============================================ */
+
+.container-header .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.container-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+}
+
+/* Status dot - pulsante quando running */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.status-dot.running {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(72, 187, 120, 0.5);
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-dot.stopped {
+    background: #cbd5e1;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(0.9);
+    }
+}
+
+/* Badge colors by status */
+.container-status-badge.running {
+    background: #f0fdf4;
+    color: var(--success);
+    border-color: #d1fae5;
+}
+
+.container-status-badge.stopped {
+    background: #f3f4f6;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+
+/* ============================================
+   CONTAINER DESCRIPTION
+   ============================================ */
+
+.container-description {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    min-height: 42px;
+}
+
+/* ============================================
+   CONTAINER FEATURES
+   ============================================ */
+
+.container-features {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.feature-icon {
+    font-size: 16px;
+    opacity: 0.7;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--light-secondary);
+    border: 1px solid var(--border);
+}
+
+.feature-icon:hover {
+    opacity: 1;
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+/* ============================================
+   CONTAINER ACTIONS
+   ============================================ */
+
+.container-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+/* Azione primaria - Start/Stop */
+.btn-primary-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 40px;
+}
+
+.btn-primary-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary-action:active {
+    transform: translateY(0);
+}
+
+.btn-start {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.btn-start:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-stop {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.btn-stop:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Azioni rapide - icone compatte */
+.container-quick-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-quick-action {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    color: var(--dark);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.btn-quick-action:hover {
+    transform: scale(1.05);
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.btn-quick-action.restart:hover {
+    background: #fffbeb;
+    border-color: #fbbf24;
+}
+
+.btn-quick-action.logs:hover {
+    background: #eff6ff;
+    border-color: #60a5fa;
+}
+
+.btn-quick-action.console:hover {
+    background: #f0fdf4;
+    border-color: #34d399;
+}
+
+.btn-quick-action.diagnostics:hover {
+    background: #f5f3ff;
+    border-color: #d8b4fe;
+}
+
+.btn-quick-action.clean:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+/* Disabled state */
+.btn-quick-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .containers-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .container-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .container-actions {
+        flex-direction: column;
+    }
+
+    .btn-primary-action {
+        width: 100%;
+    }
+
+    .feature-icon {
+        font-size: 14px;
+        padding: 5px 6px;
+    }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode .container-card {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .container-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+}
+
+html.dark-mode .container-name-badge {
+    background: #2d3748;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+html.dark-mode .container-name-badge:hover {
+    background: #374151;
+    color: #e2e8f0;
+    border-color: #60a5fa;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+html.dark-mode .container-status-badge {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+html.dark-mode .container-status-badge.running {
+    background: #1f4d2d;
+    color: #86efac;
+    border-color: var(--success);
+}
+
+html.dark-mode .container-status-badge.stopped {
+    background: #2d3748;
+    color: #a0aec0;
+    border-color: #4a5568;
+}
+
+html.dark-mode .container-description {
+    color: #a0aec0;
+}
+
+html.dark-mode .feature-icon {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #a0aec0;
+}
+
+html.dark-mode .feature-icon:hover {
+    background: #374151;
+    border-color: var(--primary);
+    color: #e2e8f0;
+}
+
+html.dark-mode .btn-quick-action {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html.dark-mode .btn-quick-action:hover {
+    background: #374151;
+    border-color: #60a5fa;
+}
+
+html.dark-mode .btn-quick-action.restart:hover {
+    background: #3f3f1f;
+    border-color: #fbbf24;
+}
+
+html.dark-mode .btn-quick-action.logs:hover {
+    background: #1f3a4d;
+    border-color: #60a5fa;
+}
+
+html.dark-mode .btn-quick-action.console:hover {
+    background: #1f4d2d;
+    border-color: #34d399;
+}
+
+html.dark-mode .btn-quick-action.diagnostics:hover {
+    background: #3d2d4d;
+    border-color: #d8b4fe;
+}
+
+html.dark-mode .btn-quick-action.clean:hover {
+    background: #4d2d2d;
+    border-color: #fecaca;
+}

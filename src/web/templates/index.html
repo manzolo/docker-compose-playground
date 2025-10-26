@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="/static/css/vendor/xterm-5.3.0.css">
 
-    <!-- CSS Modulari -->
+    <!-- modular stylesheets -->
     <link rel="stylesheet" href="/static/css/core/base.css">
     <link rel="stylesheet" href="/static/css/core/header.css">
     <link rel="stylesheet" href="/static/css/core/filters.css">
@@ -17,24 +17,27 @@
     <link rel="stylesheet" href="/static/css/core/dark-mode.css">
     <link rel="stylesheet" href="/static/css/core/operation-monitor.css">
     <link rel="stylesheet" href="/static/css/components/card_actions_tabs.css">
+    <link rel="stylesheet" href="/static/css/components/container-card.css">
     <link rel="stylesheet" href="/static/css/components/motd.css">
+    <link rel="stylesheet" href="/static/css/components/log-viewer.css">
     <link rel="stylesheet" href="/static/css/core/diagnostics-tables.css">
     <link rel="stylesheet" href="/static/css/core/command-output.css">
     <link rel="stylesheet" href="/static/css/core/quick-commands.css">
 
+
 </head>
 
 <body>
-    <!-- Toast Notification Container -->
+    <!-- global toast notification container -->
     <div id="toast-container"></div>
 
-    <!-- Loader Overlay -->
+    <!-- global page loader overlay -->
     <div id="global-loader" class="loader-overlay">
         <div class="loader-spinner"></div>
         <p id="loader-message" class="loader-message">Please wait...</p>
     </div>
 
-    <!-- Header -->
+    <!-- main page header -->
     <header>
         <div class="container">
             <div class="header-top">
@@ -55,7 +58,7 @@
         </div>
     </header>
 
-    <!-- Filters & Stats Bar -->
+    <!-- filters and search bar section -->
     <div class="container">
         <div class="filters-bar">
             <div class="search-section">
@@ -100,9 +103,9 @@
         </div>
     </div>
 
-    <!-- Container Grid -->
+    <!-- main content container -->
     <div class="container">
-        <!-- Groups Section -->
+        <!-- application stacks / group cards section -->
         {% if groups %}
         <div class="groups-section">
             <h2 class="section-title">🚀 Application Stacks</h2>
@@ -111,6 +114,7 @@
                 <div class="group-card" data-group="{{ group_name }}"
                     data-search="{{ group_name }} {{ group.description|lower }} {{ group.containers|join(' ') }}">
 
+                    <!-- group header with title and badges -->
                     <div class="group-header">
                         <div class="group-title-area">
                             <h3 class="group-title">{{ group.name }}</h3>
@@ -121,8 +125,10 @@
                         </span>
                     </div>
 
+                    <!-- group description text -->
                     <p class="group-description">{{ group.description }}</p>
 
+                    <!-- list of containers in this group -->
                     <div class="group-containers">
                         <span class="containers-label">Containers:</span>
                         <div class="container-tags">
@@ -135,6 +141,7 @@
                         </div>
                     </div>
 
+                    <!-- group action buttons (start/stop stack) -->
                     <div class="group-actions">
                         <button onclick="GroupOperations.startGroup('{{ group_name }}')"
                             class="btn btn-success btn-block group-start-btn">
@@ -146,6 +153,7 @@
                         </button>
                     </div>
 
+                    <!-- optional group source information -->
                     {% if group.source %}
                     <div class="group-source">
                         <small>Source: {{ group.source }}</small>
@@ -157,117 +165,102 @@
         </div>
         {% endif %}
 
+        <!-- individual containers section title -->
         <div class="section-title">📦 Containers</div>
 
-        <div id="images" class="image-grid">
+        <!-- individual container cards grid -->
+        <div id="images" class="containers-grid">
             {% for name, data in images.items() %}
             {% set feature = features.get(name, {}) %}
             {% set running_info = running.get(name) %}
 
-            <div class="image-card" data-name="{{ name }}" data-category="{{ data.category }}"
-                data-container="playground-{{ name }}">
-                <div class="card-header">
-                    <h3>{{ name }}</h3>
-                    <div class="header-badges">
-                        <span class="badge badge-{{ data.category }}">{{ data.category }}</span>
+            <div class="container-card" data-name="{{ name }}" data-category="{{ data.category }}"
+                data-container="playground-{{ name }}" data-search="{{ name|lower }} {{ data.description|lower }}">
 
-                        {% if feature.get('has_motd') %}
-                        <!-- Quick Commands Icon - Opens Modal -->
-                        <span class="feature-icon feature-motd" data-commands='{{ data.motd_commands_json|safe }}'
-                            data-container="{{ running_info.name if running_info else name }}" data-image="{{ name }}"
-                            onclick="QuickCommandsManager.openFromElement(this)" title="View quick commands"
-                            style="cursor: pointer;">📋</span>
-                        {% endif %}
+                <!-- HEADER CON NOME CLICCABILE E CATEGORIA A DESTRA -->
+                <div class="container-header">
+                    <!-- NOME CONTAINER CON INDICATORE RUNNING/STOPPED -->
+                    <span class="container-name-badge {% if running_info %}running{% else %}stopped{% endif %}"
+                        data-container="{{ name }}" title="Click to filter by {{ name }}">
+                        <span class="status-dot {% if running_info %}running{% else %}stopped{% endif %}"></span>
+                        {{ name }}
+                    </span>
 
-                        {% if feature.get('has_post_start') %}
-                        <span class="feature-icon feature-post-start" title="Has post-start script">🚀</span>
-                        {% endif %}
-
-                        {% if feature.get('has_pre_stop') %}
-                        <span class="feature-icon feature-pre-stop" title="Has pre-stop script">💾</span>
-                        {% endif %}
-
-                        {% if running_info %}
-                        <!-- Execute Command Icon - Only if running -->
-                        <span class="feature-icon feature-execute-command"
-                            onclick="ExecuteCommandManager.open('{{ running_info.name }}', '{{ name }}')"
-                            title="Execute command" style="cursor: pointer;">⚡</span>
-
-                        <!-- Diagnostics Icon - Only if running -->
-                        <span class="feature-icon feature-diagnostics"
-                            onclick="ExecuteCommandManager.openDiagnostics('{{ running_info.name }}', '{{ name }}')"
-                            title="Run diagnostics" style="cursor: pointer;">🔍</span>
-                        {% endif %}
-                    </div>
+                    <!-- CATEGORIA BADGE A DESTRA -->
+                    <span class="badge badge-{{ data.category }}">
+                        {{ data.category }}
+                    </span>
                 </div>
 
-                <p class="card-description">{{ data.description }}</p>
+                <!-- FEATURE ICONS (Post-Start, Pre-Stop) -->
+                {% if feature.get('has_post_start') or feature.get('has_pre_stop') %}
+                <div class="container-features">
+                    {% if feature.get('has_post_start') %}
+                    <span class="feature-icon feature-post-start" title="Has post-start script">🚀</span>
+                    {% endif %}
 
-                <div class="card-status">
-                    {% if running_info %}
-                    <span class="status-indicator status-running">●</span>
-                    <span class="status-text">Running</span>
-                    {% else %}
-                    <span class="status-indicator status-stopped">●</span>
-                    <span class="status-text">Stopped</span>
+                    {% if feature.get('has_pre_stop') %}
+                    <span class="feature-icon feature-pre-stop" title="Has pre-stop script">💾</span>
                     {% endif %}
                 </div>
+                {% endif %}
 
-                <div class="card-actions-minimal">
+                <!-- DESCRIZIONE -->
+                <p class="container-description">{{ data.description }}</p>
+
+                <!-- CONTAINER ACTIONS -->
+                <div class="container-actions">
                     {% if running_info %}
-                    <!-- CONTAINER IN ESECUZIONE -->
+                    <!-- CONTAINER RUNNING -->
+                    <button class="btn-primary-action btn-stop"
+                        onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
+                        <span>⏹</span>
+                        <span>Stop</span>
+                    </button>
 
-                    <div class="actions-bar">
-                        <!-- Azione primaria -->
-                        <button class="btn-primary-action btn-stop-minimal"
-                            onclick="ContainerManager.stopContainer('{{ name }}', '{{ running_info.name }}')">
-                            <span class="btn-icon-large">⏹</span>
-                            <span class="btn-label">Stop</span>
-                        </button>
+                    <div class="container-quick-actions">
+                        <button class="btn-quick-action quick-commands"
+                            data-commands='{{ data.motd_commands_json|safe }}'
+                            data-container="{{ running_info.name if running_info else name }}" data-image="{{ name }}"
+                            onclick="QuickCommandsManager.openFromElement(this)" title="View quick commands">📋</button>
 
-                        <!-- Azioni rapide visibili -->
-                        <button class="btn-quick-action btn-restart-minimal" data-action="restart"
-                            onclick="ContainerManager.restartContainer('{{ name }}')" title="Restart container">
-                            <span class="btn-icon-large">🔄</span>
-                        </button>
+                        <button class="btn-quick-action restart" data-action="restart"
+                            onclick="ContainerManager.restartContainer('{{ name }}')"
+                            title="Restart container">🔄</button>
 
-                        <button class="btn-quick-action btn-logs-minimal" onclick="showLogs('{{ running_info.name }}')"
-                            title="View logs">
-                            <span class="btn-icon-large">📋</span>
-                        </button>
+                        <button class="btn-quick-action logs"
+                            onclick="LogsManager.show('{{ running_info.name }}', '{{ image_name }}', true)"
+                            title="View logs">📄</button>
 
-                        <button class="btn-quick-action btn-console-minimal"
-                            onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')" title="Open console">
-                            <span class="btn-icon-large">💻</span>
-                        </button>
+                        <button class="btn-quick-action console"
+                            onclick="ConsoleManager.open('{{ running_info.name }}', '{{ name }}')"
+                            title="Open console">💻</button>
 
-                        <!-- Pulsante Clean -->
-                        <button class="btn-quick-action btn-clean-minimal"
-                            onclick="ContainerManager.cleanupContainer('{{ running_info.name }}', '{{ name }}')"
-                            title="Clean container data">
-                            <span class="btn-icon-large">🧹</span>
-                        </button>
+                        <button class="btn-quick-action execute"
+                            onclick="ExecuteCommandManager.open('{{ running_info.name }}', '{{ name }}')"
+                            title="Execute shell command">⚡</button>
+
+                        <button class="btn-quick-action diagnostics"
+                            onclick="ExecuteCommandManager.openDiagnostics('{{ running_info.name }}', '{{ name }}')"
+                            title="Run diagnostics">🔍</button>
+
+                        <button class="btn-quick-action clean"
+                            onclick="ContainerManager.cleanupContainer('{{ running_info.name }}')"
+                            title="Clean container data">🧹</button>
                     </div>
 
                     {% else %}
-                    <!-- CONTAINER FERMO -->
+                    <!-- CONTAINER STOPPED -->
+                    <button class="btn-primary-action btn-start"
+                        onclick="ContainerManager.startContainer('{{ name }}')">
+                        <span>▶</span>
+                        <span>Start</span>
+                    </button>
 
-                    <div class="actions-bar">
-                        <!-- Azione primaria -->
-                        <button class="btn-primary-action btn-start-minimal btn-start-large"
-                            onclick="ContainerManager.startContainer('{{ name }}')">
-                            <span class="btn-icon-large">▶</span>
-                            <span class="btn-label">Start Container</span>
-                        </button>
-
-                        <!-- Pulsante Clean -->
-                        <button class="btn-quick-action btn-clean-minimal"
-                            onclick="ContainerManager.cleanupContainer('{{ name }}', '{{ name }}')"
-                            title="Clean container data">
-                            <span class="btn-icon-large">🧹</span>
-                        </button>
+                    <div class="container-quick-actions">
+                        <button class="btn-quick-action clean" onclick="ContainerManager.cleanupContainer('{{ name }}')"
+                            title="Clean container data">🧹</button>
                     </div>
-
                     {% endif %}
                 </div>
             </div>
@@ -275,37 +268,7 @@
         </div>
     </div>
 
-    <!-- Modal for Logs -->
-    <div id="logModal" class="modal">
-        <div class="modal-overlay" onclick="closeModal('logModal')"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-header-left">
-                    <h2>📋 Container Logs</h2>
-                    <div class="log-info">
-                        Container: <strong id="logContainerName"></strong>
-                    </div>
-                </div>
-                <div id="logFollowControls" class="log-follow-controls">
-                    <button id="followToggleBtn" class="btn btn-sm btn-outline">
-                        <span class="follow-icon">▶</span> Follow
-                    </button>
-                    <span id="followStatus" class="follow-status"></span>
-                    <button id="logFullscreenBtn" class="modal-fullscreen-btn"
-                        onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⊡</button>
-                </div>
-                <button class="modal-close" onclick="LogsManager.close()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <pre id="logContent" class="log-content"></pre>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="LogsManager.close()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Console -->
+    <!-- console modal for interactive terminal access -->
     <div id="consoleModal" class="modal">
         <div class="modal-overlay" onclick="ConsoleManager.close()"></div>
         <div class="modal-content modal-large">
@@ -328,7 +291,43 @@
         </div>
     </div>
 
-    <!-- Command Executor Modal -->
+    <!-- logs modal for viewing container logs -->
+    <div id="logModal" class="modal">
+        <div class="modal-overlay" onclick="LogsManager.close()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📋 Container Logs</h2>
+                <div class="modal-header-left">
+                    <div class="log-info">
+                        Container: <strong id="logContainerName"></strong> | Image: <strong id="logImageName"></strong>
+                    </div>
+                </div>
+                <button id="logFullscreenBtn" class="modal-fullscreen-btn"
+                    onclick="FullscreenManager.toggleLogFullscreen()" title="Toggle fullscreen">⊡</button>
+                <button class="modal-close" onclick="LogsManager.close()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="log-toolbar">
+                    <!--<button class="btn btn-sm btn-secondary" onclick="LogsManager.clearLogs()">Clear Logs</button>-->
+                    <button class="btn btn-sm btn-secondary" onclick="LogsManager.copyLogs()">Copy Logs</button>
+                    <div class="auto-scroll-toggle">
+                        <input type="checkbox" id="autoScroll" class="toggle-checkbox" checked
+                            onchange="LogsManager.toggleAutoScroll()">
+                        <label for="autoScroll" class="toggle-label">
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Auto-scroll</span>
+                        </label>
+                    </div>
+                </div>
+                <pre id="logsContent" class="logs-content"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="LogsManager.close()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- command executor modal for running custom commands -->
     <div id="commandModal" class="modal">
         <div class="modal-overlay" onclick="ExecuteCommandManager.close()"></div>
         <div class="modal-content">
@@ -364,7 +363,7 @@
         </div>
     </div>
 
-    <!-- Quick Commands Modal -->
+    <!-- quick commands modal for predefined container commands -->
     <div id="quickCommandsModal" class="modal">
         <div class="modal-overlay" onclick="QuickCommandsManager.close()"></div>
         <div class="modal-content modal-large">
@@ -389,7 +388,7 @@
         </div>
     </div>
 
-    <!-- Diagnostics Modal -->
+    <!-- container diagnostics modal for system information and monitoring -->
     <div id="diagnosticsModal" class="modal">
         <div class="modal-overlay" onclick="ExecuteCommandManager.closeDiagnostics()"></div>
         <div class="modal-content modal-large">
@@ -404,6 +403,7 @@
                 <button class="modal-close" onclick="ExecuteCommandManager.closeDiagnostics()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- diagnostics tab navigation -->
                 <div class="diagnostics-tabs">
                     <button class="diagnostics-tab-btn active"
                         onclick="ExecuteCommandManager.switchTab('processes')">Processes</button>
@@ -417,6 +417,7 @@
                     <button class="diagnostics-tab-btn" onclick="ExecuteCommandManager.switchTab('logs')">Logs</button>
                 </div>
 
+                <!-- diagnostics tab content areas -->
                 <div id="diagnosticsProcesses" class="diagnostics-tab"></div>
                 <div id="diagnosticsDisk" class="diagnostics-tab" style="display: none;"></div>
                 <div id="diagnosticsNetwork" class="diagnostics-tab" style="display: none;"></div>
@@ -430,18 +431,21 @@
         </div>
     </div>
 
+    <!-- generic confirmation modal for user actions -->
     <div id="confirmModal" class="modal"></div>
 
-    <!-- Core Libraries -->
+    <!-- core vendor libraries for terminal and ui functionality -->
     <script src="/static/js/vendor/xterm-5.3.0.js"></script>
     <script src="/static/js/vendor/xterm-addon-fit-0.8.0.js"></script>
     <script src="/static/js/vendor/xterm-addon-webgl-0.16.0.js"></script>
 
-    <!-- Shared Modules -->
+    <!-- shared core modules and utilities -->
     <script src="/static/js/core/core-modules.js"></script>
     <script src="/static/js/core/api-service.js"></script>
     <script src="/static/js/core/dark-mode.js"></script>
     <script src="/static/js/core/reload-manager.js"></script>
+
+    <!-- feature managers -->
     <script src="/static/js/managers/filter-manager.js"></script>
     <script src="/static/js/managers/container-manager.js"></script>
     <script src="/static/js/managers/logs-manager.js"></script>
@@ -455,15 +459,18 @@
     <script src="/static/js/managers/fullscreen-manager.js"></script>
     <script src="/static/js/managers/motd-manager.js"></script>
     <script src="/static/js/managers/container-tag-manager.js"></script>
+    <script src="/static/js/managers/container-name-badge-manager.js"></script>
     <script src="/static/js/managers/filter-persistence-manager.js"></script>
     <script src="/static/js/managers/diagnostics-parser.js"></script>
     <script src="/static/js/managers/monitoring-stats.js"></script>
     <script src="/static/js/managers/execute-command.js"></script>
     <script src="/static/js/managers/health-monitor.js"></script>
     <script src="/static/js/managers/quick-commands-manager.js"></script>
+
+    <!-- core operation monitoring -->
     <script src="/static/js/core/operation-monitor.js"></script>
 
-    <!-- Page-Specific Initialization -->
+    <!-- page-specific initialization and setup -->
     <script src="/static/js/pages/page-init-dashboard.js"></script>
 </body>
 

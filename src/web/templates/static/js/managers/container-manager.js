@@ -1,21 +1,19 @@
 // =========================================================
-// CONTAINER MANAGER - Start, stop, and manage containers
+// CONTAINER MANAGER - updated for new container cards
 // =========================================================
 
 const ContainerManager = {
     /**
-     * Start a container
+     * start a container
      */
     async startContainer(image) {
         const card = DOM.query(`[data-name="${image}"]`);
-        const btn = card?.querySelector('.btn-start-minimal');
+        const btn = card?.querySelector('.btn-start');
         if (!btn) return;
 
         const originalHTML = btn.innerHTML;
-
-        // Mostra solo lo spinner
         btn.disabled = true;
-        btn.innerHTML = '<span class="btn-icon-large spinner">⏳</span>';
+        btn.innerHTML = '<span>⏳</span>';
 
         try {
             const response = await ApiService.startContainer(image);
@@ -34,11 +32,10 @@ const ContainerManager = {
     },
 
     /**
-     * Restart a container
+     * restart a container
      */
     async restartContainer(image) {
         try {
-            // Chiedi conferma prima di procedere
             const confirmed = await showConfirmModal(
                 'Restart Container',
                 `Are you sure you want to restart container <strong>${image}</strong>?`,
@@ -51,10 +48,8 @@ const ContainerManager = {
             if (!btn) return;
 
             const originalHTML = btn.innerHTML;
-
-            // Mostra solo lo spinner senza testo
             btn.disabled = true;
-            btn.innerHTML = '<span class="btn-icon-large spinner">⏳</span>';
+            btn.innerHTML = '<span>⏳</span>';
 
             const response = await ApiService.restartContainer(image);
 
@@ -62,7 +57,7 @@ const ContainerManager = {
                 OperationMonitor.startMonitoring(response.operation_id, `Restarting ${image}`);
                 await this.pollRestartStatus(response.operation_id, image, btn, originalHTML);
             } else {
-                throw new Error('No operation_id received from server');
+                throw new Error('No operation_id received');
             }
 
         } catch (error) {
@@ -72,7 +67,7 @@ const ContainerManager = {
     },
 
     /**
-     * Poll restart status
+     * poll restart status
      */
     async pollRestartStatus(operationId, image, btn, originalHTML) {
         try {
@@ -89,11 +84,9 @@ const ContainerManager = {
                 const restarted = statusData.restarted || 0;
 
                 if (restarted > 0) {
-                    //ToastManager.show(`✓ Container ${image} restarted successfully!`, 'success');
+                    this.updateCardUI(image, true, statusData.container || `playground-${image}`);
+                    ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
                 }
-
-                this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
 
             } else if (statusData.status === 'error') {
                 const errorMsg = statusData.error || 'Unknown error';
@@ -109,7 +102,7 @@ const ContainerManager = {
                 });
             }
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             ToastManager.show(`✗ Error polling container status: ${error.message}`, 'error');
             Utils.updateButtonState(btn, {
                 disabled: false,
@@ -119,7 +112,7 @@ const ContainerManager = {
     },
 
     /**
-     * Format restart status message
+     * format restart status message
      */
     formatRestartStatusMessage(statusData, image) {
         const total = statusData.total || 1;
@@ -134,7 +127,6 @@ const ContainerManager = {
             message = `Restarting '${image}': ${completed}/${total}\n` +
                 `✓ ${restarted} restarted | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
 
-            // Add script tracking info if available
             const scriptStatus = Utils.formatScriptStatus(statusData);
             if (scriptStatus) {
                 message += `\n${scriptStatus}`;
@@ -149,7 +141,7 @@ const ContainerManager = {
     },
 
     /**
-     * Handle restart error
+     * handle restart error
      */
     handleRestartError(error, image, btn, originalHTML) {
         if (error.name === 'AbortError') {
@@ -165,7 +157,7 @@ const ContainerManager = {
     },
 
     /**
-     * Cleanup a container
+     * cleanup a container
      */
     async cleanupContainer(containerName) {
         try {
@@ -178,22 +170,20 @@ const ContainerManager = {
 
             await this.performCleanup(containerName);
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
         }
     },
 
     /**
-     * Perform cleanup
+     * perform cleanup
      */
     async performCleanup(containerName) {
         try {
             const response = await ApiService.cleanupContainer(containerName);
 
-            // ApiService.cleanupContainer ritorna direttamente l'oggetto JSON
             if (response.operation_id) {
                 OperationMonitor.startMonitoring(response.operation_id, `Cleaning up ${containerName}`);
-
             } else {
                 throw new Error('No operation_id received');
             }
@@ -204,7 +194,7 @@ const ContainerManager = {
     },
 
     /**
-     * Poll container status
+     * poll container status
      */
     async pollContainerStatus(operationId, image, btn, originalHTML) {
         try {
@@ -222,13 +212,9 @@ const ContainerManager = {
                 const alreadyRunning = statusData.already_running || 0;
 
                 if (started > 0) {
-                    //ToastManager.show(`✓ Container ${image} started successfully!`, 'success');
-                } else if (alreadyRunning > 0) {
-                    ToastManager.show(`ℹ Container ${image} was already running`, 'info');
+                    this.updateCardUI(image, true, statusData.container || `playground-${image}`);
+                    ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
                 }
-
-                this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
 
             } else if (statusData.status === 'error') {
                 const errorMsg = statusData.error || 'Unknown error';
@@ -244,7 +230,7 @@ const ContainerManager = {
                 });
             }
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             ToastManager.show(`✗ Error polling container status: ${error.message}`, 'error');
             Utils.updateButtonState(btn, {
                 disabled: false,
@@ -254,23 +240,21 @@ const ContainerManager = {
     },
 
     /**
-     * Format container status message with script tracking
+     * format container status message
      */
     formatContainerStatusMessage(statusData, image) {
         const total = statusData.total || 1;
         const started = statusData.started || 0;
-        const alreadyRunning = statusData.already_running || 0;
         const failed = statusData.failed || 0;
-        const completed = started + alreadyRunning + failed;
+        const completed = started + failed;
         const remaining = total - completed;
 
         let message = '';
 
         if (statusData.status === 'running') {
             message = `Starting '${image}': ${completed}/${total}\n` +
-                `✓ ${started} started | ⚡ ${alreadyRunning} running | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
+                `✓ ${started} started | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
 
-            // Add script tracking info if available
             const scriptStatus = Utils.formatScriptStatus(statusData);
             if (scriptStatus) {
                 message += `\n${scriptStatus}`;
@@ -285,7 +269,7 @@ const ContainerManager = {
     },
 
     /**
-     * Handle start error
+     * handle start error
      */
     handleStartError(error, image, btn, originalHTML) {
         if (error.name === 'AbortError') {
@@ -301,7 +285,7 @@ const ContainerManager = {
     },
 
     /**
-     * Stop a container
+     * stop a container
      */
     async stopContainer(imageName, containerName) {
         try {
@@ -321,25 +305,22 @@ const ContainerManager = {
     },
 
     /**
-     * Perform stop container
+     * perform stop container
      */
     async performStopContainer(imageName, containerName) {
         const card = DOM.query(`[data-name="${imageName}"]`);
-        const btn = card?.querySelector('.btn-stop-minimal');
+        const btn = card?.querySelector('.btn-stop');
         if (!btn) return;
 
         const originalHTML = btn.innerHTML;
-
-        // Mostra solo lo spinner
         btn.disabled = true;
-        btn.innerHTML = '<span class="btn-icon-large spinner">⏳</span>';
+        btn.innerHTML = '<span>⏳</span>';
 
         try {
             const response = await ApiService.stopContainer(containerName);
 
             if (response.operation_id) {
                 OperationMonitor.startMonitoring(response.operation_id, `Stopping ${containerName}`);
-                //await this.pollStopStatus(response.operation_id, imageName, containerName, btn, originalHTML);
             } else {
                 throw new Error('No operation_id received from server');
             }
@@ -351,26 +332,7 @@ const ContainerManager = {
     },
 
     /**
-     * Handle stop response
-     */
-    async handleStopResponse(response, imageName, containerName, btn) {
-        if (response.ok) {
-            //ToastManager.show(`✓ Container ${containerName} stopped`, 'success');
-            this.updateCardUI(imageName, false, '');
-            ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
-        } else {
-            const data = await response.json();
-            const errorMsg = data.detail || 'Failed to stop container';
-            ToastManager.show(`✗ Error: ${errorMsg}`, 'error');
-            Utils.updateButtonState(btn, {
-                disabled: false,
-                originalHTML: btn.innerHTML
-            });
-        }
-    },
-
-    /**
-     * Handle stop error
+     * handle stop error
      */
     handleStopError(error, containerName, btn, originalHTML) {
         if (error.name === 'AbortError') {
@@ -394,101 +356,129 @@ const ContainerManager = {
     },
 
     /**
-     * Reset stop button
+     * reset stop button
      */
     resetStopButton(imageName) {
         const card = DOM.query(`[data-name="${imageName}"]`);
-        const btn = card?.querySelector('.btn-danger');
+        const btn = card?.querySelector('.btn-stop');
         if (btn) {
             Utils.updateButtonState(btn, {
                 disabled: false,
-                originalHTML: '<span class="btn-icon">⏹</span> Stop'
+                originalHTML: '<span>⏹</span><span>Stop</span>'
             });
         }
     },
 
     /**
-     * Update card UI after status change
+     * update card ui after status change - new html structure with all buttons
      */
     updateCardUI(imageName, isRunning, containerName) {
         const card = DOM.query(`[data-name="${imageName}"]`);
         if (!card) return;
 
-        const statusIndicator = card.querySelector('.status-indicator');
-        const statusText = card.querySelector('.status-text');
-        const actionsContainer = card.querySelector('.card-actions-minimal');
+        const nameBadge = card.querySelector('.container-name-badge');
+        const statusDot = card.querySelector('.container-name-badge .status-dot');
+        const actionsContainer = card.querySelector('.container-actions');
 
         if (!actionsContainer) {
-            console.error('card-actions-minimal not found for', imageName);
+            console.error('container-actions not found for', imageName);
             return;
         }
 
         if (isRunning) {
-            // CONTAINER IN ESECUZIONE
+            // running container
             card.setAttribute('data-container', containerName);
-            DOM.addClass(statusIndicator, 'status-running');
-            DOM.removeClass(statusIndicator, 'status-stopped');
-            if (statusText) statusText.textContent = 'Running';
 
+            // update name badge indicator
+            if (nameBadge) {
+                nameBadge.classList.remove('stopped');
+                nameBadge.classList.add('running');
+            }
+
+            // update status dot
+            if (statusDot) {
+                statusDot.classList.remove('stopped');
+                statusDot.classList.add('running');
+            }
+
+            // update actions - include all running container buttons
             actionsContainer.innerHTML = `
-            <div class="actions-bar">
-                <button class="btn-primary-action btn-stop-minimal"
+                <button class="btn-primary-action btn-stop"
                     onclick="ContainerManager.stopContainer('${imageName}', '${containerName}')">
-                    <span class="btn-icon-large">⏹</span>
-                    <span class="btn-label">Stop</span>
+                    <span>⏹</span>
+                    <span>Stop</span>
                 </button>
 
-                <button class="btn-quick-action btn-restart-minimal" 
-                    data-action="restart"
-                    onclick="ContainerManager.restartContainer('${imageName}')"
-                    title="Restart container">
-                    <span class="btn-icon-large">🔄</span>
-                </button>
+                <div class="container-quick-actions">
+                    <button class="btn-quick-action quick-commands" 
+                        data-commands='{{ data.motd_commands_json|safe }}'
+                        data-container="${containerName}" 
+                        data-image="${imageName}"
+                        onclick="QuickCommandsManager.openFromElement(this)" 
+                        title="View quick commands">📋</button>
 
-                <button class="btn-quick-action btn-logs-minimal" 
-                    onclick="showLogs('${containerName}')"
-                    title="View logs">
-                    <span class="btn-icon-large">📋</span>
-                </button>
+                    <button class="btn-quick-action restart" 
+                        data-action="restart"
+                        onclick="ContainerManager.restartContainer('${imageName}')"
+                        title="Restart container">🔄</button>
 
-                <button class="btn-quick-action btn-console-minimal" 
-                    onclick="ConsoleManager.open('${containerName}', '${imageName}')"
-                    title="Open console">
-                    <span class="btn-icon-large">💻</span>
-                </button>
+                    <button class="btn-quick-action logs" 
+                        onclick="LogsManager.show('${containerName}', '${imageName}', true)"
+                        title="View logs">📄</button>
 
-                <button class="btn-quick-action btn-clean-minimal" 
-                    onclick="ContainerManager.cleanupContainer('${containerName}', '${imageName}')"
-                    title="Clean container data">
-                    <span class="btn-icon-large">🧹</span>
-                </button>
-            </div>
-        `;
+                    <button class="btn-quick-action console" 
+                        onclick="ConsoleManager.open('${containerName}', '${imageName}')"
+                        title="Open console">💻</button>
+
+                    <button class="btn-quick-action execute" 
+                        onclick="ExecuteCommandManager.open('${containerName}', '${imageName}')"
+                        title="Execute shell command">⚡</button>
+
+                    <button class="btn-quick-action diagnostics"
+                        onclick="ExecuteCommandManager.openDiagnostics('${containerName}', '${imageName}')"
+                        title="Run diagnostics">🔍</button>
+
+                    <button class="btn-quick-action clean" 
+                        onclick="ContainerManager.cleanupContainer('${containerName}')"
+                        title="Clean container data">🧹</button>
+                </div>
+            `;
         } else {
-            // CONTAINER FERMO
+            // stopped container
             card.removeAttribute('data-container');
-            DOM.removeClass(statusIndicator, 'status-running');
-            DOM.addClass(statusIndicator, 'status-stopped');
-            if (statusText) statusText.textContent = 'Stopped';
 
+            // update name badge indicator
+            if (nameBadge) {
+                nameBadge.classList.remove('running');
+                nameBadge.classList.add('stopped');
+            }
+
+            // update status dot
+            if (statusDot) {
+                statusDot.classList.remove('running');
+                statusDot.classList.add('stopped');
+            }
+
+            // update actions - only start and clean for stopped container
             actionsContainer.innerHTML = `
-            <div class="actions-bar">
-                <button class="btn-primary-action btn-start-minimal btn-start-large"
+                <button class="btn-primary-action btn-start"
                     onclick="ContainerManager.startContainer('${imageName}')">
-                    <span class="btn-icon-large">▶</span>
-                    <span class="btn-label">Start Container</span>
+                    <span>▶</span>
+                    <span>Start</span>
                 </button>
 
-                <button class="btn-quick-action btn-clean-minimal" 
-                    onclick="ContainerManager.cleanupContainer('${imageName}', '${imageName}')"
-                    title="Clean container data">
-                    <span class="btn-icon-large">🧹</span>
-                </button>
-            </div>
-        `;
+                <div class="container-quick-actions">
+                    <button class="btn-quick-action clean" 
+                        onclick="ContainerManager.cleanupContainer('${imageName}')"
+                        title="Clean container data">🧹</button>
+                </div>
+            `;
         }
 
-        FilterManager.applyFilters();
+        // reinitialize handlers for new buttons (without triggering filter)
+        if (ContainerTagManager && ContainerTagManager.reinitializeHandlers) {
+            ContainerTagManager.reinitializeHandlers();
+        }
     }
 
 };

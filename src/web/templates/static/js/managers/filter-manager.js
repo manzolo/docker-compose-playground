@@ -29,8 +29,8 @@ const FilterManager = {
         const searchTerm = DOM.get('filter')?.value.toLowerCase() || '';
         const selectedCategory = DOM.get('category-filter')?.value.toLowerCase() || '';
 
-        // Filter individual containers
-        DOM.queryAll('.image-card').forEach(card => {
+        // Filter individual containers - cerca .container-card
+        DOM.queryAll('.container-card').forEach(card => {
             const matches = this.cardMatchesFilters(card, searchTerm, selectedCategory);
             card.style.display = matches ? '' : 'none';
         });
@@ -52,12 +52,15 @@ const FilterManager = {
                 const containerTags = groupCard.querySelectorAll('.container-tag');
                 const hasMatchingContainer = Array.from(containerTags).some(tag => {
                     const containerName = tag.getAttribute('data-container');
-                    const containerCard = DOM.query(`.image-card[data-name="${containerName}"]`);
+                    const containerCard = DOM.query(`.container-card[data-name="${containerName}"]`);
 
                     if (!containerCard) return false;
 
-                    const statusText = containerCard.querySelector('.status-text')?.textContent.toLowerCase() || '';
-                    return statusText === this.activeStatusFilter;
+                    // Cerca status nel .status-dot
+                    const statusDot = containerCard.querySelector('.status-dot');
+                    const isRunning = statusDot && statusDot.classList.contains('running');
+                    const status = isRunning ? 'running' : 'stopped';
+                    return status === this.activeStatusFilter;
                 });
 
                 matchesStatus = hasMatchingContainer;
@@ -75,7 +78,11 @@ const FilterManager = {
     cardMatchesFilters(card, searchTerm, selectedCategory) {
         const name = card.getAttribute('data-name').toLowerCase();
         const category = card.getAttribute('data-category').toLowerCase();
-        const status = card.querySelector('.status-text')?.textContent.toLowerCase() || '';
+        
+        // Cerca lo status nel .status-dot (running/stopped class)
+        const statusDot = card.querySelector('.status-dot');
+        const isRunning = statusDot && statusDot.classList.contains('running');
+        const status = isRunning ? 'running' : 'stopped';
 
         const matchesSearch = searchTerm ?
             (name.includes(searchTerm) || category.includes(searchTerm)) : true;
@@ -91,13 +98,14 @@ const FilterManager = {
      * Update filter badge counts
      */
     updateCounts() {
-        let totalCount = DOM.queryAll('.image-card').length;
+        let totalCount = DOM.queryAll('.container-card').length;
         let runningCount = 0;
         let stoppedCount = 0;
 
-        DOM.queryAll('.image-card').forEach(card => {
-            const status = card.querySelector('.status-text')?.textContent.toLowerCase() || '';
-            if (status === 'running') {
+        DOM.queryAll('.container-card').forEach(card => {
+            const statusDot = card.querySelector('.status-dot');
+            const isRunning = statusDot && statusDot.classList.contains('running');
+            if (isRunning) {
                 runningCount++;
             } else {
                 stoppedCount++;
@@ -105,7 +113,7 @@ const FilterManager = {
         });
 
         let visibleCount = 0;
-        DOM.queryAll('.image-card').forEach(card => {
+        DOM.queryAll('.container-card').forEach(card => {
             if (card.style.display !== 'none') {
                 visibleCount++;
             }
@@ -171,13 +179,13 @@ const FilterManager = {
      * Highlight matching card
      */
     highlightMatchingCard(containerName) {
-        const imageGrid = DOM.query('.image-grid');
-        if (imageGrid) {
-            imageGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const containersGrid = DOM.query('.containers-grid');
+        if (containersGrid) {
+            containersGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         setTimeout(() => {
-            const matchingCard = DOM.query(`.image-card[data-name="${containerName}"]`);
+            const matchingCard = DOM.query(`.container-card[data-name="${containerName}"]`);
             if (matchingCard) {
                 matchingCard.style.transition = 'all 0.3s ease';
                 matchingCard.style.transform = 'scale(1.02)';

@@ -17,58 +17,6 @@
 }
 
 /* ============================================
-   CONTAINER GRID
-   ============================================ */
-
-.image-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
-}
-
-/* ============================================
-   IMAGE CARD
-   ============================================ */
-
-.image-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: var(--shadow-md);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid var(--border);
-    position: relative;
-    overflow: hidden;
-}
-
-.image-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.image-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
-}
-
-.image-card:hover::before {
-    opacity: 1;
-}
-
-.image-card.hidden {
-    display: none;
-}
-
-/* ============================================
    CARD HEADER
    ============================================ */
 
