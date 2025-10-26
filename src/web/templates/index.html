@@ -212,40 +212,6 @@
                 </div>
                 {% endif %}
 
-                <!-- Stats Panel (Hidden by default, shown when Stats button clicked) -->
-                <div id="stats-panel-{{ name }}" class="stats-panel" style="display: none;">
-                    <div class="stat-item">
-                        <span class="stat-label">CPU</span>
-                        <div class="stat-bar">
-                            <div class="stat-cpu-bar"></div>
-                        </div>
-                        <span class="stat-cpu-text">--</span>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Memory</span>
-                        <div class="stat-bar">
-                            <div class="stat-memory-bar"></div>
-                        </div>
-                        <span class="stat-memory-text">--</span>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Network</span>
-                        <span class="stat-network-text">--</span>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">I/O</span>
-                        <span class="stat-io-text">--</span>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Processes</span>
-                        <span class="stat-processes-text">--</span>
-                    </div>
-                </div>
-
                 <div class="card-actions-minimal">
                     {% if running_info %}
                     <!-- CONTAINER IN ESECUZIONE -->
