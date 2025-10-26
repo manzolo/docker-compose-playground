@@ -1,0 +1,263 @@
+/* ============================================
+   QUICK COMMANDS MODAL & LIST
+   ============================================ */
+
+.quick-commands-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.quick-command-item {
+    padding: 16px;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.quick-command-item:hover {
+    background: #f0f4ff;
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+    transform: translateX(4px);
+}
+
+.quick-command-url {
+    border-color: #48bb78;
+}
+
+.quick-command-url:hover {
+    background: #f0fdf4;
+    border-color: #48bb78;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.1);
+}
+
+.quick-command-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.quick-command-text {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    color: #2d3748;
+    font-weight: 600;
+    word-break: break-all;
+    margin-bottom: 6px;
+    background: white;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #667eea;
+}
+
+.quick-command-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.quick-command-link:hover .quick-command-text {
+    background: #e6fffa;
+    color: #22543d;
+}
+
+.quick-command-description {
+    font-size: 12px;
+    color: #718096;
+    line-height: 1.4;
+    margin-top: 6px;
+}
+
+.quick-command-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.quick-command-btn {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #667eea;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.quick-command-btn:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.quick-command-btn:active {
+    transform: scale(0.95);
+}
+
+.quick-command-btn.btn-copy {
+    border-color: #48bb78;
+    color: #48bb78;
+}
+
+.quick-command-btn.btn-copy:hover {
+    background: #48bb78;
+    color: white;
+}
+
+.quick-command-btn.btn-send {
+    border-color: #f6ad55;
+    color: #f6ad55;
+}
+
+.quick-command-btn.btn-send:hover {
+    background: #f6ad55;
+    color: white;
+}
+
+.quick-command-btn.btn-open {
+    border-color: #4299e1;
+    color: #4299e1;
+}
+
+.quick-command-btn.btn-open:hover {
+    background: #4299e1;
+    color: white;
+}
+
+.quick-command-btn.btn-open {
+    border-color: #4299e1;
+    color: #4299e1;
+}
+
+.quick-command-btn.btn-open:hover {
+    background: #4299e1;
+    color: white;
+}
+.quick-commands-empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: #a0aec0;
+}
+
+.quick-commands-empty p {
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode .quick-command-item {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+html.dark-mode .quick-command-item:hover {
+    background: #374151;
+    border-color: #667eea;
+}
+
+html.dark-mode .quick-command-url:hover {
+    background: #1f3a1f;
+    border-color: #48bb78;
+}
+
+html.dark-mode .quick-command-text {
+    background: #1a202c;
+    color: #e2e8f0;
+    border-left-color: #667eea;
+}
+
+html.dark-mode .quick-command-link:hover .quick-command-text {
+    background: #0f2818;
+    color: #9ae6b4;
+}
+
+html.dark-mode .quick-command-description {
+    color: #cbd5e1;
+}
+
+html.dark-mode .quick-command-btn {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #667eea;
+}
+
+html.dark-mode .quick-command-btn:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+html.dark-mode .quick-command-btn.btn-copy {
+    border-color: #48bb78;
+    color: #48bb78;
+}
+
+html.dark-mode .quick-command-btn.btn-copy:hover {
+    background: #48bb78;
+    color: white;
+}
+
+html.dark-mode .quick-command-btn.btn-send {
+    border-color: #f6ad55;
+    color: #f6ad55;
+}
+
+html.dark-mode .quick-command-btn.btn-send:hover {
+    background: #f6ad55;
+    color: white;
+}
+
+html.dark-mode .quick-command-btn.btn-open {
+    border-color: #4299e1;
+    color: #4299e1;
+}
+
+html.dark-mode .quick-command-btn.btn-open:hover {
+    background: #4299e1;
+    color: white;
+}
+
+html.dark-mode .quick-commands-empty {
+    color: #718096;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .quick-command-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .quick-command-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .quick-command-text {
+        font-size: 12px;
+    }
+
+    .quick-command-btn {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+}

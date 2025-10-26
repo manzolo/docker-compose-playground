@@ -10,7 +10,7 @@ const ExecuteCommandManager = {
      */
     open(container, imageName) {
         this.currentContainer = container;
-        
+
         const modal = DOM.get('commandModal');
         if (!modal) {
             ToastManager.show('Command modal not found', 'error');
@@ -21,10 +21,35 @@ const ExecuteCommandManager = {
         DOM.get('commandImageName').textContent = imageName;
         DOM.get('commandInput').value = '';
         DOM.get('commandOutput').textContent = '';
-        
+
         ModalManager.open('commandModal');
+
+        // Focus e aggiungi event listener per Enter
+        const commandInput = DOM.get('commandInput');
+        
+        // Rimuovi ALL i listener vecchi clonando l'elemento
+        const newInput = commandInput.cloneNode(true);
+        commandInput.parentNode.replaceChild(newInput, commandInput);
+        const updatedInput = DOM.get('commandInput');
+        
         setTimeout(() => {
-            DOM.get('commandInput').focus();
+            updatedInput.focus();
+
+            // Aggiungi listener per Enter (una sola volta)
+            updatedInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.executeCommand();
+                }
+            });
+
+            // Aggiungi listener per Escape (chiude modal)
+            updatedInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.close();
+                }
+            });
         }, 100);
     },
 
@@ -33,7 +58,7 @@ const ExecuteCommandManager = {
      */
     async executeCommand() {
         const command = DOM.get('commandInput').value.trim();
-        
+
         if (!command) {
             ToastManager.show('Please enter a command', 'warning');
             return;
@@ -69,12 +94,12 @@ const ExecuteCommandManager = {
             }
 
             // Display output
-            const output = result.success 
-                ? result.output 
+            const output = result.success
+                ? result.output
                 : `Command failed with exit code ${result.exit_code}\n${result.output}`;
-            
+
             outputArea.textContent = output;
-            
+
             if (result.success) {
                 ToastManager.show('Command executed successfully', 'success');
             } else {
@@ -102,7 +127,7 @@ const ExecuteCommandManager = {
      */
     copyOutput() {
         const output = DOM.get('commandOutput').textContent;
-        
+
         if (!output) {
             ToastManager.show('Nothing to copy', 'warning');
             return;
@@ -120,7 +145,7 @@ const ExecuteCommandManager = {
      */
     async openDiagnostics(container, imageName) {
         this.currentContainer = container;
-        
+
         const modal = DOM.get('diagnosticsModal');
         if (!modal) {
             ToastManager.show('Diagnostics modal not found', 'error');
@@ -129,17 +154,44 @@ const ExecuteCommandManager = {
 
         DOM.get('diagnosticsContainerName').textContent = container;
         DOM.get('diagnosticsImageName').textContent = imageName;
-        
+
         // Clear all tabs
-        DOM.get('diagnosticsProcesses').textContent = '';
-        DOM.get('diagnosticsDisk').textContent = '';
-        DOM.get('diagnosticsNetwork').textContent = '';
-        DOM.get('diagnosticsEnvironment').textContent = '';
-        DOM.get('diagnosticsUptime').textContent = '';
-        DOM.get('diagnosticsLogs').textContent = '';
+        DOM.get('diagnosticsProcesses').innerHTML = '';
+        DOM.get('diagnosticsDisk').innerHTML = '';
+        DOM.get('diagnosticsNetwork').innerHTML = '';
+        DOM.get('diagnosticsEnvironment').innerHTML = '';
+        DOM.get('diagnosticsUptime').innerHTML = '';
+        DOM.get('diagnosticsLogs').innerHTML = '';
 
         ModalManager.open('diagnosticsModal');
+
+        // Resetta il primo tab come attivo
+        DOM.queryAll('.diagnostics-tab-btn').forEach((btn, index) => {
+            if (index === 0) {
+                DOM.addClass(btn, 'active');
+            } else {
+                DOM.removeClass(btn, 'active');
+            }
+        });
         
+        DOM.queryAll('.diagnostics-tab').forEach((tab, index) => {
+            tab.style.display = index === 0 ? 'block' : 'none';
+        });
+
+        // Rimuovi listener vecchio se esiste
+        if (this.diagnosticsEscapeListener) {
+            document.removeEventListener('keydown', this.diagnosticsEscapeListener);
+        }
+
+        // Aggiungi listener per Escape su document (chiude modal)
+        this.diagnosticsEscapeListener = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closeDiagnostics();
+            }
+        };
+        document.addEventListener('keydown', this.diagnosticsEscapeListener);
+
         // Fetch diagnostics
         this.fetchDiagnostics(container);
     },
@@ -163,13 +215,13 @@ const ExecuteCommandManager = {
                 return;
             }
 
-            // Display diagnostic data
-            DOM.get('diagnosticsProcesses').textContent = data.diagnostics.processes || 'N/A';
-            DOM.get('diagnosticsDisk').textContent = data.diagnostics.disk_usage || 'N/A';
-            DOM.get('diagnosticsNetwork').textContent = data.diagnostics.network || 'N/A';
-            DOM.get('diagnosticsEnvironment').textContent = data.diagnostics.environment || 'N/A';
-            DOM.get('diagnosticsUptime').textContent = data.diagnostics.uptime || 'N/A';
-            DOM.get('diagnosticsLogs').textContent = data.diagnostics.recent_logs || 'N/A';
+            // Display diagnostic data with parsing
+            DOM.get('diagnosticsProcesses').innerHTML = DiagnosticsParser.parseProcesses(data.diagnostics.processes || 'N/A');
+            DOM.get('diagnosticsDisk').innerHTML = DiagnosticsParser.parseDiskUsage(data.diagnostics.disk_usage || 'N/A');
+            DOM.get('diagnosticsNetwork').innerHTML = DiagnosticsParser.parseNetwork(data.diagnostics.network || 'N/A');
+            DOM.get('diagnosticsEnvironment').innerHTML = DiagnosticsParser.parseEnvironment(data.diagnostics.environment || 'N/A');
+            DOM.get('diagnosticsUptime').innerHTML = DiagnosticsParser.parseUptime(data.diagnostics.uptime || 'N/A');
+            DOM.get('diagnosticsLogs').innerHTML = DiagnosticsParser.parseLogs(data.diagnostics.recent_logs || 'N/A');
 
             ToastManager.show('Diagnostics completed', 'success');
 
@@ -219,6 +271,12 @@ const ExecuteCommandManager = {
      */
     closeDiagnostics() {
         this.currentContainer = null;
+        
+        // Rimuovi listener Escape
+        if (this.diagnosticsEscapeListener) {
+            document.removeEventListener('keydown', this.diagnosticsEscapeListener);
+        }
+        
         ModalManager.close('diagnosticsModal');
     }
 };

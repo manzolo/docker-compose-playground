@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+import json
 import logging
 
 from src.web.core.config import load_config
@@ -20,13 +21,16 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters['motd_to_html'] = motd_to_html
 
 
+
 def enrich_image_data(config):
     """Add motd_commands and clean motd to each image config"""
     enriched = {}
     for img_name, img_data in config.items():
         enriched_data = img_data.copy()
         motd = img_data.get('motd', '')
-        enriched_data['motd_commands'] = parse_motd_commands(motd)
+        commands = parse_motd_commands(motd)
+        enriched_data['motd_commands'] = commands
+        enriched_data['motd_commands_json'] = json.dumps(commands)
         enriched_data['motd'] = clean_motd_text(motd)
         enriched[img_name] = enriched_data
     return enriched
