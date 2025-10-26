@@ -1,0 +1,47 @@
+/* MOTD Styling */
+.motd-text {
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #333;
+}
+
+.motd-link {
+    color: #0066cc;
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    font-weight: 500;
+}
+
+.motd-link:hover {
+    color: #004499;
+    text-decoration: none;
+}
+
+.motd-separator {
+    color: #00AA88;
+    font-weight: bold;
+}
+
+.motd-highlight {
+    color: #228B22;
+    font-weight: bold;
+}
+
+.motd-warning {
+    color: #FF8C00;
+    font-weight: bold;
+}
+
+.motd-command {
+    color: #C41E3A;
+    font-weight: 600;
+}
+
+.motd-comment {
+    color: #666;
+    font-style: italic;
+}

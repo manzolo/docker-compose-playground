@@ -1,4 +1,86 @@
 """MOTD (Message of the Day) processing utilities"""
+import re
+from markupsafe import Markup
+
+
+def parse_urls(text: str) -> Markup:
+    """Converte gli URL in link HTML"""
+    if not text:
+        return Markup("")
+    
+    # Pattern per riconoscere URL (http, https, ftp)
+    url_pattern = r'(https?|ftp)://[^\s<>"{}|\\^`\[\]]+'
+    
+    def make_link(match):
+        url = match.group(0)
+        # Estrai il dominio per il testo del link
+        domain = url.split('//')[1].split('/')[0]
+        return f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="motd-link" title="{url}">{domain}</a>'
+    
+    html = re.sub(url_pattern, make_link, text)
+    return Markup(html)
+
+
+def motd_to_html(motd_text: str) -> Markup:
+    """Converte MOTD text in HTML preservando la formattazione"""
+    if not motd_text:
+        return Markup("")
+    
+    html = []
+    lines = motd_text.split('\n')
+    
+    for line in lines:
+        if not line.strip():
+            html.append('')
+            continue
+        
+        # Sostituisci i caratteri box drawing con HTML equivalenti
+        html_line = escape_html(line)
+        
+        # Colora le righe di separazione
+        if any(c in line for c in ['═', '║', '╔', '╚', '╗', '╝']):
+            html_line = f'<span class="motd-separator">{html_line}</span>'
+        
+        # Colora le emoji e testo speciale
+        elif line.strip().startswith(('🔐', '📊', '📁', '🚀')):
+            html_line = f'<span class="motd-highlight">{html_line}</span>'
+        elif line.strip().startswith(('💡', '⚠️', '❌')):
+            html_line = f'<span class="motd-warning">{html_line}</span>'
+        elif ' # ' in line:  # Commenti
+            html_line = highlight_command_with_comment(html_line)
+        
+        # Applica il parsing degli URL
+        html_line = parse_urls(html_line)
+        
+        html.append(str(html_line))
+    
+    # Crea paragrafi
+    result = '<br>\n'.join(html)
+    return Markup(result)
+
+
+def escape_html(text: str) -> str:
+    """Escapa i caratteri HTML speciali"""
+    replacements = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }
+    for char, escaped in replacements.items():
+        text = text.replace(char, escaped)
+    return text
+
+
+def highlight_command_with_comment(line: str) -> str:
+    """Evidenzia il comando e il commento separatamente"""
+    if ' # ' in line:
+        parts = line.split(' # ', 1)
+        command = parts[0]
+        comment = parts[1]
+        return f'<span class="motd-command">{command}</span> <span class="motd-comment"># {comment}</span>'
+    return line
 
 
 def parse_motd_commands(motd_text: str) -> list[str]:
@@ -11,7 +93,7 @@ def parse_motd_commands(motd_text: str) -> list[str]:
         line = line.strip()
         # Extract lines that look like commands: contain 'apk ', 'apt ', 'npm ', '--', etc.
         # Exclude empty lines, title lines (with ║, ═), notes and sections
-        if (line and 
+        if (line and
             not any(c in line for c in ['║', '═', '╔', '╚', '╗', '╝']) and
             not line.startswith('Note:') and
             not line.startswith('⚠️') and
@@ -28,7 +110,6 @@ def clean_motd_text(motd_text: str) -> str:
     
     # Box drawing characters to remove
     box_chars = ['╔', '╚', '╗', '╝', '║', '═', '─', '┌', '┐', '└', '┘', '│', '├', '┤', '┼']
-    
     cleaned = motd_text
     for char in box_chars:
         cleaned = cleaned.replace(char, '')
