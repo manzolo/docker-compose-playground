@@ -1,0 +1,178 @@
+/* ============================================
+   COMMAND OUTPUT STYLING
+   ============================================ */
+
+.command-output {
+    background: #f8f9fa;
+    color: #2d3748;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    max-height: 600px;
+    overflow-y: auto;
+    margin: 16px 0;
+    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.command-output-group {
+    margin-bottom: 20px;
+}
+
+.command-output-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+}
+
+.command-input-group {
+    margin-bottom: 24px;
+}
+
+.command-input-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+}
+
+#commandInput {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    background: white;
+    color: #2d3748;
+    transition: all 0.3s;
+}
+
+#commandInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+#commandInput::placeholder {
+    color: #a0aec0;
+}
+
+.command-input-help {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #718096;
+    padding: 8px 12px;
+    background: #f7fafc;
+    border-radius: 6px;
+    border-left: 3px solid #667eea;
+}
+
+/* Scrollbar per command output */
+.command-output::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.command-output::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.command-output::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.command-output::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode .command-output {
+    background: #0f1419;
+    color: #e2e8f0;
+    border-color: #4a5568;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+html.dark-mode .command-output-group label,
+html.dark-mode .command-input-group label {
+    color: #e2e8f0;
+}
+
+html.dark-mode #commandInput {
+    background: #1a202c;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+html.dark-mode #commandInput:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    background: #2d3748;
+}
+
+html.dark-mode #commandInput::placeholder {
+    color: #718096;
+}
+
+html.dark-mode .command-input-help {
+    background: #2d3748;
+    color: #cbd5e1;
+    border-left-color: #667eea;
+}
+
+html.dark-mode .command-output::-webkit-scrollbar-track {
+    background: #1a202c;
+}
+
+html.dark-mode .command-output::-webkit-scrollbar-thumb {
+    background: #4a5568;
+}
+
+html.dark-mode .command-output::-webkit-scrollbar-thumb:hover {
+    background: #718096;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .command-output {
+        font-size: 12px;
+        padding: 16px;
+        max-height: 400px;
+    }
+
+    .command-input-group label,
+    .command-output-group label {
+        font-size: 13px;
+    }
+
+    #commandInput {
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+
+    .command-input-help {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+}

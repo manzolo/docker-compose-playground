@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="/static/css/core/operation-monitor.css">
     <link rel="stylesheet" href="/static/css/components/card_actions_tabs.css">
     <link rel="stylesheet" href="/static/css/components/motd.css">
+    <link rel="stylesheet" href="/static/css/core/diagnostics-tables.css">
+    <link rel="stylesheet" href="/static/css/core/command-output.css">
 
 </head>
 
@@ -178,6 +180,17 @@
 
                         {% if feature.get('has_pre_stop') %}
                         <span class="feature-icon feature-pre-stop" title="Has pre-stop script">💾</span>
+                        {% endif %}
+
+                        {% if running_info %}
+                        <span class="feature-icon feature-execute-command"
+                            onclick="ExecuteCommandManager.open('{{ running_info.name }}', '{{ name }}')"
+                            title="Execute command" style="cursor: pointer;">⚡</span>
+
+                        <!-- Diagnostics Icon - Only if running -->
+                        <span class="feature-icon feature-diagnostics"
+                            onclick="ExecuteCommandManager.openDiagnostics('{{ running_info.name }}', '{{ name }}')"
+                            title="Run diagnostics" style="cursor: pointer;">🔍</span>
                         {% endif %}
                     </div>
                 </div>
@@ -430,6 +443,7 @@
     <script src="/static/js/managers/motd-manager.js"></script>
     <script src="/static/js/managers/container-tag-manager.js"></script>
     <script src="/static/js/managers/filter-persistence-manager.js"></script>
+    <script src="/static/js/managers/diagnostics-parser.js"></script>
     <script src="/static/js/managers/monitoring-stats.js"></script>
     <script src="/static/js/managers/execute-command.js"></script>
     <script src="/static/js/managers/health-monitor.js"></script>
