@@ -26,17 +26,28 @@ const ExecuteCommandManager = {
 
         // Focus e aggiungi event listener per Enter
         const commandInput = DOM.get('commandInput');
+        
+        // Rimuovi ALL i listener vecchi clonando l'elemento
+        const newInput = commandInput.cloneNode(true);
+        commandInput.parentNode.replaceChild(newInput, commandInput);
+        const updatedInput = DOM.get('commandInput');
+        
         setTimeout(() => {
-            commandInput.focus();
+            updatedInput.focus();
 
-            // Rimuovi listener vecchi se esistono
-            commandInput.removeEventListener('keypress', this.handleCommandKeypress);
-
-            // Aggiungi listener per Enter
-            commandInput.addEventListener('keypress', (e) => {
+            // Aggiungi listener per Enter (una sola volta)
+            updatedInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.executeCommand();
+                }
+            });
+
+            // Aggiungi listener per Escape (chiude modal)
+            updatedInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.close();
                 }
             });
         }, 100);
@@ -154,6 +165,33 @@ const ExecuteCommandManager = {
 
         ModalManager.open('diagnosticsModal');
 
+        // Resetta il primo tab come attivo
+        DOM.queryAll('.diagnostics-tab-btn').forEach((btn, index) => {
+            if (index === 0) {
+                DOM.addClass(btn, 'active');
+            } else {
+                DOM.removeClass(btn, 'active');
+            }
+        });
+        
+        DOM.queryAll('.diagnostics-tab').forEach((tab, index) => {
+            tab.style.display = index === 0 ? 'block' : 'none';
+        });
+
+        // Rimuovi listener vecchio se esiste
+        if (this.diagnosticsEscapeListener) {
+            document.removeEventListener('keydown', this.diagnosticsEscapeListener);
+        }
+
+        // Aggiungi listener per Escape su document (chiude modal)
+        this.diagnosticsEscapeListener = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closeDiagnostics();
+            }
+        };
+        document.addEventListener('keydown', this.diagnosticsEscapeListener);
+
         // Fetch diagnostics
         this.fetchDiagnostics(container);
     },
@@ -233,6 +271,12 @@ const ExecuteCommandManager = {
      */
     closeDiagnostics() {
         this.currentContainer = null;
+        
+        // Rimuovi listener Escape
+        if (this.diagnosticsEscapeListener) {
+            document.removeEventListener('keydown', this.diagnosticsEscapeListener);
+        }
+        
         ModalManager.close('diagnosticsModal');
     }
 };

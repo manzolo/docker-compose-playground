@@ -151,13 +151,18 @@
 .diagnostics-tabs {
     display: flex;
     gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 0;
     border-bottom: 2px solid #e2e8f0;
     overflow-x: auto;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    padding-bottom: 24px;
 }
 
 .diagnostics-tab-btn {
-    padding: 12px 18px;
+    padding: 16px 18px;
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
@@ -167,6 +172,9 @@
     transition: all 0.3s;
     white-space: nowrap;
     font-size: 14px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
 }
 
 .diagnostics-tab-btn:hover {
@@ -276,6 +284,7 @@ html.dark-mode .no-data {
 
 html.dark-mode .diagnostics-tabs {
     border-bottom-color: #4a5568;
+    background: #1a202c;
 }
 
 html.dark-mode .diagnostics-tab-btn {
@@ -310,8 +319,9 @@ html.dark-mode .diagnostics-tab-btn.active {
     }
 
     .diagnostics-tab-btn {
-        padding: 10px 14px;
+        padding: 12px 14px;
         font-size: 12px;
+        min-height: 45px;
     }
 
     .uptime-info {
