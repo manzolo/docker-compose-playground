@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Improved Web Panel Starter
-# Version: 1.0.0
+# Version: 2.0.0
 # Author: xAI
 # License: MIT
 # Description: A robust script to start a Python-based web server with process management, logging, and health checks.
@@ -32,9 +32,12 @@ readonly HEALTH_CHECK_URL="http://localhost:${PORT}${HEALTH_CHECK_ENDPOINT}"
 readonly HEALTH_CHECK_TIMEOUT=30
 readonly STARTUP_TIMEOUT=60
 readonly USE_DOCKER="${USE_DOCKER:-false}"
+readonly INSTALL_RETRIES=3
+readonly INSTALL_RETRY_WAIT=5
 
 # Process management
 WEB_PID=""
+MONITOR_PID=""
 EXIT_CODE=0
 SHUTDOWN_IN_PROGRESS=false
 TAIL_PROCESS_PID=""
@@ -150,6 +153,22 @@ show_environment() {
     [[ "$USE_DOCKER" == true ]] && log_info "  Docker support: ENABLED"
 }
 
+validate_environment() {
+    log_info "Validating environment variables..."
+    
+    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [[ "$PORT" -lt 1 ]] || [[ "$PORT" -gt 65535 ]]; then
+        log_error "Invalid PORT: $PORT (must be 1-65535)"
+    fi
+    
+    if [[ ! "$HEALTH_CHECK_ENDPOINT" =~ ^/ ]]; then
+        log_error "Invalid HEALTH_CHECK_ENDPOINT: must start with /"
+    fi
+    
+    if [[ ! "$LOG_LEVEL" =~ ^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$ ]]; then
+        log_error "Invalid LOG_LEVEL: $LOG_LEVEL"
+    fi
+}
+
 detect_python() {
     local python_cmd
     python_cmd=$(command -v python3 || command -v python)
@@ -166,38 +185,75 @@ detect_python() {
 
 kill_port() {
     local port=$1
+    local force=${2:-false}
     local pids
+    
     if command -v lsof >/dev/null 2>&1; then
         pids=$(lsof -ti:"$port" 2>/dev/null)
     elif command -v ss >/dev/null 2>&1; then
-        pids=$(ss -tuln | grep ":$port" | awk '{print $NF}' | cut -d'/' -f1)
+        pids=$(ss -tuln | grep ":$port" | awk '{print $NF}' | cut -d'/' -f1 | sort -u)
     elif command -v netstat >/dev/null 2>&1; then
-        pids=$(netstat -tuln | grep ":$port" | awk '{print $NF}' | cut -d'/' -f1)
+        pids=$(netstat -tuln | grep ":$port" | awk '{print $NF}' | cut -d'/' -f1 | sort -u)
     else
         log_warning "No lsof, ss, or netstat found. Cannot check for port conflicts."
         return
     fi
+    
     if [[ -n "$pids" ]]; then
         log_warning "Port $port is in use by processes: $pids"
-        read -p "Do you want to terminate these processes? [y/N] " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_error "Port $port is in use. Exiting."
+        
+        # Check if interactive (tty available)
+        if [[ "$force" == true ]] || [[ ! -t 0 ]]; then
+            log_warning "Auto-terminating processes on port $port (non-interactive mode)..."
+        else
+            # Interactive mode - ask user
+            read -p "Do you want to terminate these processes? [y/N] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_error "Port $port is in use. Exiting."
+            fi
+            log_warning "Terminating processes on port $port gracefully..."
         fi
-        log_warning "Terminating processes on port $port gracefully..."
-        echo "$pids" | xargs kill -TERM 2>/dev/null || true
+        
+        # Graceful termination
+        echo "$pids" | xargs -r kill -TERM 2>/dev/null || true
         sleep 2
+        
+        # Check if still running
         pids=$(lsof -ti:"$port" 2>/dev/null || true)
         if [[ -n "$pids" ]]; then
             log_warning "Force killing remaining processes on port $port"
-            echo "$pids" | xargs kill -9 2>/dev/null || true
+            echo "$pids" | xargs -r kill -9 2>/dev/null || true
         fi
         sleep 1
     fi
 }
 
+preflight_checks() {
+    log_info "Running preflight checks..."
+    
+    # Check disk space (minimum 100MB)
+    local available_space
+    available_space=$(df "$PROJECT_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
+    if [[ -n "$available_space" && $available_space -lt 104857600 ]]; then
+        log_warning "Less than 100MB disk space available"
+    fi
+    
+    # Check Python modules availability
+    if ! "$PYTHON_CMD" -c "import sys; print(f'Python {sys.version}')" >/dev/null 2>&1; then
+        log_error "Python is not working correctly"
+    fi
+    
+    # Check app.py syntax
+    if [[ -f "$PROJECT_DIR/src/web/app.py" ]]; then
+        if ! "$PYTHON_CMD" -m py_compile "$PROJECT_DIR/src/web/app.py" 2>/dev/null; then
+            log_warning "Syntax errors detected in app.py. Server may fail to start."
+        fi
+    fi
+}
+
 check_dependencies() {
-    local deps=("$PYTHON_CMD" "lsof" "curl")
+    local deps=("$PYTHON_CMD" "curl" "grep")
     local missing=()
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" >/dev/null 2>&1; then
@@ -241,6 +297,7 @@ create_virtualenv() {
 
 install_dependencies() {
     log_info "Checking for requirements file at $REQ_FILE..."
+    
     if [[ ! -f "$REQ_FILE" ]]; then
         log_info "Creating default requirements.txt..."
         cat > "$REQ_FILE" << 'EOF'
@@ -255,11 +312,30 @@ psutil>=5.9.0
 watchdog>=3.0.0
 EOF
     fi
+    
     log_info "Installing dependencies from $REQ_FILE..."
-    if ! pip install -r "$REQ_FILE" --quiet; then
-        log_error "Failed to install dependencies"
+    
+    local retry_count=0
+    local success=false
+    
+    while [[ $retry_count -lt $INSTALL_RETRIES ]] && [[ "$success" == false ]]; do
+        log_info "Installation attempt $((retry_count + 1))/$INSTALL_RETRIES..."
+        
+        if pip install -r "$REQ_FILE" --quiet --retries 5; then
+            success=true
+            log_info "Dependencies installed successfully"
+        else
+            ((retry_count++))
+            if [[ $retry_count -lt $INSTALL_RETRIES ]]; then
+                log_warning "Installation failed. Retrying in ${INSTALL_RETRY_WAIT}s..."
+                sleep "$INSTALL_RETRY_WAIT"
+            fi
+        fi
+    done
+    
+    if [[ "$success" == false ]]; then
+        log_error "Failed to install dependencies after $INSTALL_RETRIES attempts"
     fi
-    log_info "Dependencies installed successfully"
 }
 
 create_python_log_config() {
@@ -315,13 +391,29 @@ health_check() {
     log_info "Waiting for server to be ready at $HEALTH_CHECK_URL (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
     
     while [[ $elapsed -lt $HEALTH_CHECK_TIMEOUT ]]; do
-        if curl -sf "$HEALTH_CHECK_URL" >/dev/null 2>&1; then
-            log_info "Server is healthy and ready!"
-            return 0
+        # Try curl first
+        if command -v curl >/dev/null 2>&1; then
+            if curl -sf --connect-timeout 2 --max-time 5 "$HEALTH_CHECK_URL" >/dev/null 2>&1; then
+                log_info "Server is healthy and ready!"
+                return 0
+            fi
+        # Fallback: netcat
+        elif command -v nc >/dev/null 2>&1; then
+            if nc -z -w 1 localhost "$PORT" >/dev/null 2>&1; then
+                log_info "Server is responding on port $PORT"
+                return 0
+            fi
+        # Last resort: bash TCP socket
+        else
+            if (echo > /dev/tcp/localhost/"$PORT") 2>/dev/null; then
+                log_info "Server is responding on port $PORT"
+                return 0
+            fi
         fi
         
+        # Check if process is still alive
         if ! ps -p "$WEB_PID" >/dev/null 2>&1; then
-            log_error "Server process died before becoming healthy. Check logs."
+            log_error "Server process died before becoming healthy. Check $LOG_FILE for details."
         fi
         
         sleep 1
@@ -332,13 +424,32 @@ health_check() {
 }
 
 monitor_resources() {
+    local last_check=0
+    local check_interval=60
+    
+    log_debug "Resource monitor started for PID $WEB_PID"
+    
     while ps -p "$WEB_PID" >/dev/null 2>&1; do
-        local cpu mem
-        cpu=$(ps -p "$WEB_PID" -o %cpu | tail -n1)
-        mem=$(ps -p "$WEB_PID" -o %mem | tail -n1)
-        log_debug "Resource usage - CPU: $cpu%, Memory: $mem%"
-        sleep 60
+        # Check every 10 seconds if process is alive, log every 60
+        if ! sleep 1; then
+            break
+        fi
+        
+        ((last_check++))
+        
+        # Only log metrics every 60 seconds
+        if [[ $((last_check % 60)) -eq 0 ]]; then
+            if ps -p "$WEB_PID" >/dev/null 2>&1; then
+                local cpu mem
+                cpu=$(ps -p "$WEB_PID" -o %cpu 2>/dev/null | tail -n1)
+                mem=$(ps -p "$WEB_PID" -o %mem 2>/dev/null | tail -n1)
+                log_debug "Resource usage - CPU: ${cpu}%, Memory: ${mem}%"
+            fi
+        fi
     done
+    
+    # Process died - this will be caught by the main wait
+    log_debug "Resource monitor: Process $WEB_PID is no longer running"
 }
 
 #############################################
@@ -349,7 +460,7 @@ start_tail_logs() {
     if [[ "$ENABLE_TAIL" == true ]]; then
         log_info "Starting live log viewer (tail -f)..."
         sleep 1
-        tail -f "$LOG_FILE" &
+        tail -f "$LOG_FILE" 2>/dev/null &
         TAIL_PROCESS_PID=$!
         log_info "Live log viewer started (PID: $TAIL_PROCESS_PID)"
     fi
@@ -359,6 +470,7 @@ stop_tail_logs() {
     if [[ -n "$TAIL_PROCESS_PID" ]] && ps -p "$TAIL_PROCESS_PID" >/dev/null 2>&1; then
         log_debug "Stopping tail process..."
         kill "$TAIL_PROCESS_PID" 2>/dev/null || true
+        wait "$TAIL_PROCESS_PID" 2>/dev/null || true
     fi
 }
 
@@ -381,7 +493,14 @@ start_server() {
         "--log-level" "$UVICORN_LOG_LEVEL"
         "--log-config" "$python_log_config"
     )
-    [[ "$LOG_LEVEL" != "DEBUG" ]] && uvicorn_args+=("--no-access-log")
+    
+    # Handle access log flag compatibility
+    if [[ "$LOG_LEVEL" != "DEBUG" ]]; then
+        # Try the newer flag format first
+        if uvicorn --help 2>/dev/null | grep -q "\-\-access-log"; then
+            uvicorn_args+=("--access-log")
+        fi
+    fi
 
     export DOCKER_LOG_LEVEL="error"
     export PYTHONWARNINGS="ignore"
@@ -399,7 +518,10 @@ start_server() {
     log_info "Server process started with PID: $WEB_PID"
     
     start_tail_logs
+    
+    # Start resource monitor in background
     monitor_resources &
+    MONITOR_PID=$!
     
     if health_check; then
         local end_time
@@ -407,11 +529,16 @@ start_server() {
         log_info "Server startup completed in $((end_time - start_time)) seconds"
     else
         kill "$WEB_PID" 2>/dev/null || true
+        kill "$MONITOR_PID" 2>/dev/null || true
         exit 1
     fi
     
+    # Wait for server process
     wait "$WEB_PID"
     EXIT_CODE=$?
+    
+    # Cleanup monitor
+    kill "$MONITOR_PID" 2>/dev/null || true
     
     if [[ $EXIT_CODE -eq 0 ]]; then
         log_info "Web server stopped cleanly"
@@ -430,37 +557,60 @@ graceful_shutdown() {
     
     stop_tail_logs
     
-    if [[ -f "$PID_FILE" ]]; then
-        local pid
-        pid=$(cat "$PID_FILE")
+    # Use PID from memory, not file (avoid stale PID issues)
+    if [[ -n "$WEB_PID" ]] && ps -p "$WEB_PID" >/dev/null 2>&1; then
+        log_info "Sending SIGTERM to process $WEB_PID for graceful shutdown..."
+        kill -TERM "$WEB_PID" 2>/dev/null
         
-        if ps -p "$pid" >/dev/null 2>&1; then
-            log_info "Sending SIGTERM to process $pid for graceful shutdown..."
-            kill -TERM "$pid" 2>/dev/null
-            
-            local wait_count=0
-            while ps -p "$pid" >/dev/null 2>&1 && [[ $wait_count -lt 15 ]]; do
-                sleep 1
-                ((wait_count++))
-            done
-            
-            if ps -p "$pid" >/dev/null 2>&1; then
-                log_warning "Process did not exit gracefully. Force killing..."
-                kill -9 "$pid" 2>/dev/null || true
-            fi
+        local wait_count=0
+        local max_wait=15
+        while ps -p "$WEB_PID" >/dev/null 2>&1 && [[ $wait_count -lt $max_wait ]]; do
+            sleep 1
+            ((wait_count++))
+        done
+        
+        if ps -p "$WEB_PID" >/dev/null 2>&1; then
+            log_warning "Process did not exit gracefully. Force killing..."
+            kill -9 "$WEB_PID" 2>/dev/null || true
         fi
-        
-        rm -f "$PID_FILE"
     fi
     
-    kill_port "$PORT"
+    # Cleanup monitor process
+    if [[ -n "$MONITOR_PID" ]] && ps -p "$MONITOR_PID" >/dev/null 2>&1; then
+        kill "$MONITOR_PID" 2>/dev/null || true
+    fi
+    
+    # Cleanup PID file
+    rm -f "$PID_FILE"
+    
+    # Cleanup port
+    kill_port "$PORT" true
+    
     log_info "Shutdown completed. Bye!"
     exit 0
 }
 
+show_status() {
+    if [[ -n "$WEB_PID" ]] && ps -p "$WEB_PID" >/dev/null 2>&1; then
+        local uptime cpu mem
+        uptime=$(ps -p "$WEB_PID" -o etime 2>/dev/null | tail -n1)
+        cpu=$(ps -p "$WEB_PID" -o %cpu 2>/dev/null | tail -n1)
+        mem=$(ps -p "$WEB_PID" -o %mem 2>/dev/null | tail -n1)
+        
+        log_info "Web server status:"
+        log_info "  PID: $WEB_PID"
+        log_info "  Uptime: $uptime"
+        log_info "  CPU: ${cpu}%"
+        log_info "  Memory: ${mem}%"
+        log_info "  URL: http://localhost:$PORT"
+    else
+        log_info "Web server is not running"
+    fi
+}
+
 show_help() {
     cat << EOF
-Improved Web Panel Starter (v1.0.0)
+Improved Web Panel Starter (v2.0.0)
 
 A Bash script to start a Python-based web server with robust process management,
 logging, and health checks.
@@ -475,12 +625,13 @@ Options:
   --use-docker         Enable Docker dependency checks
   --health-check-endpoint ENDPOINT
                        Set custom health check endpoint (default: /)
+  --status             Show server status and exit
   --help               Display this help message and exit
 
 Environment Variables:
   LOG_LEVEL            Set default log level (default: INFO)
   USE_DOCKER          Enable Docker support (default: false)
-  PORT                Set server port (default: $PORT)
+  PORT                Set server port (default: 8000)
   HEALTH_CHECK_ENDPOINT
                       Set health check endpoint (default: /)
 
@@ -490,6 +641,7 @@ Examples:
   $0 --log-level WARNING    # Start with WARNING log level
   $0 --use-docker           # Start with Docker support enabled
   $0 --health-check-endpoint /health  # Use custom health check endpoint
+  $0 --status               # Show server status
 
 Logs are written to:
   - $LOG_FILE
@@ -528,6 +680,12 @@ parse_arguments() {
                 HEALTH_CHECK_ENDPOINT="$2"
                 shift 2
                 ;;
+            --status)
+                # Show status and exit
+                mkdir -p "$PROJECT_DIR/venv" 2>/dev/null
+                show_status
+                exit 0
+                ;;
             --help)
                 show_help
                 exit 0
@@ -559,9 +717,11 @@ main() {
     readonly VENV_PATH="${VENV_BASE_DIR}/${VENV_NAME}"
     
     setup_logging
+    validate_environment
     show_environment
+    preflight_checks
     check_dependencies
-    kill_port "$PORT"
+    kill_port "$PORT" true
     create_virtualenv
     install_dependencies
     

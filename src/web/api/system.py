@@ -6,6 +6,8 @@ import concurrent.futures
 import logging
 import os
 
+from typing import List, Dict, Any
+
 from src.web.core.config import load_config
 from src.web.core.docker import (
     docker_client, ensure_network, SHARED_DIR, NETWORK_NAME,
@@ -545,72 +547,249 @@ async def stop_all():
     return {"operation_id": operation_id, "status": "started"}
 
 
-async def stop_all_background(operation_id: str, containers):
-    """Background task to stop all containers"""
-    stopped = []
-    failed = []
-    not_running = []
-    max_workers = min(10, len(containers))
+async def stop_all_background(operation_id: str, containers: List[Any]):
+    """
+    Background task to stop all containers with proper handling of edge cases.
     
-    logger.info("Stopping all %d containers with %d workers", len(containers), max_workers)
+    Args:
+        operation_id: Unique operation identifier
+        containers: List of Docker container objects to stop
+    """
+    
+    # Initialize counters
+    stopped = []      # Successfully stopped
+    failed = []       # Failed to stop
+    not_running = []  # Were already stopped
+    
+    # Edge case: no containers to stop
+    if not containers:
+        logger.info("No containers to stop")
+        complete_operation(
+            operation_id,
+            stopped=0,
+            not_running=0,
+            failed=0,
+            containers=[]
+        )
+        return
+    
+    max_workers = min(10, len(containers))
+    logger.info(
+        "Stopping all %d container(s) with %d worker(s)",
+        len(containers),
+        max_workers
+    )
     
     def stop_and_remove(container):
+        """
+        Stop and remove a single container.
+        
+        Returns:
+            dict: {status, name, [error]}
+        """
+        container_name = container.name
+        
         try:
+            # Step 1: Execute pre-stop script if defined
             try:
                 config_data = load_config()
-                image_name = container.name.replace("playground-", "")
-                img_data = config_data["images"].get(image_name, {})
+                image_name = container_name.replace("playground-", "")
+                img_data = config_data.get("images", {}).get(image_name, {})
                 scripts = img_data.get("scripts", {})
                 
                 if "pre_stop" in scripts:
-                    execute_script(scripts["pre_stop"], container.name, image_name)
+                    logger.debug(
+                        f"Executing pre-stop script for {container_name}"
+                    )
+                    execute_script(
+                        scripts["pre_stop"],
+                        container_name,
+                        image_name
+                    )
                 
                 timeout = get_stop_timeout(img_data)
+                logger.debug(f"Stop timeout for {container_name}: {timeout}s")
+                
             except Exception as e:
-                logger.warning(f"Pre-stop script error for {container.name}: {e}")
-                timeout = 10
-            
-            container.stop(timeout=timeout)
-            container.remove()
-            logger.info(f"Container stopped and removed: {container.name}")
-            return {"status": "stopped", "name": container.name}
-        except docker.errors.NotFound:
-            logger.warning(f"Container not found: {container.name}")
-            return {"status": "not_running", "name": container.name}
-        except Exception as e:
-            logger.error(f"Failed to stop {container.name}: {e}")
-            return {"status": "failed", "name": container.name, "error": str(e)}
-    
-    loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [loop.run_in_executor(executor, stop_and_remove, c) for c in containers]
-        
-        for future in asyncio.as_completed(futures):
-            try:
-                result = await future
-                
-                if result["status"] == "stopped":
-                    stopped.append(result["name"])
-                elif result["status"] == "not_running":
-                    not_running.append(result["name"])
-                elif result["status"] == "failed":
-                    failed.append(result["name"])
-                
-                update_operation(
-                    operation_id,
-                    stopped=len(stopped),
-                    not_running=len(not_running),
-                    failed=len(failed),
-                    containers=stopped
+                logger.warning(
+                    f"Pre-stop script error for {container_name}: {e}",
+                    exc_info=False
                 )
-            except Exception as e:
-                logger.error(f"Error processing container in stop_all_background: {e}")
-                failed.append("unknown")
+                timeout = 10  # Default timeout
+            
+            # Step 2: Check current container state
+            try:
+                # Reload container state from Docker daemon
+                container.reload()
+                current_state = container.status
+                logger.debug(f"Container {container_name} current state: {current_state}")
+                
+                # If already stopped, just remove it
+                if current_state in ["exited", "stopped", "paused"]:
+                    logger.info(f"Container {container_name} is already {current_state}")
+                    try:
+                        container.remove(force=True)
+                        logger.info(f"Removed stopped container: {container_name}")
+                    except docker.errors.NotFound:
+                        logger.debug(f"Container already removed: {container_name}")
+                    
+                    return {
+                        "status": "not_running",
+                        "name": container_name,
+                        "previous_state": current_state
+                    }
+                
+            except docker.errors.NotFound:
+                # Container doesn't exist
+                logger.warning(f"Container not found: {container_name}")
+                return {
+                    "status": "not_running",
+                    "name": container_name,
+                    "reason": "not_found"
+                }
+            
+            # Step 3: Stop the container
+            logger.info(f"Stopping container {container_name} (timeout: {timeout}s)")
+            container.stop(timeout=timeout)
+            logger.info(f"Container stopped: {container_name}")
+            
+            # Step 4: Remove the container
+            try:
+                container.remove()
+                logger.info(f"Container removed: {container_name}")
+            except docker.errors.NotFound:
+                logger.debug(f"Container already removed: {container_name}")
+            
+            return {
+                "status": "stopped",
+                "name": container_name
+            }
+        
+        except docker.errors.NotFound:
+            """
+            Container doesn't exist - might have been removed by another process
+            """
+            logger.warning(f"Container disappeared during stop: {container_name}")
+            return {
+                "status": "not_running",
+                "name": container_name,
+                "reason": "disappeared"
+            }
+        
+        except docker.errors.APIError as e:
+            """
+            Docker API error (e.g., permission denied, resource busy)
+            """
+            logger.error(
+                f"Docker API error stopping {container_name}: {e}",
+                exc_info=False
+            )
+            return {
+                "status": "failed",
+                "name": container_name,
+                "error": f"API error: {str(e)}"
+            }
+        
+        except Exception as e:
+            """
+            Unexpected error
+            """
+            logger.error(
+                f"Unexpected error stopping {container_name}: {e}",
+                exc_info=True
+            )
+            return {
+                "status": "failed",
+                "name": container_name,
+                "error": f"Unexpected error: {str(e)}"
+            }
     
-    logger.info("stop_all completed: %d stopped, %d not_running, %d failed", 
-                len(stopped), len(not_running), len(failed))
-    complete_operation(operation_id, stopped=len(stopped), not_running=len(not_running), 
-                      failed=len(failed), containers=stopped)
+    # Execute stop operations in parallel
+    loop = asyncio.get_event_loop()
+    
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            futures = [
+                loop.run_in_executor(executor, stop_and_remove, container)
+                for container in containers
+            ]
+            
+            # Process results as they complete
+            for future in asyncio.as_completed(futures):
+                try:
+                    result = await future
+                    
+                    if result["status"] == "stopped":
+                        stopped.append(result["name"])
+                        logger.debug(f"Result: stopped - {result['name']}")
+                    
+                    elif result["status"] == "not_running":
+                        not_running.append(result["name"])
+                        reason = result.get("reason", result.get("previous_state", "unknown"))
+                        logger.debug(f"Result: not_running - {result['name']} ({reason})")
+                    
+                    elif result["status"] == "failed":
+                        failed.append(result["name"])
+                        error = result.get("error", "unknown error")
+                        logger.debug(f"Result: failed - {result['name']} ({error})")
+                    
+                    # Update operation progress
+                    update_operation(
+                        operation_id,
+                        stopped=len(stopped),
+                        not_running=len(not_running),
+                        failed=len(failed),
+                        containers=stopped  # Only the stopped ones
+                    )
+                
+                except Exception as e:
+                    logger.error(
+                        f"Error processing result in stop_all_background: {e}",
+                        exc_info=True
+                    )
+                    # Don't count as failed if we can't process result
+                    # The operation will show what we know about
+    
+    except Exception as e:
+        logger.error(
+            f"Critical error in ThreadPoolExecutor: {e}",
+            exc_info=True
+        )
+    
+    # Log final summary
+    total_processed = len(stopped) + len(not_running) + len(failed)
+    logger.info(
+        "stop_all_background completed: "
+        "processed=%d/%d, stopped=%d, not_running=%d, failed=%d",
+        total_processed,
+        len(containers),
+        len(stopped),
+        len(not_running),
+        len(failed)
+    )
+    
+    # Log details
+    if stopped:
+        logger.info(f"Successfully stopped: {', '.join(stopped)}")
+    if not_running:
+        logger.info(f"Already not running: {', '.join(not_running)}")
+    if failed:
+        logger.warning(f"Failed to stop: {', '.join(failed)}")
+    
+    # Complete the operation with final results
+    complete_operation(
+        operation_id,
+        stopped=len(stopped),
+        not_running=len(not_running),
+        failed=len(failed),
+        containers=stopped,
+        summary={
+            "stopped": stopped,
+            "not_running": not_running,
+            "failed": failed
+        }
+    )
 
 
 @router.post("/api/restart-all")
@@ -629,69 +808,263 @@ async def restart_all():
     return {"operation_id": operation_id, "status": "started"}
 
 
-async def restart_all_background(operation_id: str, containers):
-    """Background task to restart all containers"""
+async def restart_all_background(operation_id: str, containers: List[Any]):
+    """
+    Background task to restart all containers with proper error handling.
+    
+    Restart process:
+    1. Execute pre_stop script (if configured)
+    2. Restart the container
+    3. Wait for container to be ready (post_start wait time)
+    4. Execute post_start script (if configured)
+    
+    Args:
+        operation_id: Unique operation identifier
+        containers: List of Docker container objects to restart
+    """
+    
     restarted = []
     failed = []
+    not_found = []
+    already_running = []  # For containers already running (edge case)
+    
+    # Edge case: no containers to restart
+    if not containers:
+        logger.info("No containers to restart")
+        complete_operation(
+            operation_id,
+            restarted=0,
+            failed=0,
+            containers=[]
+        )
+        return
+    
     max_workers = min(10, len(containers))
+    logger.info(
+        "Restarting %d container(s) with %d worker(s)",
+        len(containers),
+        max_workers
+    )
     
-    logger.info("Restarting all %d containers with %d workers", len(containers), max_workers)
-    
-    def restart_cont(c):
+    def restart_container(container):
+        """
+        Restart a single container with pre/post scripts.
+        
+        Returns:
+            dict: {status, name, [error]}
+        """
+        container_name = container.name
+        
         try:
-            config_data = load_config()
-            image_name = c.name.replace("playground-", "")
-            img_data = config_data["images"].get(image_name, {})
-            scripts = img_data.get("scripts", {})
+            # Step 1: Reload and check current state
+            try:
+                container.reload()
+                current_state = container.status
+                logger.debug(f"{container_name}: current state = {current_state}")
+            except docker.errors.NotFound:
+                logger.warning(f"{container_name}: container not found")
+                return {
+                    "status": "not_found",
+                    "name": container_name,
+                    "reason": "not_found"
+                }
             
+            # Step 2: Load configuration
+            try:
+                config_data = load_config()
+                image_name = container_name.replace("playground-", "")
+                img_data = config_data.get("images", {}).get(image_name, {})
+                scripts = img_data.get("scripts", {})
+                post_start_wait = img_data.get("post_start_wait", 2)  # Default 2s
+                
+                logger.debug(f"{container_name}: post_start_wait = {post_start_wait}s")
+                
+            except Exception as e:
+                logger.warning(f"{container_name}: config load error: {e}")
+                scripts = {}
+                post_start_wait = 2
+            
+            # Step 3: Execute pre_stop script if defined
             if "pre_stop" in scripts:
                 try:
-                    execute_script(scripts["pre_stop"], c.name, image_name)
+                    logger.debug(f"{container_name}: executing pre_stop script")
+                    execute_script(scripts["pre_stop"], container_name, image_name)
+                    logger.debug(f"{container_name}: pre_stop script completed")
                 except Exception as e:
-                    logger.warning(f"Pre-stop script error: {e}")
+                    logger.warning(f"{container_name}: pre_stop script failed: {e}")
+                    # Continue even if pre_stop fails
             
-            timeout = get_stop_timeout(img_data)
-            c.restart(timeout=timeout)
+            # Step 4: Get stop timeout
+            try:
+                timeout = get_stop_timeout(img_data)
+            except Exception as e:
+                logger.debug(f"{container_name}: timeout config error: {e}")
+                timeout = 10  # Default timeout
             
+            # Step 5: Restart the container
+            try:
+                logger.info(f"{container_name}: restarting (timeout: {timeout}s)")
+                container.restart(timeout=timeout)
+                logger.info(f"{container_name}: restart completed")
+            
+            except docker.errors.NotFound:
+                logger.warning(f"{container_name}: disappeared during restart")
+                return {
+                    "status": "not_found",
+                    "name": container_name,
+                    "reason": "disappeared"
+                }
+            
+            except docker.errors.APIError as e:
+                logger.error(f"{container_name}: Docker API error: {e}")
+                return {
+                    "status": "failed",
+                    "name": container_name,
+                    "error": f"API error: {str(e)}"
+                }
+            
+            # Step 6: Wait for post_start (if configured)
+            if post_start_wait > 0:
+                logger.debug(f"{container_name}: waiting {post_start_wait}s before post_start")
+                time.sleep(post_start_wait)
+            
+            # Step 7: Execute post_start script if defined
             if "post_start" in scripts:
                 try:
-                    import time
-                    time.sleep(2)
-                    execute_script(scripts["post_start"], c.name, image_name)
+                    logger.debug(f"{container_name}: executing post_start script")
+                    execute_script(scripts["post_start"], container_name, image_name)
+                    logger.debug(f"{container_name}: post_start script completed")
                 except Exception as e:
-                    logger.warning(f"Post-start script error: {e}")
+                    logger.warning(f"{container_name}: post_start script failed: {e}")
+                    # Don't fail the whole restart just because post_start failed
+                    # The container is running, the script just failed
             
-            logger.info(f"Container restarted: {c.name}")
-            return {"status": "restarted", "name": c.name}
-        except Exception as e:
-            logger.error(f"Failed to restart {c.name}: {e}")
-            return {"status": "failed", "name": c.name, "error": str(e)}
-    
-    loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [loop.run_in_executor(executor, restart_cont, c) for c in containers]
-        
-        for future in asyncio.as_completed(futures):
+            # Step 8: Verify container is running
             try:
-                result = await future
+                container.reload()
+                final_state = container.status
                 
-                if result["status"] == "restarted":
-                    restarted.append(result["name"])
-                elif result["status"] == "failed":
-                    failed.append(result["name"])
-                
-                update_operation(
-                    operation_id,
-                    restarted=len(restarted),
-                    failed=len(failed),
-                    containers=restarted
-                )
-            except Exception as e:
-                logger.error(f"Error processing container in restart_all_background: {e}")
-                failed.append("unknown")
+                if final_state == "running":
+                    logger.info(f"{container_name}: successfully restarted and verified running")
+                    return {
+                        "status": "restarted",
+                        "name": container_name
+                    }
+                else:
+                    logger.warning(f"{container_name}: restart complete but state is {final_state}")
+                    return {
+                        "status": "restarted",
+                        "name": container_name,
+                        "state": final_state
+                    }
+            
+            except docker.errors.NotFound:
+                logger.error(f"{container_name}: disappeared after restart!")
+                return {
+                    "status": "failed",
+                    "name": container_name,
+                    "error": "Container disappeared after restart"
+                }
+        
+        except docker.errors.NotFound:
+            logger.warning(f"{container_name}: container not found")
+            return {
+                "status": "not_found",
+                "name": container_name,
+                "reason": "not_found"
+            }
+        
+        except Exception as e:
+            logger.error(f"{container_name}: unexpected error: {e}", exc_info=True)
+            return {
+                "status": "failed",
+                "name": container_name,
+                "error": f"Unexpected error: {str(e)}"
+            }
     
-    logger.info("restart_all completed: %d restarted, %d failed", len(restarted), len(failed))
-    complete_operation(operation_id, restarted=len(restarted), failed=len(failed), containers=restarted)
+    # Execute restart operations in parallel
+    loop = asyncio.get_event_loop()
+    
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            futures = [
+                loop.run_in_executor(executor, restart_container, container)
+                for container in containers
+            ]
+            
+            # Process results as they complete
+            for future in asyncio.as_completed(futures):
+                try:
+                    result = await future
+                    
+                    if result["status"] == "restarted":
+                        restarted.append(result["name"])
+                        logger.debug(f"Result: restarted - {result['name']}")
+                    
+                    elif result["status"] == "not_found":
+                        not_found.append(result["name"])
+                        reason = result.get("reason", "unknown")
+                        logger.debug(f"Result: not_found - {result['name']} ({reason})")
+                    
+                    elif result["status"] == "failed":
+                        failed.append(result["name"])
+                        error = result.get("error", "unknown error")
+                        logger.debug(f"Result: failed - {result['name']} ({error})")
+                    
+                    # Update operation progress
+                    update_operation(
+                        operation_id,
+                        restarted=len(restarted),
+                        failed=len(failed) + len(not_found),  # not_found is also a failure
+                        containers=restarted
+                    )
+                
+                except Exception as e:
+                    logger.error(
+                        f"Error processing result in restart_all_background: {e}",
+                        exc_info=True
+                    )
+                    # Don't add "unknown" to failed - we don't know which container it is
+    
+    except Exception as e:
+        logger.error(
+            f"Critical error in ThreadPoolExecutor: {e}",
+            exc_info=True
+        )
+    
+    # Log final summary
+    total_processed = len(restarted) + len(not_found) + len(failed)
+    logger.info(
+        "restart_all_background completed: "
+        "processed=%d/%d, restarted=%d, not_found=%d, failed=%d",
+        total_processed,
+        len(containers),
+        len(restarted),
+        len(not_found),
+        len(failed)
+    )
+    
+    # Log details
+    if restarted:
+        logger.info(f"Successfully restarted: {', '.join(restarted)}")
+    if not_found:
+        logger.warning(f"Not found: {', '.join(not_found)}")
+    if failed:
+        logger.error(f"Failed to restart: {', '.join(failed)}")
+    
+    # Complete the operation with final results
+    complete_operation(
+        operation_id,
+        restarted=len(restarted),
+        failed=len(failed) + len(not_found),
+        containers=restarted,
+        summary={
+            "restarted": restarted,
+            "not_found": not_found,
+            "failed": failed
+        }
+    )
     
 @router.post("/api/cleanup-all")
 async def cleanup_all():
