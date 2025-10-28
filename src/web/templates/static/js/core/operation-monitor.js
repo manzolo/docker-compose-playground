@@ -4,11 +4,18 @@
 
 const OperationMonitor = {
     activeOperations: {},
+    pollTimeouts: {}, // Track timeouts per operation per cleanup
 
     /**
      * Start monitoring an operation with persistent widget
      */
     startMonitoring(operationId, operationName = 'Operation') {
+        // Evita duplicati
+        if (this.activeOperations[operationId]) {
+            console.warn(`Operation ${operationId} already being monitored`);
+            return;
+        }
+
         // Crea widget se non esiste
         if (!DOM.get('operation-monitor-container')) {
             this.createMonitorContainer();
@@ -43,6 +50,8 @@ const OperationMonitor = {
      */
     createOperationCard(operationId, operationName) {
         const container = DOM.get('operation-monitor-container');
+        if (!container) return;
+
         const card = document.createElement('div');
         card.id = `operation-${operationId}`;
         card.className = 'operation-card operation-running';
@@ -63,16 +72,16 @@ const OperationMonitor = {
     },
 
     /**
-     * Poll operation status
+     * Poll operation status - with proper cleanup
      */
     async pollOperation(operationId) {
         let attempts = 0;
-        const maxAttempts = 1800; // 30 minuti
+        const maxAttempts = 1800;
 
         const poll = async () => {
             try {
-                const response = await fetch(`/api/operation-status/${operationId}`);
-                const statusData = await response.json();
+                const statusData = await fetch(`/api/operation-status/${operationId}`)
+                    .then(r => r.json());
 
                 // Aggiorna card
                 this.updateOperationCard(operationId, statusData);
@@ -90,7 +99,9 @@ const OperationMonitor = {
                 // Continua il polling
                 attempts++;
                 if (attempts < maxAttempts) {
-                    setTimeout(poll, 1000);
+                    const timeoutId = setTimeout(poll, 1000);
+                    // Traccia il timeout per cleanup
+                    this.pollTimeouts[`${operationId}_${attempts}`] = timeoutId;
                 } else {
                     this.timeoutOperation(operationId);
                 }
@@ -98,7 +109,8 @@ const OperationMonitor = {
                 console.error('Polling error:', error);
                 attempts++;
                 if (attempts < maxAttempts) {
-                    setTimeout(poll, 1000);
+                    const timeoutId = setTimeout(poll, 1000);
+                    this.pollTimeouts[`${operationId}_${attempts}`] = timeoutId;
                 } else {
                     this.timeoutOperation(operationId);
                 }
@@ -127,11 +139,9 @@ const OperationMonitor = {
     formatOperationMessage(statusData) {
         const total = statusData.total || '?';
         const operation = statusData.operation || 'unknown';
+        const elapsed = this.getElapsedTime(statusData.started_at);
 
         let message = '';
-
-        // Calcola tempo trascorso
-        const elapsed = this.getElapsedTime(statusData.started_at);
 
         if (operation === 'start_group' || operation === 'start') {
             const started = statusData.started || 0;
@@ -161,7 +171,7 @@ const OperationMonitor = {
             if (scriptStatus) {
                 message += `\n${scriptStatus}`;
             }
-        } else if (operation === 'restart_all') {
+        } else if (operation === 'restart_all' || operation === 'restart') {
             const restarted = statusData.restarted || 0;
             const failed = statusData.failed || 0;
             const completed = restarted + failed;
@@ -174,20 +184,7 @@ const OperationMonitor = {
             if (scriptStatus) {
                 message += `\n${scriptStatus}`;
             }
-        } else if (operation === 'restart' || operation === 'restart_all') {
-            const restarted = statusData.restarted || 0;
-            const failed = statusData.failed || 0;
-            const completed = restarted + failed;
-            const remaining = total !== '?' ? total - completed : '?';
-
-            message = `Restarting: ${completed}/${total} (${elapsed})\n`;
-            message += `🔄 ${restarted} restarted | ✗ ${failed} failed | ⏳ ${remaining} remaining`;
-
-            const scriptStatus = Utils.formatScriptStatus(statusData);
-            if (scriptStatus) {
-                message += `\n${scriptStatus}`;
-            }
-        } else if (operation === 'cleanup') {
+        } else if (operation === 'cleanup' || operation === 'cleanup_all') {
             const removed = statusData.removed || 0;
             const failed = statusData.failed || 0;
             const completed = removed + failed;
@@ -247,23 +244,20 @@ const OperationMonitor = {
         if (operationName.startsWith('Group:') || operationName.startsWith('Stopping Group:')) {
             const groupName = operationName.replace(/^Group: |^Stopping Group: /, '');
             const operationType = operationName.startsWith('Group:') ? 'start' : 'stop';
-            // Delega a GroupOperations.handleGroupOperationComplete
             GroupOperations.handleGroupOperationComplete(statusData, groupName, operationType);
         } else {
-            // Comportamento originale per altre operazioni
             messageEl.textContent = 'Operation completed!';
-            //ToastManager.show('Operation completed!', 'success');
         }
 
         this.activeOperations[operationId].status = 'completed';
 
+        // Pulisci timeouts
+        this.cleanupPollTimeouts(operationId);
+
         // Auto-chiudi dopo 5 secondi
         setTimeout(() => {
             this.closeOperation(operationId);
-            // Reload già gestito in handleGroupOperationComplete per i gruppi
-            //if (!operationName.startsWith('Group:') && !operationName.startsWith('Stopping Group:')) {
             ReloadManager.showReloadToast(7000);
-            //}
         }, 5000);
     },
 
@@ -274,9 +268,7 @@ const OperationMonitor = {
         const card = DOM.get(`operation-${operationId}`);
         if (!card) return;
 
-        // IMPORTANTE: Chiudi il loader
         hideLoader();
-
         DOM.removeClass(card, 'operation-running');
         DOM.addClass(card, 'operation-failed');
 
@@ -289,6 +281,9 @@ const OperationMonitor = {
 
         this.activeOperations[operationId].status = 'failed';
 
+        // Pulisci timeouts
+        this.cleanupPollTimeouts(operationId);
+
         ToastManager.show(`Task failed: ${statusData.error || 'Unknown'}`, 'error');
     },
 
@@ -299,9 +294,7 @@ const OperationMonitor = {
         const card = DOM.get(`operation-${operationId}`);
         if (!card) return;
 
-        // IMPORTANTE: Chiudi il loader
         hideLoader();
-
         DOM.removeClass(card, 'operation-running');
         DOM.addClass(card, 'operation-timeout');
 
@@ -313,6 +306,9 @@ const OperationMonitor = {
         messageEl.textContent = 'Timeout: The operation continues in the background. Reload the page to check the status.';
 
         this.activeOperations[operationId].status = 'timeout';
+
+        // Pulisci timeouts
+        this.cleanupPollTimeouts(operationId);
 
         ToastManager.show('Operation timed out - continues in background', 'warning');
     },
@@ -330,13 +326,50 @@ const OperationMonitor = {
                 }
             }, 300);
         }
+
+        // Pulisci tracciamento
         delete this.activeOperations[operationId];
+        this.cleanupPollTimeouts(operationId);
 
         // Cleanup di sicurezza
         if (OperationHelper) {
             OperationHelper.cleanup();
         }
+    },
+
+    /**
+     * Cleanup poll timeouts per operazione
+     */
+    cleanupPollTimeouts(operationId) {
+        const keys = Object.keys(this.pollTimeouts);
+        keys.forEach(key => {
+            if (key.startsWith(`${operationId}_`)) {
+                clearTimeout(this.pollTimeouts[key]);
+                delete this.pollTimeouts[key];
+            }
+        });
+    },
+
+    /**
+     * Cleanup globale (per beforeunload)
+     */
+    cleanup() {
+        // Chiudi tutti i poll timeouts
+        Object.values(this.pollTimeouts).forEach(timeoutId => {
+            clearTimeout(timeoutId);
+        });
+        this.pollTimeouts = {};
+
+        // Chiudi tutte le operazioni
+        Object.keys(this.activeOperations).forEach(operationId => {
+            this.closeOperation(operationId);
+        });
     }
 };
 
 window.OperationMonitor = OperationMonitor;
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    OperationMonitor.cleanup();
+});

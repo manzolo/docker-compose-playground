@@ -24,32 +24,31 @@ const ExecuteCommandManager = {
 
         ModalManager.open('commandModal');
 
-        // Focus e aggiungi event listener per Enter
-        const commandInput = DOM.get('commandInput');
-        
-        // Rimuovi ALL i listener vecchi clonando l'elemento
-        const newInput = commandInput.cloneNode(true);
-        commandInput.parentNode.replaceChild(newInput, commandInput);
-        const updatedInput = DOM.get('commandInput');
-        
+        // Invalida cache per l'input (per sicurezza)
+        DOM.invalidateCache('commandInput');
+
+        // Focus con delay per assicurare visibilità
         setTimeout(() => {
-            updatedInput.focus();
+            const commandInput = DOM.get('commandInput');
+            if (commandInput) {
+                commandInput.focus();
 
-            // Aggiungi listener per Enter (una sola volta)
-            updatedInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    this.executeCommand();
-                }
-            });
+                // Aggiungi listener per Enter (una sola volta - elemento fresco)
+                commandInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.executeCommand();
+                    }
+                });
 
-            // Aggiungi listener per Escape (chiude modal)
-            updatedInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.close();
-                }
-            });
+                // Aggiungi listener per Escape (chiude modal)
+                commandInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        this.close();
+                    }
+                });
+            }
         }, 100);
     },
 
@@ -57,7 +56,8 @@ const ExecuteCommandManager = {
      * Execute command
      */
     async executeCommand() {
-        const command = DOM.get('commandInput').value.trim();
+        const commandInput = DOM.get('commandInput');
+        const command = commandInput ? commandInput.value.trim() : '';
 
         if (!command) {
             ToastManager.show('Please enter a command', 'warning');
@@ -70,7 +70,9 @@ const ExecuteCommandManager = {
         }
 
         const outputArea = DOM.get('commandOutput');
-        outputArea.textContent = 'Executing...';
+        if (outputArea) {
+            outputArea.textContent = 'Executing...';
+        }
 
         showLoader(`Executing command: ${command}`);
 
@@ -88,7 +90,10 @@ const ExecuteCommandManager = {
             hideLoader();
 
             if (!response.ok) {
-                outputArea.textContent = `Error: ${result.detail || 'Failed to execute command'}`;
+                const errorMsg = result.detail || 'Failed to execute command';
+                if (outputArea) {
+                    outputArea.textContent = `Error: ${errorMsg}`;
+                }
                 ToastManager.show('Command failed', 'error');
                 return;
             }
@@ -98,7 +103,9 @@ const ExecuteCommandManager = {
                 ? result.output
                 : `Command failed with exit code ${result.exit_code}\n${result.output}`;
 
-            outputArea.textContent = output;
+            if (outputArea) {
+                outputArea.textContent = output;
+            }
 
             if (result.success) {
                 ToastManager.show('Command executed successfully', 'success');
@@ -108,7 +115,10 @@ const ExecuteCommandManager = {
 
         } catch (error) {
             hideLoader();
-            outputArea.textContent = `Error: ${error.message}`;
+            const outputArea = DOM.get('commandOutput');
+            if (outputArea) {
+                outputArea.textContent = `Error: ${error.message}`;
+            }
             ToastManager.show('Error executing command', 'error');
         }
     },
@@ -117,16 +127,24 @@ const ExecuteCommandManager = {
      * Clear output
      */
     clearOutput() {
-        DOM.get('commandOutput').textContent = '';
-        DOM.get('commandInput').value = '';
-        DOM.get('commandInput').focus();
+        const outputArea = DOM.get('commandOutput');
+        const inputArea = DOM.get('commandInput');
+        
+        if (outputArea) {
+            outputArea.textContent = '';
+        }
+        if (inputArea) {
+            inputArea.value = '';
+            inputArea.focus();
+        }
     },
 
     /**
      * Copy output to clipboard
      */
     copyOutput() {
-        const output = DOM.get('commandOutput').textContent;
+        const outputArea = DOM.get('commandOutput');
+        const output = outputArea ? outputArea.textContent : '';
 
         if (!output) {
             ToastManager.show('Nothing to copy', 'warning');
@@ -152,8 +170,11 @@ const ExecuteCommandManager = {
             return;
         }
 
-        DOM.get('diagnosticsContainerName').textContent = container;
-        DOM.get('diagnosticsImageName').textContent = imageName;
+        const nameEl = DOM.get('diagnosticsContainerName');
+        const imageEl = DOM.get('diagnosticsImageName');
+        
+        if (nameEl) nameEl.textContent = container;
+        if (imageEl) imageEl.textContent = imageName;
 
         // Clear all tabs
         DOM.get('diagnosticsProcesses').innerHTML = '';
@@ -216,12 +237,19 @@ const ExecuteCommandManager = {
             }
 
             // Display diagnostic data with parsing
-            DOM.get('diagnosticsProcesses').innerHTML = DiagnosticsParser.parseProcesses(data.diagnostics.processes || 'N/A');
-            DOM.get('diagnosticsDisk').innerHTML = DiagnosticsParser.parseDiskUsage(data.diagnostics.disk_usage || 'N/A');
-            DOM.get('diagnosticsNetwork').innerHTML = DiagnosticsParser.parseNetwork(data.diagnostics.network || 'N/A');
-            DOM.get('diagnosticsEnvironment').innerHTML = DiagnosticsParser.parseEnvironment(data.diagnostics.environment || 'N/A');
-            DOM.get('diagnosticsUptime').innerHTML = DiagnosticsParser.parseUptime(data.diagnostics.uptime || 'N/A');
-            DOM.get('diagnosticsLogs').innerHTML = DiagnosticsParser.parseLogs(data.diagnostics.recent_logs || 'N/A');
+            const processesEl = DOM.get('diagnosticsProcesses');
+            const diskEl = DOM.get('diagnosticsDisk');
+            const networkEl = DOM.get('diagnosticsNetwork');
+            const envEl = DOM.get('diagnosticsEnvironment');
+            const uptimeEl = DOM.get('diagnosticsUptime');
+            const logsEl = DOM.get('diagnosticsLogs');
+
+            if (processesEl) processesEl.innerHTML = DiagnosticsParser.parseProcesses(data.diagnostics?.processes || 'N/A');
+            if (diskEl) diskEl.innerHTML = DiagnosticsParser.parseDiskUsage(data.diagnostics?.disk_usage || 'N/A');
+            if (networkEl) networkEl.innerHTML = DiagnosticsParser.parseNetwork(data.diagnostics?.network || 'N/A');
+            if (envEl) envEl.innerHTML = DiagnosticsParser.parseEnvironment(data.diagnostics?.environment || 'N/A');
+            if (uptimeEl) uptimeEl.innerHTML = DiagnosticsParser.parseUptime(data.diagnostics?.uptime || 'N/A');
+            if (logsEl) logsEl.innerHTML = DiagnosticsParser.parseLogs(data.diagnostics?.recent_logs || 'N/A');
 
             ToastManager.show('Diagnostics completed', 'success');
 
@@ -246,7 +274,8 @@ const ExecuteCommandManager = {
         });
 
         // Show selected tab
-        const tab = DOM.get(`diagnostics${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+        const tabId = `diagnostics${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
+        const tab = DOM.get(tabId);
         if (tab) {
             tab.style.display = 'block';
         }
@@ -267,7 +296,7 @@ const ExecuteCommandManager = {
     },
 
     /**
-     * Close diagnostics modal
+     * Close diagnostics modal - with proper cleanup
      */
     closeDiagnostics() {
         this.currentContainer = null;
@@ -275,10 +304,24 @@ const ExecuteCommandManager = {
         // Rimuovi listener Escape
         if (this.diagnosticsEscapeListener) {
             document.removeEventListener('keydown', this.diagnosticsEscapeListener);
+            this.diagnosticsEscapeListener = null;
         }
         
         ModalManager.close('diagnosticsModal');
+    },
+
+    /**
+     * Cleanup su beforeunload
+     */
+    cleanup() {
+        this.close();
+        this.closeDiagnostics();
     }
 };
 
 window.ExecuteCommandManager = ExecuteCommandManager;
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    ExecuteCommandManager.cleanup();
+});

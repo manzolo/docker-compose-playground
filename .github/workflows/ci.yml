@@ -4,8 +4,6 @@ on:
   push:
     branches: [develop, main, 'release/*', 'feature/*']
     tags: [v*]
-  schedule:
-    - cron: '0 0 * * *'
 
 jobs:
   test-quick:

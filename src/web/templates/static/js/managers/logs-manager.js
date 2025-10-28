@@ -8,16 +8,19 @@ const LogsManager = {
     refreshInterval: null,
     isFollowing: false,
     refreshRate: 2000,
+    escapeListener: null, // Track escape listener per cleanup
+    autoScrollListener: null, // Track auto-scroll listener
 
     /**
      * Show container logs
      */
     async show(container, image = null, follow = false) {
         try {
+            // Cleanup precedente se esiste
+            this.stopFollowing();
+            
             this.currentContainer = container;
             this.currentImage = image;
-            
-            //console.log('LogsManager.show() called:', { container, image, follow });
             
             const logContainerName = DOM.get('logContainerName');
             if (logContainerName) {
@@ -30,7 +33,6 @@ const LogsManager = {
             }
 
             const data = await ApiService.getContainerLogs(container);
-            //console.log('Logs fetched:', data);
 
             const logsContent = DOM.get('logsContent');
             if (logsContent) {
@@ -40,6 +42,7 @@ const LogsManager = {
             this.addFollowControls();
             ModalManager.open('logModal');
 
+            // Scroll to bottom
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     const logsContentElem = DOM.get('logsContent');
@@ -49,8 +52,10 @@ const LogsManager = {
                 });
             });
 
+            // Setup Escape key listener
+            this.setupEscapeListener();
+
             if (follow) {
-                //console.log('Starting follow mode...');
                 this.startFollowing();
             }
         } catch (error) {
@@ -60,15 +65,57 @@ const LogsManager = {
     },
 
     /**
+     * Setup Escape key listener - tracciato per cleanup
+     */
+    setupEscapeListener() {
+        // Rimuovi listener precedente se esiste
+        if (this.escapeListener) {
+            document.removeEventListener('keydown', this.escapeListener);
+        }
+
+        this.escapeListener = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.close();
+            }
+        };
+
+        document.addEventListener('keydown', this.escapeListener);
+    },
+
+    /**
      * Add follow controls
      */
     addFollowControls() {
         const followToggleBtn = DOM.get('followToggleBtn');
+        const autoScrollCheckbox = DOM.get('autoScroll');
+
+        // Rimuovi listener vecchi se esistono
+        if (this.autoScrollListener) {
+            if (autoScrollCheckbox) {
+                DOM.off(autoScrollCheckbox, 'change', this.autoScrollListener);
+            }
+        }
 
         if (followToggleBtn) {
-            DOM.on(followToggleBtn, 'click', () => {
-                this.toggleFollow();
-            });
+            // Rimuovi listener vecchio clonando elemento
+            const newBtn = followToggleBtn.cloneNode(true);
+            followToggleBtn.parentNode.replaceChild(newBtn, followToggleBtn);
+            
+            const updatedBtn = DOM.get('followToggleBtn');
+            if (updatedBtn) {
+                DOM.on(updatedBtn, 'click', () => {
+                    this.toggleFollow();
+                });
+            }
+        }
+
+        // Aggiungi auto-scroll listener
+        if (autoScrollCheckbox) {
+            this.autoScrollListener = () => {
+                this.toggleAutoScroll();
+            };
+            DOM.on(autoScrollCheckbox, 'change', this.autoScrollListener);
         }
 
         this.updateFollowButton();
@@ -95,6 +142,7 @@ const LogsManager = {
 
             this.updateFollowStatus('Last update: ' + new Date().toLocaleTimeString());
         } catch (error) {
+            console.error('Error refreshing logs:', error);
             ToastManager.show(`Error refreshing logs: ${error.message}`, 'error');
             this.stopFollowing();
         }
@@ -112,13 +160,19 @@ const LogsManager = {
     },
 
     /**
-     * Start following logs
+     * Start following logs - con interval tracciato
      */
     startFollowing() {
-        //console.log('startFollowing() called');
+        if (this.isFollowing) return;
+        
         this.isFollowing = true;
+        
+        // Rimuovi interval precedente se esiste
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+
         this.refreshInterval = setInterval(() => {
-            //console.log('Refreshing logs...');
             this.refreshLogs();
         }, this.refreshRate);
 
@@ -132,10 +186,11 @@ const LogsManager = {
     },
 
     /**
-     * Stop following logs
+     * Stop following logs - con cleanup di interval
      */
     stopFollowing() {
         this.isFollowing = false;
+        
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
@@ -150,15 +205,15 @@ const LogsManager = {
      */
     updateFollowButton() {
         const btn = DOM.get('followToggleBtn');
-        const icon = btn?.querySelector('.follow-icon');
-        if (btn) {
-            if (this.isFollowing) {
-                DOM.addClass(btn, 'active');
-                if (icon) icon.textContent = '⏸';
-            } else {
-                DOM.removeClass(btn, 'active');
-                if (icon) icon.textContent = '▶';
-            }
+        if (!btn) return;
+
+        const icon = btn.querySelector('.follow-icon');
+        if (this.isFollowing) {
+            DOM.addClass(btn, 'active');
+            if (icon) icon.textContent = '⏸';
+        } else {
+            DOM.removeClass(btn, 'active');
+            if (icon) icon.textContent = '▶';
         }
     },
 
@@ -202,21 +257,38 @@ const LogsManager = {
     toggleAutoScroll() {
         const autoScrollCheckbox = DOM.get('autoScroll');
         if (autoScrollCheckbox && autoScrollCheckbox.checked) {
-            // Auto-scroll is ON - start following logs
             this.startFollowing();
         } else {
-            // Auto-scroll is OFF - stop following logs
             this.stopFollowing();
         }
     },
 
     /**
-     * Close logs modal
+     * Close logs modal - with proper cleanup
      */
     close() {
+        // Ferma il following
         this.stopFollowing();
+
+        // Rimuovi escape listener
+        if (this.escapeListener) {
+            document.removeEventListener('keydown', this.escapeListener);
+            this.escapeListener = null;
+        }
+
+        // Rimuovi auto-scroll listener
+        if (this.autoScrollListener) {
+            const autoScrollCheckbox = DOM.get('autoScroll');
+            if (autoScrollCheckbox) {
+                DOM.off(autoScrollCheckbox, 'change', this.autoScrollListener);
+            }
+            this.autoScrollListener = null;
+        }
+
+        // Reset stato
         this.currentContainer = null;
         this.currentImage = null;
+
         ModalManager.close('logModal');
     },
 
@@ -229,8 +301,20 @@ const LogsManager = {
             this.stopFollowing();
             this.startFollowing();
         }
+    },
+
+    /**
+     * Cleanup su beforeunload
+     */
+    cleanup() {
+        this.close();
     }
 };
 
 window.LogsManager = LogsManager;
 window.showLogs = LogsManager.show.bind(LogsManager);
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    LogsManager.cleanup();
+});

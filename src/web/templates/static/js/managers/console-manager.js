@@ -7,13 +7,22 @@ const ConsoleManager = {
     term: null,
     fitAddon: null,
     webglAddon: null,
+    resizeHandler: null, // Track resize handler per cleanup
+    container: null, // Track current container
 
     /**
      * Open console
      */
     open(container, imageName) {
+        // Chiudi connessione precedente se esiste
+        if (this.ws) {
+            this.close();
+        }
+
+        this.container = container;
         this.updateConsoleUI(container, '● Connecting...', 'console-connecting');
         ModalManager.open('consoleModal');
+        
         // Wait for modal to be fully rendered
         setTimeout(() => {
             this.initializeTerminal();
@@ -25,10 +34,14 @@ const ConsoleManager = {
      * Update console UI
      */
     updateConsoleUI(container, status, className) {
-        DOM.get('consoleContainerName').textContent = container;
-        const statusElement = DOM.get('consoleStatus');
-        statusElement.textContent = status;
-        statusElement.className = `console-status ${className}`;
+        const nameEl = DOM.get('consoleContainerName');
+        const statusEl = DOM.get('consoleStatus');
+        
+        if (nameEl) nameEl.textContent = container;
+        if (statusEl) {
+            statusEl.textContent = status;
+            statusEl.className = `console-status ${className}`;
+        }
     },
 
     /**
@@ -38,6 +51,10 @@ const ConsoleManager = {
         if (this.term) {
             this.term.dispose();
             this.term = null;
+        }
+
+        if (this.fitAddon) {
+            this.fitAddon = null;
         }
 
         this.term = new Terminal({
@@ -61,7 +78,10 @@ const ConsoleManager = {
         this.term.loadAddon(this.fitAddon);
 
         // Open terminal in the DOM
-        this.term.open(DOM.get('terminal'));
+        const terminalEl = DOM.get('terminal');
+        if (terminalEl) {
+            this.term.open(terminalEl);
+        }
 
         // Force initial fit
         try {
@@ -87,25 +107,32 @@ const ConsoleManager = {
 
         this.term.focus();
 
-        // Handle window resize
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (this.fitAddon && this.term) {
-                    try {
-                        this.fitAddon.fit();
-                        this.term.refresh(0, this.term.rows - 1);
-                        // Ensure WebGL context is updated
-                        if (this.webglAddon) {
-                            this.webglAddon._renderer?.updateDimensions();
-                        }
-                    } catch (e) {
-                        console.warn('Resize fit failed:', e);
+        // Handle window resize - rimuovi handler precedente
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+        }
+
+        this.resizeHandler = () => {
+            if (this.fitAddon && this.term) {
+                try {
+                    this.fitAddon.fit();
+                    this.term.refresh(0, this.term.rows - 1);
+                    if (this.webglAddon && this.webglAddon._renderer) {
+                        this.webglAddon._renderer.updateDimensions();
                     }
+                } catch (e) {
+                    console.warn('Resize fit failed:', e);
                 }
-            }, 250);
-        });
+            }
+        };
+
+        let resizeTimeout;
+        const resizeWithDebounce = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(this.resizeHandler, 250);
+        };
+
+        window.addEventListener('resize', resizeWithDebounce);
 
         // Delayed fit to ensure DOM is ready
         setTimeout(() => {
@@ -117,34 +144,34 @@ const ConsoleManager = {
                     console.warn('Delayed fit failed:', e);
                 }
             }
-            this.term.scrollToBottom();
+            if (this.term) {
+                this.term.scrollToBottom();
+            }
         }, 250);
     },
 
     /**
-     * Connect WebSocket
+     * Connect WebSocket - con proper cleanup
      */
     connectWebSocket(container) {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         this.ws = new WebSocket(`${protocol}//${window.location.host}/ws/console/${container}`);
 
-        this.ws.onopen = () => {
+        // Salva i handler originali per cleanup
+        const onOpen = () => {
             this.updateConsoleUI(container, '● Connected', 'console-connected');
-            // Removed term.write to avoid displaying in terminal
-            // this.term.write('\r\n\x1b[32m✓ Connected to console\x1b[0m\r\n\r\n');
             this.term.scrollToBottom();
         };
 
-        this.ws.onmessage = (event) => {
+        const onMessage = (event) => {
             let data = event.data;
             
-            // Scarta i messaggi di ridimensionamento (non devono essere visualizzati)
+            // Scarta i messaggi di ridimensionamento
             if (data.startsWith('{"type":"resize"')) {
                 return;
             }
             
             data = data.replace(/\r?\n/g, '\r\n');
-            
             this.term.write(data);
             this.scrollToBottomIfAtBottom();
             
@@ -157,35 +184,46 @@ const ConsoleManager = {
             }
         };
 
-        this.ws.onerror = (error) => {
+        const onError = (error) => {
             console.error('WebSocket error:', error);
             this.updateConsoleUI(container, '● Error', 'console-error');
-            this.term.write('\r\n\x1b[31m✗ Connection error\x1b[0m\r\n');
+            if (this.term) {
+                this.term.write('\r\n\x1b[31m✗ Connection error\x1b[0m\r\n');
+            }
         };
 
-        this.ws.onclose = () => {
+        const onClose = () => {
             this.updateConsoleUI(container, '● Disconnected', 'console-disconnected');
             if (this.term) {
                 this.term.write('\r\n\x1b[33m⚠ Console disconnected\x1b[0m\r\n');
             }
         };
 
-        this.term.onData(data => {
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(data);
-            }
-        });
+        // Assegna i handler
+        this.ws.onopen = onOpen;
+        this.ws.onmessage = onMessage;
+        this.ws.onerror = onError;
+        this.ws.onclose = onClose;
 
-        this.term.onResize((size) => {
-            //console.debug('Terminal resized:', size.cols, size.rows); // Debugging
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({
-                    type: 'resize',
-                    cols: size.cols,
-                    rows: size.rows
-                }));
-            }
-        });
+        // Data handler per input da terminale
+        if (this.term) {
+            this.term.onData(data => {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(data);
+                }
+            });
+
+            // Resize handler per WebSocket
+            this.term.onResize((size) => {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'resize',
+                        cols: size.cols,
+                        rows: size.rows
+                    }));
+                }
+            });
+        }
     },
 
     /**
@@ -210,16 +248,32 @@ const ConsoleManager = {
     },
 
     /**
-     * Close console
+     * Close console - with proper cleanup
      */
     close() {
+        // Chiudi WebSocket
         if (this.ws) {
+            this.ws.onopen = null;
+            this.ws.onmessage = null;
+            this.ws.onerror = null;
             this.ws.onclose = null;
             this.ws.close();
             this.ws = null;
         }
 
+        // Rimuovi resize handler
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        }
+
+        // Dispose terminal
         if (this.term) {
+            // Rimuovi data handlers
+            this.term.onData(() => {});
+            this.term.onResize(() => {});
+            
+            // Dispose WebGL addon se presente
             if (this.webglAddon) {
                 try {
                     this.webglAddon.dispose();
@@ -228,13 +282,29 @@ const ConsoleManager = {
                 }
                 this.webglAddon = null;
             }
+            
+            // Dispose terminal
             this.term.dispose();
             this.term = null;
         }
 
         this.fitAddon = null;
+        this.container = null;
+        
         ModalManager.close('consoleModal');
+    },
+
+    /**
+     * Cleanup su beforeunload
+     */
+    cleanup() {
+        this.close();
     }
 };
 
 window.ConsoleManager = ConsoleManager;
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    ConsoleManager.cleanup();
+});
