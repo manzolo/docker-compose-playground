@@ -300,7 +300,7 @@ run_phase_3() {
         log_warning "Group start unclear"
     fi
     
-    sleep 5
+    sleep 10
     
     print_test "Verify group containers are running"
     local stats=$(curl -s "$API_URL/container-stats/playground-elasticsearch-stack")
