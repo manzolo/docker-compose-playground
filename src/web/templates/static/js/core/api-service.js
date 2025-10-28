@@ -1,27 +1,38 @@
 // =========================================================
-// API SERVICE - Centralized API calls
+// API SERVICE - Centralized API calls with proper cleanup
 // =========================================================
 
 const ApiService = {
+    activeRequests: new Map(), // Track AbortControllers per cleanup
+
     /**
-     * Fetch with timeout
+     * Fetch with timeout and AbortController tracking
      */
     async fetchWithTimeout(url, options = {}) {
         const controller = new AbortController();
+        const timeoutMs = options.timeout || Config.POLLING.TIMEOUT.START;
+        
         const timeoutId = setTimeout(
             () => controller.abort(),
-            options.timeout || Config.POLLING.TIMEOUT.START
+            timeoutMs
         );
+
+        // Traccia la richiesta
+        this.activeRequests.set(url, { controller, timeoutId });
 
         try {
             const response = await fetch(url, {
                 ...options,
                 signal: controller.signal
             });
+            
             clearTimeout(timeoutId);
+            this.activeRequests.delete(url);
+            
             return response;
         } catch (error) {
             clearTimeout(timeoutId);
+            this.activeRequests.delete(url);
             throw error;
         }
     },
@@ -215,13 +226,7 @@ const ApiService = {
     },
 
     /**
-     * Server logs
-     */
-    async getServerLogs() {
-        return this.fetchText('/api/logs');
-    },
-    /**
-     * Server logs
+     * Server logs - SINGLE definition (removed duplication)
      */
     async getServerLogs() {
         return this.fetchText('/api/logs');
@@ -291,7 +296,23 @@ const ApiService = {
         return this.fetchJson(`/api/validate-config/${image}`, {
             timeout: 10000
         });
+    },
+
+    /**
+     * Cleanup: abort all pending requests
+     */
+    abortAllRequests() {
+        this.activeRequests.forEach(({ controller, timeoutId }) => {
+            clearTimeout(timeoutId);
+            controller.abort();
+        });
+        this.activeRequests.clear();
     }
 };
 
 window.ApiService = ApiService;
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    ApiService.abortAllRequests();
+});

@@ -7,7 +7,7 @@
 // =========================================================
 const Config = {
     POLLING: {
-        MAX_ATTEMPTS: 180,  // 1800 secondi = 3 minuti
+        MAX_ATTEMPTS: 180,
         INTERVAL: 1000,
         TIMEOUT: {
             START: 180000,
@@ -30,11 +30,23 @@ const Config = {
 };
 
 // =========================================================
-// DOM Helper
+// DOM Helper with cache for repeated queries
 // =========================================================
 const DOM = {
+    cache: {}, // Cache per riduire DOM queries
+
     get(id) {
-        return document.getElementById(id);
+        if (!this.cache[id]) {
+            this.cache[id] = document.getElementById(id);
+        }
+        return this.cache[id];
+    },
+
+    invalidateCache(id) {
+        delete this.cache[id];
+        if (id) {
+            this.cache[id] = document.getElementById(id);
+        }
     },
     
     query(selector) {
@@ -50,6 +62,12 @@ const DOM = {
             element.addEventListener(event, handler);
         }
     },
+
+    off(element, event, handler) {
+        if (element) {
+            element.removeEventListener(event, handler);
+        }
+    },
     
     addClass(element, className) {
         if (element) element.classList.add(className);
@@ -59,8 +77,14 @@ const DOM = {
         if (element) element.classList.remove(className);
     },
     
-    toggleClass(element, className) {
-        if (element) element.classList.toggle(className);
+    toggleClass(element, className, force) {
+        if (element) {
+            if (force !== undefined) {
+                element.classList.toggle(className, force);
+            } else {
+                element.classList.toggle(className);
+            }
+        }
     },
     
     hasClass(element, className) {
@@ -113,8 +137,6 @@ const Utils = {
         } = options;
         let attempts = 0;
         let statusData = null;
-        let hasError = false;
-        let errorToThrow = null;
 
         return new Promise((resolve, reject) => {
             const poll = () => {
@@ -127,10 +149,6 @@ const Utils = {
                     })
                     .then(data => {
                         statusData = data;
-
-                        /*if (messageFormatter) {
-                            showLoader(messageFormatter(statusData));
-                        }*/
 
                         // Se completato o errore, risolvere
                         if (statusData.status === 'completed' || statusData.status === 'error') {
@@ -153,7 +171,6 @@ const Utils = {
                         attempts++;
                         
                         if (attempts < maxAttempts) {
-                            // Retry dopo l'intervallo
                             setTimeout(poll, interval);
                         } else {
                             hideLoader();
@@ -162,7 +179,6 @@ const Utils = {
                     });
             };
 
-            // Inizia il polling
             poll();
         });
     },
@@ -217,6 +233,8 @@ const Utils = {
 // Toast Notification System
 // =========================================================
 const ToastManager = {
+    activeToasts: [], // Track toasts para cleanup
+
     show(message, type = 'info') {
         const container = DOM.get('toast-container');
         if (!container) {
@@ -226,6 +244,7 @@ const ToastManager = {
 
         const toast = this.createToast(message, type);
         container.appendChild(toast);
+        this.activeToasts.push(toast);
         this.animateToast(toast);
     },
 
@@ -244,7 +263,10 @@ const ToastManager = {
 
         setTimeout(() => {
             DOM.removeClass(toast, 'toast-show');
-            setTimeout(() => toast.remove(), 300);
+            setTimeout(() => {
+                toast.remove();
+                this.activeToasts = this.activeToasts.filter(t => t !== toast);
+            }, 300);
         }, Config.TOAST.DISPLAY_TIME);
     },
 
@@ -258,6 +280,18 @@ const ToastManager = {
                 this.show(`Error: ${error}`, 'error');
             }, (index + 1) * 800);
         });
+    },
+
+    /**
+     * Cleanup all active toasts (per memory leak prevention)
+     */
+    cleanup() {
+        this.activeToasts.forEach(toast => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        });
+        this.activeToasts = [];
     }
 };
 
@@ -265,11 +299,14 @@ const ToastManager = {
 // Modal Management
 // =========================================================
 const ModalManager = {
+    openModals: [], // Track open modals
+
     open(modalId) {
         const modal = DOM.get(modalId);
         if (modal) {
             DOM.addClass(modal, 'modal-open');
             document.body.style.overflow = 'hidden';
+            this.openModals.push(modalId);
         }
     },
 
@@ -278,57 +315,63 @@ const ModalManager = {
         if (modal) {
             DOM.removeClass(modal, 'modal-open');
             document.body.style.overflow = '';
+            this.openModals = this.openModals.filter(m => m !== modalId);
         }
+    },
+
+    /**
+     * Close all open modals (per cleanup)
+     */
+    closeAll() {
+        this.openModals.forEach(modalId => this.close(modalId));
     }
 };
 
 // =========================================================
-// Loader Management
+// Loader Management (refactored per evitare race conditions)
 // =========================================================
 const LoaderManager = {
     activeTimeout: null,
     forceHideTimeout: null,
+    loaderCount: 0, // Counter per nested show/hide
 
     show(message = 'Please wait...') {
         const loader = DOM.get('global-loader');
         const messageElement = DOM.get('loader-message');
 
-        // Cancella eventuali timeout precedenti
-        if (this.activeTimeout) clearTimeout(this.activeTimeout);
-        if (this.forceHideTimeout) clearTimeout(this.forceHideTimeout);
-
-        if (messageElement) {
-            messageElement.textContent = message;
-        }
-
-        if (loader) {
-            DOM.addClass(loader, 'active');
-            document.body.style.overflow = 'hidden';
+        if (this.loaderCount === 0) {
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
+            if (loader) {
+                DOM.addClass(loader, 'active');
+                document.body.style.overflow = 'hidden';
+            }
         } else {
-            console.error('Loader element not found!');
-            ToastManager.show(`Operation in progress: ${message}`, 'info');
+            // Aggiorna messaggio anche se già visibile
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
         }
+
+        this.loaderCount++;
+        this.ensureHiddenAfter(15);
     },
 
     hide() {
-        const loader = DOM.get('global-loader');
-        
-        if (loader) {
-            DOM.removeClass(loader, 'active');
-            document.body.style.overflow = '';
-        } else {
-            console.error('Loader element not found!');
-        }
+        this.loaderCount = Math.max(0, this.loaderCount - 1);
 
-        // Cancella timeout di sicurezza
-        if (this.forceHideTimeout) {
-            clearTimeout(this.forceHideTimeout);
-            this.forceHideTimeout = null;
+        if (this.loaderCount === 0) {
+            const loader = DOM.get('global-loader');
+            if (loader) {
+                DOM.removeClass(loader, 'active');
+                document.body.style.overflow = '';
+            }
         }
     },
 
     /**
-     * Forza la chiusura del loader (emergency method)
+     * Force hide (emergency)
      */
     forceHide() {
         const loader = DOM.get('global-loader');
@@ -338,10 +381,11 @@ const LoaderManager = {
             document.body.style.overflow = '';
             console.warn('Loader forcefully hidden');
         }
+        this.loaderCount = 0;
     },
 
     /**
-     * Safety net: se il loader è ancora attivo dopo N secondi, forzalo a chiudersi
+     * Safety net
      */
     ensureHiddenAfter(seconds = 10) {
         if (this.forceHideTimeout) clearTimeout(this.forceHideTimeout);
@@ -356,7 +400,7 @@ const LoaderManager = {
     },
 
     /**
-     * Pulisci tutti i timeout
+     * Cleanup
      */
     cleanup() {
         if (this.activeTimeout) {
@@ -367,16 +411,16 @@ const LoaderManager = {
             clearTimeout(this.forceHideTimeout);
             this.forceHideTimeout = null;
         }
+        this.loaderCount = 0;
     }
 };
 
 const OperationHelper = {
     /**
-     * Esegui una funzione async con loader, garantendo la chiusura
+     * Execute async with loader + safety
      */
     async executeWithLoader(loaderMessage, asyncFunction) {
         LoaderManager.show(loaderMessage);
-        LoaderManager.ensureHiddenAfter(15);
         
         try {
             const result = await asyncFunction();
@@ -389,16 +433,13 @@ const OperationHelper = {
     },
 
     /**
-     * Esegui operazione lunga con OperationMonitor
-     * Non chiudere il loader - il monitor se ne occupa
+     * Execute with monitor (don't close loader)
      */
     async executeWithMonitor(loaderMessage, operationName, asyncFunction) {
         LoaderManager.show(loaderMessage);
-        LoaderManager.ensureHiddenAfter(20);
         
         try {
             const result = await asyncFunction();
-            // Non chiudere qui - OperationMonitor.startMonitoring() lo farà
             return result;
         } catch (error) {
             LoaderManager.hide();
@@ -407,10 +448,12 @@ const OperationHelper = {
     },
 
     /**
-     * Cleanup di sicurezza
+     * Global cleanup
      */
     cleanup() {
         LoaderManager.cleanup();
+        ToastManager.cleanup();
+        ModalManager.closeAll();
     }
 };
 
@@ -418,6 +461,8 @@ const OperationHelper = {
 // Confirm Modal Management
 // =========================================================
 const ConfirmModalManager = {
+    resolvePromise: null,
+
     async show(title, message, type = 'warning') {
         return new Promise((resolve) => {
             const modal = DOM.get('confirmModal');
@@ -480,3 +525,8 @@ window.hideLoader = LoaderManager.hide.bind(LoaderManager);
 window.closeModal = ModalManager.close.bind(ModalManager);
 window.openModal = ModalManager.open.bind(ModalManager);
 window.showConfirmModal = ConfirmModalManager.show.bind(ConfirmModalManager);
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    OperationHelper.cleanup();
+});
