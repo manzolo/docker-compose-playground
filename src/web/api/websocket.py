@@ -1,8 +1,12 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import select
+import asyncio
+from typing import Optional
 import asyncio
 import logging
 import docker
 import json
+import time
 
 from src.web.core.config import load_config, get_motd
 from src.web.core.docker import docker_client
@@ -10,6 +14,87 @@ from src.web.utils.motd_processor import format_motd_for_terminal
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
+
+# Track active WebSocket sessions
+active_sessions: dict = {}
+active_sessions_lock = asyncio.Lock()
+
+class WebSocketConfig:
+    """WebSocket performance configuration"""
+    
+    # Buffer sizes
+    SOCKET_RECV_BUFFER = 4096  # bytes
+    SOCKET_SEND_BUFFER = 4096  # bytes
+    
+    # Polling optimization
+    # Instead of fixed 0.01s sleep (100x/sec), use select with timeout
+    SOCKET_SELECT_TIMEOUT = 0.1  # 100ms - reduces CPU usage
+    POLL_BACKOFF_MIN = 0.01  # 10ms minimum
+    POLL_BACKOFF_MAX = 0.5   # 500ms maximum
+    
+    # Connection limits
+    MAX_CONCURRENT_SESSIONS = 50
+    CONNECTION_IDLE_TIMEOUT = 3600  # 1 hour
+    
+    # Logging
+    LOG_BUFFER_SIZE_EVERY_N_READS = 100  # Reduce noisy logging
+
+async def read_from_socket_safe(sock, max_size: int = WebSocketConfig.SOCKET_RECV_BUFFER) -> Optional[bytes]:
+    """
+    Read from socket using select for non-blocking I/O
+    
+    Args:
+        sock: Socket object
+        max_size: Max bytes to read
+    
+    Returns:
+        bytes or None if no data available or error
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        
+        # Use select to wait for data with timeout
+        readable, _, _ = select.select(
+            [sock], [], [], 
+            WebSocketConfig.SOCKET_SELECT_TIMEOUT
+        )
+        
+        if readable:
+            # Data available, read it
+            data = await loop.run_in_executor(None, sock.recv, max_size)
+            return data if data else None
+        
+        return None  # No data available
+    
+    except OSError as e:
+        logger.debug("Socket read error: %s", str(e))
+        return None
+    except Exception as e:
+        logger.warning("Unexpected error in read_from_socket_safe: %s", str(e))
+        return None
+
+async def write_to_socket_safe(sock, data: bytes) -> bool:
+    """
+    Write to socket safely
+    
+    Args:
+        sock: Socket object
+        data: Data to write
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, sock.sendall, data)
+        return True
+    except OSError as e:
+        logger.debug("Socket write error: %s", str(e))
+        return False
+    except Exception as e:
+        logger.warning("Unexpected error in write_to_socket_safe: %s", str(e))
+        return False
+
 
 
 def parse_control_message(data: str) -> dict | None:
@@ -35,14 +120,39 @@ def parse_control_message(data: str) -> dict | None:
 
 @router.websocket("/ws/console/{container}")
 async def websocket_console(websocket: WebSocket, container: str):
-    """WebSocket endpoint for container terminal console"""
+    """WebSocket endpoint for container terminal console - Optimized version
+    
+    Improvements:
+    - Uses select() instead of fixed sleep polling
+    - Adaptive backoff for reduced CPU usage
+    - Better error handling and logging
+    - Session tracking for debugging
+    """
     await websocket.accept()
-    logger.info("WebSocket connection opened for container: %s", container)
+    
+    session_id = f"{container}-{id(websocket)}"
+    logger.info("WebSocket connection opened for container: %s (session: %s)", container, session_id)
+    
+    # Track session
+    async with active_sessions_lock:
+        if len(active_sessions) >= WebSocketConfig.MAX_CONCURRENT_SESSIONS:
+            logger.warning("Max concurrent sessions reached (%d)", WebSocketConfig.MAX_CONCURRENT_SESSIONS)
+            await websocket.send_json({"error": "Server at capacity, try again later"})
+            await websocket.close()
+            return
+        
+        active_sessions[session_id] = {
+            "container": container,
+            "started": time.time(),
+            "bytes_sent": 0,
+            "bytes_received": 0
+        }
     
     # Initialize variables for cleanup in finally block
     sock = None
     exec_stream = None
-    websocket_closed = False  # Track WebSocket closure state
+    websocket_closed = False
+    read_count = 0
     
     try:
         # Get container instance from Docker
@@ -64,20 +174,17 @@ async def websocket_console(websocket: WebSocket, container: str):
         # Load configuration and get shell type
         config_data = load_config()
         config = config_data["images"]
-        
-        # Extract image name from container name
         image_name = container.replace("playground-", "", 1)
         
-        # Determine which shell to use based on configuration
         if image_name not in config:
             logger.warning("Image '%s' not found in config for container %s", image_name, container)
-            shell = "/bin/sh"  # Default fallback shell
+            shell = "/bin/sh"
         else:
             shell = config.get(image_name, {}).get("shell", "/bin/bash")
         
         logger.info("Using shell %s for container %s", shell, image_name)
         
-        # Get and format MOTD (Message of the Day)
+        # Get and format MOTD
         motd = get_motd(image_name, config) if image_name in config else ""
         formatted_motd = format_motd_for_terminal(motd)
         
@@ -115,47 +222,67 @@ async def websocket_console(websocket: WebSocket, container: str):
         sock = exec_stream._sock
         sock.setblocking(False)
         
-        logger.info("Console session started for container %s", container)
+        logger.info("Console session started for container %s (session: %s)", container, session_id)
         
         # Send MOTD to client if available
         if formatted_motd:
-            await asyncio.sleep(0.1)  # Small delay to ensure client is ready
+            await asyncio.sleep(0.1)
             try:
                 await websocket.send_text(formatted_motd)
                 logger.info("Sent MOTD (%d characters) for image %s", len(formatted_motd), image_name)
             except Exception as e:
                 logger.warning("Failed to send MOTD: %s", str(e))
         
+        # ====================================================
+        # READ TASK: Container → WebSocket (Optimized)
+        # ====================================================
         async def read_from_container():
             """Read output from container and send to WebSocket client"""
+            nonlocal read_count
+            backoff = WebSocketConfig.POLL_BACKOFF_MIN
+            
             while True:
                 try:
-                    await asyncio.sleep(0.01)  # Small delay to prevent busy waiting
-                    try:
-                        # Read data from container socket
-                        data = sock.recv(4096)
-                        if data:
-                            # Decode and send to WebSocket client
+                    # Use select instead of sleep
+                    data = await read_from_socket_safe(sock, WebSocketConfig.SOCKET_RECV_BUFFER)
+                    
+                    if data:
+                        try:
                             text = data.decode('utf-8', errors='replace')
                             await websocket.send_text(text)
-                        else:
-                            # Socket closed by container
-                            logger.info("Container socket closed for %s", container)
+                            
+                            # Update session stats
+                            async with active_sessions_lock:
+                                if session_id in active_sessions:
+                                    active_sessions[session_id]["bytes_sent"] += len(data)
+                            
+                            # Log every N reads to reduce noise
+                            read_count += 1
+                            if read_count % WebSocketConfig.LOG_BUFFER_SIZE_EVERY_N_READS == 0:
+                                logger.debug("Session %s: read %d buffers", session_id, read_count)
+                            
+                            # Reset backoff on successful read
+                            backoff = WebSocketConfig.POLL_BACKOFF_MIN
+                        
+                        except Exception as e:
+                            logger.error("Error sending to WebSocket: %s", str(e))
                             break
-                    except BlockingIOError:
-                        # No data available, continue polling
-                        continue
-                    except OSError as e:
-                        # Socket error occurred
-                        logger.error("Socket error reading from container %s: %s", container, str(e))
-                        break
+                    
+                    else:
+                        # No data available - adaptive backoff
+                        await asyncio.sleep(backoff)
+                        backoff = min(backoff * 1.5, WebSocketConfig.POLL_BACKOFF_MAX)
+                
                 except WebSocketDisconnect:
-                    logger.info("WebSocket disconnected while reading from container %s", container)
+                    logger.info("WebSocket disconnected while reading (session: %s)", session_id)
                     break
                 except Exception as e:
                     logger.error("Error reading from container %s: %s", container, str(e))
                     break
         
+        # ====================================================
+        # WRITE TASK: WebSocket → Container (Unchanged but with better error handling)
+        # ====================================================
         async def write_to_container():
             """Read input from WebSocket client and send to container"""
             while True:
@@ -185,7 +312,7 @@ async def websocket_console(websocket: WebSocket, container: str):
                                         width=cols
                                     )
                                     logger.debug("Resized terminal for %s: %dx%d", container, cols, rows)
-                                    continue  # Skip sending resize to container
+                                    continue
                                 
                                 except (ValueError, TypeError) as e:
                                     logger.warning("Invalid resize parameters: %s", str(e))
@@ -194,27 +321,38 @@ async def websocket_console(websocket: WebSocket, container: str):
                                     logger.error("Error resizing terminal for %s: %s", container, str(e))
                                     continue
                             
-                            # Send regular input to container (not a resize message)
+                            # Send regular input to container
                             if data and json_data is None:
-                                # Only send non-JSON data to container
-                                sock.send(data.encode('utf-8'))
+                                success = await write_to_socket_safe(sock, data.encode('utf-8'))
+                                if success:
+                                    # Update session stats
+                                    async with active_sessions_lock:
+                                        if session_id in active_sessions:
+                                            active_sessions[session_id]["bytes_received"] += len(data)
+                                else:
+                                    logger.error("Failed to write to socket")
+                                    break
+                            
                             elif json_data and json_data.get("type") != "resize":
-                                # Unknown control message type, treat as regular input
                                 logger.debug("Unknown control message type: %s", json_data.get("type"))
-                                sock.send(data.encode('utf-8'))
+                                success = await write_to_socket_safe(sock, data.encode('utf-8'))
+                                if not success:
+                                    break
                         
                         except OSError as e:
                             logger.error("Socket error writing to container %s: %s", container, str(e))
                             break
                 
                 except WebSocketDisconnect:
-                    logger.info("WebSocket disconnected while writing to container %s", container)
+                    logger.info("WebSocket disconnected while writing (session: %s)", session_id)
                     break
                 except Exception as e:
                     logger.error("Error writing to container %s: %s", container, str(e))
                     break
         
-        # Run both read and write tasks concurrently
+        # ====================================================
+        # RUN BOTH TASKS CONCURRENTLY
+        # ====================================================
         try:
             await asyncio.gather(
                 read_from_container(),
@@ -229,14 +367,14 @@ async def websocket_console(websocket: WebSocket, container: str):
         try:
             await websocket.send_json({"error": "Container not found"})
         except:
-            pass  # Client may have already disconnected
+            pass
     
     except docker.errors.APIError as e:
         logger.error("Docker API error for container %s: %s", container, str(e))
         try:
             await websocket.send_json({"error": f"Docker error: {str(e)}"})
         except:
-            pass  # Client may have already disconnected
+            pass
     
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for container %s", container)
@@ -247,7 +385,7 @@ async def websocket_console(websocket: WebSocket, container: str):
         try:
             await websocket.send_json({"error": str(e)})
         except:
-            pass  # Client may have already disconnected
+            pass
     
     finally:
         # Cleanup resources
@@ -272,7 +410,44 @@ async def websocket_console(websocket: WebSocket, container: str):
                 logger.debug("WebSocket closed for container %s", container)
             except Exception as e:
                 logger.debug("WebSocket already closed for container %s: %s", container, str(e))
-        else:
-            logger.debug("WebSocket was already closed for container %s", container)
         
-        logger.info("Console session closed for container %s", container)
+        # Remove session tracking
+        async with active_sessions_lock:
+            if session_id in active_sessions:
+                session_data = active_sessions[session_id]
+                uptime = time.time() - session_data["started"]
+                logger.info("Console session closed (session: %s, uptime: %.1fs, sent: %d bytes, recv: %d bytes)",
+                           session_id, uptime, session_data["bytes_sent"], session_data["bytes_received"])
+                del active_sessions[session_id]
+        
+        logger.info("Console session cleanup completed for container %s", container)
+
+@router.get("/api/websocket-sessions")
+async def get_websocket_sessions():
+    """Get info about active WebSocket sessions (debug endpoint)
+    
+    Returns active console sessions with connection details and stats
+    """
+    async with active_sessions_lock:
+        sessions_info = []
+        for session_id, session_data in active_sessions.items():
+            uptime = time.time() - session_data["started"]
+            sessions_info.append({
+                "session_id": session_id,
+                "container": session_data["container"],
+                "uptime_seconds": round(uptime, 1),
+                "bytes_sent": session_data["bytes_sent"],
+                "bytes_received": session_data["bytes_received"]
+            })
+        
+        return {
+            "total_active_sessions": len(sessions_info),
+            "max_sessions": WebSocketConfig.MAX_CONCURRENT_SESSIONS,
+            "sessions": sessions_info,
+            "config": {
+                "select_timeout": WebSocketConfig.SOCKET_SELECT_TIMEOUT,
+                "buffer_size": WebSocketConfig.SOCKET_RECV_BUFFER,
+                "backoff_min": WebSocketConfig.POLL_BACKOFF_MIN,
+                "backoff_max": WebSocketConfig.POLL_BACKOFF_MAX
+            }
+        }

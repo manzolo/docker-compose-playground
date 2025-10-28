@@ -1,4 +1,6 @@
 """Docker client management and container utilities"""
+import os
+from typing import Dict, Any
 import docker
 import socket
 import logging
@@ -27,6 +29,41 @@ SHARED_DIR = BASE_DIR / "shared-volumes"
 NETWORK_NAME = "playground-network"
 SCRIPTS_DIR = BASE_DIR / "scripts"
 
+class TimeoutConfig:
+    """Centralized timeout configuration"""
+    
+    # Container startup
+    CONTAINER_START_TIMEOUT = int(os.getenv('PLAYGROUND_START_TIMEOUT', '60'))  # Default 60s, up from 30s
+    CONTAINER_START_POLL_INTERVAL = 0.5  # seconds
+    
+    # Container stop
+    CONTAINER_STOP_TIMEOUT_DEFAULT = int(os.getenv('PLAYGROUND_STOP_TIMEOUT', '10'))  # Default 10s
+    CONTAINER_STOP_TIMEOUT_WITH_SCRIPTS = int(os.getenv('PLAYGROUND_STOP_TIMEOUT_SCRIPTS', '30'))  # Default 30s
+    
+    # Script execution
+    SCRIPT_EXECUTION_TIMEOUT = int(os.getenv('PLAYGROUND_SCRIPT_TIMEOUT', '300'))  # Default 300s (5 min)
+    
+    # Docker API calls
+    DOCKER_API_TIMEOUT = int(os.getenv('PLAYGROUND_API_TIMEOUT', '30'))
+    
+    # Port check
+    PORT_CHECK_TIMEOUT = int(os.getenv('PLAYGROUND_PORT_CHECK_TIMEOUT', '1'))
+    
+    @classmethod
+    def log_config(cls):
+        """Log current timeout configuration"""
+        logger.info("Timeout Configuration:")
+        logger.info("  Container Start: %ds (poll interval: %.2fs)", 
+                   cls.CONTAINER_START_TIMEOUT, cls.CONTAINER_START_POLL_INTERVAL)
+        logger.info("  Container Stop (default): %ds", cls.CONTAINER_STOP_TIMEOUT_DEFAULT)
+        logger.info("  Container Stop (with scripts): %ds", cls.CONTAINER_STOP_TIMEOUT_WITH_SCRIPTS)
+        logger.info("  Script Execution: %ds", cls.SCRIPT_EXECUTION_TIMEOUT)
+        logger.info("  Docker API: %ds", cls.DOCKER_API_TIMEOUT)
+        logger.info("  Port Check: %ds", cls.PORT_CHECK_TIMEOUT)
+
+
+# Log configuration on module load
+TimeoutConfig.log_config()
 
 def ensure_network():
     """Ensure playground network exists"""
@@ -103,7 +140,14 @@ def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
 
 
 def check_port_available(port: int) -> Tuple[bool, str]:
-    """Check if a port is available on the host"""
+    """Check if a port is available on the host
+    
+    Args:
+        port: Port number to check
+    
+    Returns:
+        Tuple[bool, str]: (is_available, used_by_container_or_system)
+    """
     try:
         all_containers = docker_client.containers.list(all=True)
         for container in all_containers:
@@ -116,7 +160,7 @@ def check_port_available(port: int) -> Tuple[bool, str]:
                                 return False, container.name
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
+        sock.settimeout(TimeoutConfig.PORT_CHECK_TIMEOUT)
         result = sock.connect_ex(('0.0.0.0', port))
         sock.close()
         
@@ -127,7 +171,6 @@ def check_port_available(port: int) -> Tuple[bool, str]:
     except Exception as e:
         logger.warning("Error checking port %d: %s", port, str(e))
         return True, ""
-
 
 def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> Tuple[bool, List[Dict[str, Any]]]:
     """Validate all ports are available for a container"""
@@ -153,22 +196,50 @@ def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> T
 
 
 def get_stop_timeout(img_data: Dict[str, Any]) -> int:
-    """Get appropriate stop timeout based on scripts"""
+    """Get appropriate stop timeout based on scripts
+    
+    Args:
+        img_data: Image configuration dict
+    
+    Returns:
+        int: Stop timeout in seconds
+    """
     scripts = img_data.get("scripts", {})
+    
     if scripts.get("pre_stop"):
-        return 30
-    return 10
+        timeout = TimeoutConfig.CONTAINER_STOP_TIMEOUT_WITH_SCRIPTS
+        logger.debug("Using extended stop timeout (%.1fs) due to pre_stop script", timeout)
+        return timeout
+    
+    return TimeoutConfig.CONTAINER_STOP_TIMEOUT_DEFAULT
+
+
 
 
 def start_single_container_sync(container_name: str, img_data: Dict[str, Any], operation_id: str = None) -> Dict[str, Any]:
-    """Start a single container synchronously with volume support"""
+    """Start a single container synchronously with volume support
+    
+    Args:
+        container_name: Container name (without 'playground-' prefix)
+        img_data: Image configuration dict
+        operation_id: Optional operation ID for tracking
+    
+    Returns:
+        dict: Status dict with keys: status, name, error (if failed)
+    
+    Status codes:
+        - "started": Container successfully started
+        - "already_running": Container was already running
+        - "failed": Container failed to start
+    """
     from src.web.core.scripts import execute_script
     from src.web.core.state import add_script_tracking, complete_script_tracking
     
     full_container_name = f"playground-{container_name}"
-    logger.info("Starting container: %s", container_name)
+    logger.info("Starting container: %s (timeout: %ds)", container_name, TimeoutConfig.CONTAINER_START_TIMEOUT)
     
     try:
+        # Check if container already exists
         existing = docker_client.containers.get(full_container_name)
         if existing.status == "running":
             logger.info("Container %s already running", container_name)
@@ -179,6 +250,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     except docker.errors.NotFound:
         pass
     
+    # Validate ports
     ports_available, conflicts = validate_ports_available(img_data, container_name)
     if not ports_available:
         conflict_list = [f"{c['host_port']} (used by {c['used_by']})" for c in conflicts]
@@ -186,6 +258,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
         logger.error("%s: %s", container_name, error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
     
+    # Prepare volumes
     volumes_config = img_data.get("volumes", [])
     ensure_named_volumes(volumes_config)
     
@@ -195,6 +268,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     
     ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}
     
+    # Create and run container
     try:
         logger.info("Running Docker image: %s as %s", img_data["image"], full_container_name)
         container = docker_client.containers.run(
@@ -220,16 +294,23 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
         logger.error("%s: %s", container_name, error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
     
-    max_wait = 30
+    # Wait for container to be running
+    max_wait = TimeoutConfig.CONTAINER_START_TIMEOUT
     elapsed = 0
-    wait_interval = 0.5
+    wait_interval = TimeoutConfig.CONTAINER_START_POLL_INTERVAL
+    start_time = time.time()
+    
+    logger.debug("Polling container status (max %ds, interval %.2fs)", max_wait, wait_interval)
     
     while elapsed < max_wait:
         try:
             container.reload()
+            
             if container.status == "running":
-                logger.info("Container %s is now running", full_container_name)
+                elapsed_time = time.time() - start_time
+                logger.info("Container %s is now running (took %.2fs)", full_container_name, elapsed_time)
                 
+                # Execute post-start script
                 scripts = img_data.get('scripts', {})
                 post_start_script = scripts.get('post_start') if scripts else None
                 
@@ -249,29 +330,63 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
                     
                     if operation_id:
                         complete_script_tracking(operation_id, full_container_name)
+                
                 return {"status": "started", "name": container_name}
             
             elif container.status in ["exited", "dead"]:
                 error_msg = f"Container failed to start: {container.status}"
                 logger.error("%s: %s", container_name, error_msg)
+                
+                # Try to get exit logs
+                try:
+                    logs = container.logs(tail=10).decode('utf-8', errors='replace')
+                    logger.error("Container logs: %s", logs[:500])  # Log first 500 chars
+                except Exception as e:
+                    logger.warning("Could not get container logs: %s", str(e))
+                
                 return {"status": "failed", "name": container_name, "error": error_msg}
         
         except docker.errors.NotFound:
             error_msg = "Container disappeared after creation"
             logger.error("%s: %s", container_name, error_msg)
             return {"status": "failed", "name": container_name, "error": error_msg}
+        except Exception as e:
+            logger.warning("Error checking container status: %s", str(e))
         
         time.sleep(wait_interval)
-        elapsed += wait_interval
+        elapsed = time.time() - start_time
+        
+        if elapsed % 5 < wait_interval:  # Log every ~5 seconds
+            logger.debug("Still waiting for %s (elapsed: %.1fs/%ds)", container_name, elapsed, max_wait)
     
-    container.reload()
-    error_msg = f"Container did not start in time (status: {container.status})"
+    # Timeout reached
+    try:
+        container.reload()
+        status = container.status
+    except:
+        status = "unknown"
+    
+    error_msg = f"Container did not start within {max_wait}s timeout (status: {status})"
     logger.error("%s: %s", container_name, error_msg)
     return {"status": "failed", "name": container_name, "error": error_msg}
 
 
 def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], operation_id: str = None) -> Dict[str, Any]:
-    """Stop a single container synchronously with proper timeout"""
+    """Stop a single container synchronously with proper timeout
+    
+    Args:
+        container_name: Container name (with or without 'playground-' prefix)
+        img_data: Image configuration dict
+        operation_id: Optional operation ID for tracking
+    
+    Returns:
+        dict: Status dict with keys: status, name, error (if failed)
+    
+    Status codes:
+        - "stopped": Container successfully stopped
+        - "not_running": Container was not running
+        - "failed": Container failed to stop
+    """
     from src.web.core.scripts import execute_script
     from src.web.core.state import add_script_tracking, complete_script_tracking
     
@@ -282,7 +397,8 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
         base_container_name = container_name
         full_container_name = f"playground-{container_name}"
     
-    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)", base_container_name, full_container_name)
+    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)", 
+                base_container_name, full_container_name)
     
     try:
         cont = docker_client.containers.get(full_container_name)
@@ -292,6 +408,7 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
             logger.info(">>> Container not running, returning not_running")
             return {"status": "not_running", "name": base_container_name}
         
+        # Execute pre-stop script
         scripts = img_data.get('scripts', {})
         pre_stop_script = scripts.get('pre_stop') if scripts else None
         
@@ -312,14 +429,24 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
             if operation_id:
                 complete_script_tracking(operation_id, full_container_name)
         
+        # Stop container with configured timeout
         timeout = get_stop_timeout(img_data)
-        logger.info("Stopping container %s with timeout %d seconds", full_container_name, timeout)
+        logger.info("Stopping container %s with timeout %ds", full_container_name, timeout)
         
-        cont.stop(timeout=timeout)
-        cont.remove()
-        
-        logger.info("Container %s stopped and removed", base_container_name)
-        return {"status": "stopped", "name": base_container_name}
+        try:
+            cont.stop(timeout=timeout)
+            cont.remove()
+            logger.info("Container %s stopped and removed", base_container_name)
+            return {"status": "stopped", "name": base_container_name}
+        except Exception as e:
+            logger.error("Error stopping container %s: %s", full_container_name, str(e))
+            # Try force removal
+            try:
+                cont.remove(force=True)
+                logger.warning("Container force removed after stop failure")
+                return {"status": "stopped", "name": base_container_name}
+            except Exception as force_error:
+                raise Exception(f"Failed to stop and remove: {str(e)}, force failed: {str(force_error)}")
     
     except docker.errors.NotFound:
         logger.warning("Container %s not found", full_container_name)
@@ -397,3 +524,7 @@ def get_container_volumes(container_name: str) -> Dict[str, str]:
 
 
 ensure_network()
+logger.info("Docker operations module loaded successfully")
+logger.info("Shared directory: %s", SHARED_DIR)
+logger.info("Network: %s", NETWORK_NAME)
+logger.info("Scripts directory: %s", SCRIPTS_DIR)

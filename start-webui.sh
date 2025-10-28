@@ -250,6 +250,9 @@ pyyaml>=6.0.2
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.6
 jinja2>=3.1.4
+slowapi>=0.1.9
+psutil>=5.9.0
+watchdog>=3.0.0
 EOF
     fi
     log_info "Installing dependencies from $REQ_FILE..."

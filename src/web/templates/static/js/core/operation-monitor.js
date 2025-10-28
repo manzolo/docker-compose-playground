@@ -184,7 +184,7 @@ const OperationMonitor = {
             if (scriptStatus) {
                 message += `\n${scriptStatus}`;
             }
-        } else if (operation === 'cleanup') {
+        } else if (operation === 'cleanup' || operation === 'cleanup_all') {
             const removed = statusData.removed || 0;
             const failed = statusData.failed || 0;
             const completed = removed + failed;

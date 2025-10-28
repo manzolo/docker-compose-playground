@@ -9,6 +9,8 @@ import os
 import glob
 import logging
 import docker
+import re
+from typing import Tuple
 
 from src.web.core.config import load_config, CUSTOM_CONFIG_DIR, BASE_DIR
 from src.web.core.docker import docker_client, SHARED_DIR
@@ -178,45 +180,100 @@ async def export_config():
     response_model=ContainerConfigResponse,
     status_code=201,
     summary="Add Container Configuration",
-    description="Add a new container configuration",
+    description="Add a new container configuration with full validation",
     responses={
         201: {"description": "Container added successfully"},
-        400: {"description": "Invalid request or container already exists"},
+        400: {"description": "Invalid request or validation failed"},
+        409: {"description": "Container already exists"},
         500: {"description": "Server error"}
     }
 )
+
 async def add_container_config(request: AddContainerRequest):
     """
-    Add a new container configuration.
-    
-    Creates a new container configuration file in the custom.d directory.
+    Add a new container configuration with comprehensive validation.
     
     **Request Body:**
-    - `name`: Unique container name
-    - `image`: Docker image to use
-    - `category`: Category for organization
-    - `description`: Container description
+    - `name`: Container name (alphanumeric, hyphens, underscores; 1-50 chars)
+    - `image`: Docker image (e.g., ubuntu:22.04, docker.io/ubuntu:latest)
+    - `category`: Category (1-30 chars, alphanumeric + spaces/hyphens)
+    - `description`: Description (max 500 chars)
     - `keep_alive_cmd`: Command to keep container running
-    - `shell`: Default shell for the container
-    - `ports`: Ports to expose
-    - `environment`: Environment variables (KEY=VALUE format, one per line)
+    - `shell`: Shell path (e.g., /bin/bash)
+    - `ports`: Port mappings (list of "host:container")
+    - `environment`: Environment variables (KEY=VALUE, one per line)
     - `motd`: Message of the day
+    
+    **Validation checks:**
+    - Container name format and uniqueness
+    - Docker image format
+    - Category and description validity
+    - Port range and format
+    - Environment variable syntax
+    - Shell path format
     
     **Response:**
     - `status`: "success" if created
     - `message`: Confirmation message
     - `name`: Container name
     - `file`: Path to created config file
+    
+    **Status Codes:**
+    - 201: Created successfully
+    - 400: Validation failed
+    - 409: Container already exists
+    - 500: Server error
     """
     try:
-        # Validate required fields
-        if not request.name or not request.image or not request.category or not request.description:
-            raise HTTPException(400, "Missing required fields")
+        # Validate container name
+        is_valid, error_msg = validate_container_name(request.name)
+        if not is_valid:
+            logger.warning("Invalid container name: %s - %s", request.name, error_msg)
+            raise HTTPException(400, f"Invalid container name: {error_msg}")
         
+        # Validate Docker image
+        is_valid, error_msg = validate_docker_image(request.image)
+        if not is_valid:
+            logger.warning("Invalid Docker image: %s - %s", request.image, error_msg)
+            raise HTTPException(400, f"Invalid Docker image: {error_msg}")
+        
+        # Validate category
+        is_valid, error_msg = validate_category(request.category)
+        if not is_valid:
+            logger.warning("Invalid category: %s - %s", request.category, error_msg)
+            raise HTTPException(400, f"Invalid category: {error_msg}")
+        
+        # Validate description
+        is_valid, error_msg = validate_description(request.description)
+        if not is_valid:
+            logger.warning("Invalid description - %s", error_msg)
+            raise HTTPException(400, f"Invalid description: {error_msg}")
+        
+        # Validate shell
+        is_valid, error_msg = validate_shell(request.shell)
+        if not is_valid:
+            logger.warning("Invalid shell: %s - %s", request.shell, error_msg)
+            raise HTTPException(400, f"Invalid shell: {error_msg}")
+        
+        # Validate ports
+        is_valid, error_msg = validate_ports(request.ports)
+        if not is_valid:
+            logger.warning("Invalid ports: %s", error_msg)
+            raise HTTPException(400, f"Invalid ports: {error_msg}")
+        
+        # Validate environment variables
+        is_valid, error_msg, env_dict = validate_environment_variables(request.environment)
+        if not is_valid:
+            logger.warning("Invalid environment variables: %s", error_msg)
+            raise HTTPException(400, f"Invalid environment: {error_msg}")
+        
+        # Check if container already exists
         config_data = load_config()
         if request.name in config_data["images"]:
-            raise HTTPException(400, f"Container '{request.name}' already exists")
+            logger.warning("Container already exists: %s", request.name)
+            raise HTTPException(409, f"Container '{request.name}' already exists")
         
+        # Build configuration
         new_config = {
             "images": {
                 request.name: {
@@ -226,30 +283,27 @@ async def add_container_config(request: AddContainerRequest):
                     "keep_alive_cmd": request.keep_alive_cmd,
                     "shell": request.shell,
                     "ports": request.ports,
-                    "environment": {}
+                    "environment": env_dict
                 }
             }
         }
         
-        # Parse environment variables
-        if request.environment:
-            env_lines = request.environment.strip().split('\n')
-            for line in env_lines:
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    new_config['images'][request.name]['environment'][key.strip()] = value.strip()
-        
         # Add MOTD if provided
-        if request.motd:
+        if request.motd and len(request.motd) <= 5000:  # Max 5000 chars for MOTD
             new_config['images'][request.name]['motd'] = request.motd
+        elif request.motd:
+            logger.warning("MOTD too long for %s", request.name)
+            raise HTTPException(400, "MOTD cannot exceed 5000 characters")
         
-        # Create config file
+        # Create config file with safe name
         safe_name = request.name.replace('_', '-').lower()
         config_file_path = CUSTOM_CONFIG_DIR / f"{safe_name}.yml"
         
         if config_file_path.exists():
-            raise HTTPException(400, f"Configuration file for '{request.name}' already exists")
+            logger.error("Config file already exists: %s", config_file_path)
+            raise HTTPException(409, f"Configuration file for '{request.name}' already exists")
         
+        # Write YAML
         yaml_content = yaml.dump(
             new_config,
             Dumper=CustomDumper,
@@ -262,11 +316,11 @@ async def add_container_config(request: AddContainerRequest):
         with config_file_path.open("w") as f:
             f.write(yaml_content)
         
-        logger.info("Added new container config: %s", request.name)
+        logger.info("Successfully added container config: %s (file: %s)", request.name, config_file_path)
         
         return ContainerConfigResponse(
             status="success",
-            message=f"Container '{request.name}' added successfully",
+            message=f"Container '{request.name}' added successfully with {len(env_dict)} environment variables",
             name=request.name,
             file=f"custom.d/{safe_name}.yml"
         )
@@ -274,9 +328,8 @@ async def add_container_config(request: AddContainerRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error adding container: %s", str(e))
+        logger.error("Unexpected error adding container: %s", str(e), exc_info=True)
         raise HTTPException(500, f"Failed to add container: {str(e)}")
-
 
 @router.post(
     "/api/validate-image",
@@ -601,3 +654,221 @@ def cleanup_temp_files(age_hours: int = 1) -> int:
             logger.warning("Error deleting temp file %s: %s", temp_file, str(e))
     
     return removed_count
+
+
+def validate_container_name(name: str) -> Tuple[bool, str]:
+    """Validate container name format
+    
+    Rules:
+    - Alphanumeric, hyphens, underscores only
+    - Start with letter or digit
+    - 1-50 characters
+    - No consecutive hyphens or underscores
+    
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if not name:
+        return False, "Container name cannot be empty"
+    
+    if len(name) > 50:
+        return False, "Container name cannot exceed 50 characters"
+    
+    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$', name) and len(name) > 1:
+        return False, "Container name must start/end with alphanumeric, contain only [a-z0-9_-]"
+    
+    if re.search(r'[-_]{2,}', name):
+        return False, "Container name cannot have consecutive hyphens or underscores"
+    
+    return True, ""
+
+
+def validate_docker_image(image: str) -> Tuple[bool, str]:
+    """Validate Docker image name format
+    
+    Accepts formats:
+    - ubuntu
+    - ubuntu:22.04
+    - docker.io/ubuntu:latest
+    - gcr.io/project/image:tag
+    
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if not image or not isinstance(image, str):
+        return False, "Image name cannot be empty"
+    
+    if len(image) > 255:
+        return False, "Image name too long (max 255 chars)"
+    
+    # Basic pattern: [registry/]name[:tag]
+    pattern = r'^([a-z0-9\-._]+/)?[a-z0-9\-._]+(@[a-z0-9:._-]+)?(:[\w.-]+)?$'
+    if not re.match(pattern, image, re.IGNORECASE):
+        return False, "Invalid Docker image format"
+    
+    return True, ""
+
+
+def validate_category(category: str) -> Tuple[bool, str]:
+    """Validate category name
+    
+    Rules:
+    - Alphanumeric, spaces, hyphens only
+    - 1-30 characters
+    
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if not category or not isinstance(category, str):
+        return False, "Category cannot be empty"
+    
+    if len(category) > 30:
+        return False, "Category name cannot exceed 30 characters"
+    
+    if not re.match(r'^[a-zA-Z0-9\s\-]+$', category):
+        return False, "Category can only contain letters, numbers, spaces, and hyphens"
+    
+    return True, ""
+
+
+def validate_description(desc: str) -> Tuple[bool, str]:
+    """Validate description field
+    
+    Rules:
+    - Max 500 characters
+    - No null bytes
+    
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if not isinstance(desc, str):
+        return False, "Description must be a string"
+    
+    if len(desc) > 500:
+        return False, "Description cannot exceed 500 characters"
+    
+    if '\x00' in desc:
+        return False, "Description contains invalid characters"
+    
+    return True, ""
+
+
+def validate_shell(shell: str) -> Tuple[bool, str]:
+    """Validate shell path
+    
+    Rules:
+    - Must start with /
+    - Only alphanumeric and slashes
+    - Max 50 characters
+    
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if not shell or not isinstance(shell, str):
+        return False, "Shell cannot be empty"
+    
+    if len(shell) > 50:
+        return False, "Shell path too long"
+    
+    if not shell.startswith('/'):
+        return False, "Shell path must start with /"
+    
+    if not re.match(r'^/[a-zA-Z0-9/_-]+$', shell):
+        return False, "Shell path contains invalid characters"
+    
+    return True, ""
+
+
+def validate_ports(ports: list) -> Tuple[bool, str]:
+    """Validate port mappings
+    
+    Format: "host_port:container_port" or "container_port"
+    
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if not isinstance(ports, list):
+        return False, "Ports must be a list"
+    
+    if len(ports) > 20:
+        return False, "Cannot expose more than 20 ports"
+    
+    for port_mapping in ports:
+        if not isinstance(port_mapping, (int, str)):
+            return False, f"Invalid port format: {port_mapping}"
+        
+        port_str = str(port_mapping)
+        
+        if ':' in port_str:
+            parts = port_str.split(':')
+            if len(parts) != 2:
+                return False, f"Invalid port mapping: {port_mapping}"
+            
+            try:
+                host_port = int(parts[0])
+                container_port = int(parts[1])
+                
+                if host_port < 1 or host_port > 65535:
+                    return False, f"Host port out of range: {host_port}"
+                
+                if container_port < 1 or container_port > 65535:
+                    return False, f"Container port out of range: {container_port}"
+            except ValueError:
+                return False, f"Ports must be numeric: {port_mapping}"
+        else:
+            try:
+                port = int(port_str)
+                if port < 1 or port > 65535:
+                    return False, f"Port out of range: {port}"
+            except ValueError:
+                return False, f"Port must be numeric: {port_mapping}"
+    
+    return True, ""
+
+
+def validate_environment_variables(env_string: str) -> Tuple[bool, str, dict]:
+    """Validate environment variables format
+    
+    Format: KEY=VALUE, one per line
+    
+    Returns:
+        Tuple[bool, str, dict]: (is_valid, error_message, parsed_env_dict)
+    """
+    if not env_string:
+        return True, "", {}
+    
+    if not isinstance(env_string, str):
+        return False, "Environment must be a string", {}
+    
+    env_dict = {}
+    lines = env_string.strip().split('\n')
+    
+    if len(lines) > 50:
+        return False, "Cannot set more than 50 environment variables", {}
+    
+    for i, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line or line.startswith('#'):  # Allow comments
+            continue
+        
+        if '=' not in line:
+            return False, f"Line {i}: Invalid format, must be KEY=VALUE", {}
+        
+        key, value = line.split('=', 1)
+        key = key.strip()
+        value = value.strip()
+        
+        # Validate key
+        if not re.match(r'^[A-Z_][A-Z0-9_]*$', key):
+            return False, f"Line {i}: Invalid variable name '{key}' (must be UPPERCASE_SNAKE_CASE)", {}
+        
+        if len(key) > 50:
+            return False, f"Line {i}: Variable name too long", {}
+        
+        if len(value) > 500:
+            return False, f"Line {i}: Variable value too long", {}
+        
+        env_dict[key] = value
+    
+    return True, "", env_dict
+

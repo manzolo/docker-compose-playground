@@ -390,25 +390,28 @@ async def stop_category_background(operation_id: str, containers, category: str)
     """Background task to stop all containers in a category"""
     stopped = []
     failed = []
+    max_workers = min(10, len(containers))  # Limit a 10 worker max
+    
+    logger.info("Stopping %d containers in category '%s' with %d workers", 
+                len(containers), category, max_workers)
     
     def stop_cont(c):
         try:
-            if c.status == "running":
-                try:
-                    config_data = load_config()
-                    image_name = c.name.replace("playground-", "")
-                    img_data = config_data["images"].get(image_name, {})
-                    scripts = img_data.get("scripts", {})
-                    
-                    if "pre_stop" in scripts:
-                        execute_script(scripts["pre_stop"], c.name, image_name)
-                    
-                    timeout = get_stop_timeout(img_data)
-                except Exception as e:
-                    logger.warning(f"Pre-stop script error: {e}")
-                    timeout = 10
+            try:
+                config_data = load_config()
+                image_name = c.name.replace("playground-", "")
+                img_data = config_data["images"].get(image_name, {})
+                scripts = img_data.get("scripts", {})
                 
-                c.stop(timeout=timeout)
+                if "pre_stop" in scripts:
+                    execute_script(scripts["pre_stop"], c.name, image_name)
+                
+                timeout = get_stop_timeout(img_data)
+            except Exception as e:
+                logger.warning(f"Pre-stop script error: {e}")
+                timeout = 10
+            
+            c.stop(timeout=timeout)
             
             logger.info(f"Container stopped: {c.name}")
             return {"status": "stopped", "name": c.name}
@@ -417,23 +420,27 @@ async def stop_category_background(operation_id: str, containers, category: str)
             return {"status": "failed", "name": c.name, "error": str(e)}
     
     loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [loop.run_in_executor(executor, stop_cont, c) for c in containers]
         
         for future in asyncio.as_completed(futures):
-            result = await future
-            
-            if result["status"] == "stopped":
-                stopped.append(result["name"])
-            elif result["status"] == "failed":
-                failed.append(result["name"])
-            
-            update_operation(
-                operation_id,
-                stopped=len(stopped),
-                failed=len(failed),
-                containers=stopped
-            )
+            try:
+                result = await future
+                
+                if result["status"] == "stopped":
+                    stopped.append(result["name"])
+                elif result["status"] == "failed":
+                    failed.append(result["name"])
+                
+                update_operation(
+                    operation_id,
+                    stopped=len(stopped),
+                    failed=len(failed),
+                    containers=stopped
+                )
+            except Exception as e:
+                logger.error(f"Error in stop_category_background: {e}")
+                failed.append("unknown")
     
     complete_operation(operation_id, stopped=len(stopped), failed=len(failed), containers=stopped)
 
@@ -473,27 +480,24 @@ async def restart_category_background(operation_id: str, containers, category: s
     """Background task to restart all containers in a category"""
     restarted = []
     failed = []
+    max_workers = min(10, len(containers))  # Limit a 10 worker max
+    
+    logger.info("Restarting %d containers in category '%s' with %d workers",
+                len(containers), category, max_workers)
     
     def restart_cont(c):
         try:
-            if c.status == "running":
-                try:
-                    config_data = load_config()
-                    image_name = c.name.replace("playground-", "")
-                    img_data = config_data["images"].get(image_name, {})
-                    scripts = img_data.get("scripts", {})
-                    
-                    if "pre_stop" in scripts:
-                        execute_script(scripts["pre_stop"], c.name, image_name)
-                    
-                    timeout = get_stop_timeout(img_data)
-                except Exception as e:
-                    logger.warning(f"Pre-stop script error: {e}")
-                    timeout = 10
-                
-                c.stop(timeout=timeout)
+            config_data = load_config()
+            image_name = c.name.replace("playground-", "")
+            img_data = config_data["images"].get(image_name, {})
+            scripts = img_data.get("scripts", {})
             
-            c.start()
+            if "pre_stop" in scripts:
+                execute_script(scripts["pre_stop"], c.name, image_name)
+            
+            timeout = get_stop_timeout(img_data)
+            c.restart(timeout=timeout)
+            
             logger.info(f"Container restarted: {c.name}")
             return {"status": "restarted", "name": c.name}
         except Exception as e:
@@ -501,27 +505,29 @@ async def restart_category_background(operation_id: str, containers, category: s
             return {"status": "failed", "name": c.name, "error": str(e)}
     
     loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [loop.run_in_executor(executor, restart_cont, c) for c in containers]
         
         for future in asyncio.as_completed(futures):
-            result = await future
-            
-            if result["status"] == "restarted":
-                restarted.append(result["name"])
-            elif result["status"] == "failed":
-                failed.append(result["name"])
-            
-            update_operation(
-                operation_id,
-                restarted=len(restarted),
-                failed=len(failed),
-                containers=restarted
-            )
+            try:
+                result = await future
+                
+                if result["status"] == "restarted":
+                    restarted.append(result["name"])
+                elif result["status"] == "failed":
+                    failed.append(result["name"])
+                
+                update_operation(
+                    operation_id,
+                    restarted=len(restarted),
+                    failed=len(failed),
+                    containers=restarted
+                )
+            except Exception as e:
+                logger.error(f"Error in restart_category_background: {e}")
+                failed.append("unknown")
     
     complete_operation(operation_id, restarted=len(restarted), failed=len(failed), containers=restarted)
-
-# AGGIUNGI QUESTO CODICE PRIMA DELLA RIGA 524 (prima di @router.post("/api/cleanup-all"))
 
 @router.post("/api/stop-all")
 async def stop_all():
@@ -544,6 +550,9 @@ async def stop_all_background(operation_id: str, containers):
     stopped = []
     failed = []
     not_running = []
+    max_workers = min(10, len(containers))
+    
+    logger.info("Stopping all %d containers with %d workers", len(containers), max_workers)
     
     def stop_and_remove(container):
         try:
@@ -553,7 +562,6 @@ async def stop_all_background(operation_id: str, containers):
                 img_data = config_data["images"].get(image_name, {})
                 scripts = img_data.get("scripts", {})
                 
-                # Execute pre-stop script if exists
                 if "pre_stop" in scripts:
                     execute_script(scripts["pre_stop"], container.name, image_name)
                 
@@ -562,37 +570,47 @@ async def stop_all_background(operation_id: str, containers):
                 logger.warning(f"Pre-stop script error for {container.name}: {e}")
                 timeout = 10
             
-            # Stop container
             container.stop(timeout=timeout)
             container.remove()
+            logger.info(f"Container stopped and removed: {container.name}")
             return {"status": "stopped", "name": container.name}
+        except docker.errors.NotFound:
+            logger.warning(f"Container not found: {container.name}")
+            return {"status": "not_running", "name": container.name}
         except Exception as e:
             logger.error(f"Failed to stop {container.name}: {e}")
             return {"status": "failed", "name": container.name, "error": str(e)}
     
     loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [loop.run_in_executor(executor, stop_and_remove, c) for c in containers]
         
-        # Process results as they complete
         for future in asyncio.as_completed(futures):
-            result = await future
-            
-            if result["status"] == "stopped":
-                stopped.append(result["name"])
-            elif result["status"] == "failed":
-                failed.append(result["name"])
-            
-            # Update progress after each container
-            update_operation(
-                operation_id,
-                stopped=len(stopped),
-                not_running=len(not_running),
-                failed=len(failed),
-                containers=stopped
-            )
+            try:
+                result = await future
+                
+                if result["status"] == "stopped":
+                    stopped.append(result["name"])
+                elif result["status"] == "not_running":
+                    not_running.append(result["name"])
+                elif result["status"] == "failed":
+                    failed.append(result["name"])
+                
+                update_operation(
+                    operation_id,
+                    stopped=len(stopped),
+                    not_running=len(not_running),
+                    failed=len(failed),
+                    containers=stopped
+                )
+            except Exception as e:
+                logger.error(f"Error processing container in stop_all_background: {e}")
+                failed.append("unknown")
     
-    complete_operation(operation_id, stopped=len(stopped), not_running=len(not_running), failed=len(failed), containers=stopped)
+    logger.info("stop_all completed: %d stopped, %d not_running, %d failed", 
+                len(stopped), len(not_running), len(failed))
+    complete_operation(operation_id, stopped=len(stopped), not_running=len(not_running), 
+                      failed=len(failed), containers=stopped)
 
 
 @router.post("/api/restart-all")
@@ -615,6 +633,9 @@ async def restart_all_background(operation_id: str, containers):
     """Background task to restart all containers"""
     restarted = []
     failed = []
+    max_workers = min(10, len(containers))
+    
+    logger.info("Restarting all %d containers with %d workers", len(containers), max_workers)
     
     def restart_cont(c):
         try:
@@ -623,7 +644,6 @@ async def restart_all_background(operation_id: str, containers):
             img_data = config_data["images"].get(image_name, {})
             scripts = img_data.get("scripts", {})
             
-            # Execute pre-stop script if exists
             if "pre_stop" in scripts:
                 try:
                     execute_script(scripts["pre_stop"], c.name, image_name)
@@ -633,7 +653,6 @@ async def restart_all_background(operation_id: str, containers):
             timeout = get_stop_timeout(img_data)
             c.restart(timeout=timeout)
             
-            # Execute post-start script if exists
             if "post_start" in scripts:
                 try:
                     import time
@@ -642,72 +661,89 @@ async def restart_all_background(operation_id: str, containers):
                 except Exception as e:
                     logger.warning(f"Post-start script error: {e}")
             
+            logger.info(f"Container restarted: {c.name}")
             return {"status": "restarted", "name": c.name}
         except Exception as e:
             logger.error(f"Failed to restart {c.name}: {e}")
             return {"status": "failed", "name": c.name, "error": str(e)}
     
     loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [loop.run_in_executor(executor, restart_cont, c) for c in containers]
         
-        # Process results as they complete
         for future in asyncio.as_completed(futures):
-            result = await future
-            
-            if result["status"] == "restarted":
-                restarted.append(result["name"])
-            elif result["status"] == "failed":
-                failed.append(result["name"])
-            
-            # Update progress after each container
-            update_operation(
-                operation_id,
-                restarted=len(restarted),
-                failed=len(failed),
-                containers=restarted
-            )
+            try:
+                result = await future
+                
+                if result["status"] == "restarted":
+                    restarted.append(result["name"])
+                elif result["status"] == "failed":
+                    failed.append(result["name"])
+                
+                update_operation(
+                    operation_id,
+                    restarted=len(restarted),
+                    failed=len(failed),
+                    containers=restarted
+                )
+            except Exception as e:
+                logger.error(f"Error processing container in restart_all_background: {e}")
+                failed.append("unknown")
     
+    logger.info("restart_all completed: %d restarted, %d failed", len(restarted), len(failed))
     complete_operation(operation_id, restarted=len(restarted), failed=len(failed), containers=restarted)
     
 @router.post("/api/cleanup-all")
 async def cleanup_all():
-    """Cleanup all managed containers, their images and volumes"""
+    """Cleanup all managed containers with volume safety checks
+    
+    Returns:
+        dict: Operation tracking info
+    """
     containers = docker_client.containers.list(all=True, filters={"label": "playground.managed=true"})
     operation_id = str(uuid.uuid4())
     
     if containers:
+        logger.info("Starting cleanup-all for %d containers", len(containers))
         create_operation(
             operation_id,
-            "cleanup",
+            "cleanup_all",
             total=len(containers)
         )
         asyncio.create_task(cleanup_all_background(operation_id, containers))
     else:
+        logger.info("No containers to cleanup")
         create_operation(
             operation_id,
-            "cleanup",
+            "cleanup_all",
             total=0
         )
         complete_operation(operation_id, removed=0, containers=[])
     
     return {"operation_id": operation_id, "status": "started" if containers else "completed"}
 
-
 async def cleanup_all_background(operation_id: str, containers):
-    """Background cleanup of containers, images and volumes"""
+    """Background cleanup of all containers with volume safety
+    
+    Args:
+        operation_id: Operation tracking ID
+        containers: List of Docker container objects
+    """
     removed = []
     failed = []
     images_removed = []
     volumes_removed = []
+    volumes_protected = []
+    max_workers = min(10, len(containers))
+    
+    logger.info("Cleanup all started: %d containers, %d workers", len(containers), max_workers)
     
     def cleanup_cont(c):
         try:
-            # Raccogli info sul container prima di rimuoverlo
             container_name = c.name
             image_id = c.image.id
             
-            # Estrai i volumi collegati al container
+            # Collect volumes
             container_volumes = []
             mounts = c.attrs.get('Mounts', [])
             for mount in mounts:
@@ -716,7 +752,7 @@ async def cleanup_all_background(operation_id: str, containers):
                     if vol_name:
                         container_volumes.append(vol_name)
             
-            # Esegui gli script pre-stop se il container è in running
+            # Stop if running
             if c.status == "running":
                 try:
                     config_data = load_config()
@@ -734,36 +770,57 @@ async def cleanup_all_background(operation_id: str, containers):
                 
                 c.stop(timeout=timeout)
             
-            # Rimuovi il container
+            # Remove container
             c.remove(force=True)
             logger.info(f"Container rimosso: {container_name}")
             
-            # Rimuovi i volumi associati al container
-            volumes_removed_for_container = []
+            removed_items = []
+            protected_items = []
+            
+            # Remove volumes safely
             for vol_name in container_volumes:
                 try:
+                    # Check protection
+                    if is_volume_protected(vol_name):
+                        logger.warning(f"Volume {vol_name} is protected, skipping")
+                        protected_items.append(vol_name)
+                        continue
+                    
+                    # Check usage
+                    other_users = is_volume_in_use_by_others(vol_name, container_name)
+                    if other_users:
+                        logger.warning(f"Volume {vol_name} in use by {other_users}, skipping")
+                        protected_items.append(vol_name)
+                        continue
+                    
+                    # Remove
                     volume = docker_client.volumes.get(vol_name)
                     volume.remove(force=True)
-                    volumes_removed_for_container.append(vol_name)
+                    removed_items.append(vol_name)
                     logger.info(f"Volume rimosso: {vol_name}")
+                
+                except docker.errors.NotFound:
+                    logger.info(f"Volume {vol_name} not found")
                 except Exception as e:
-                    logger.warning(f"Impossibile rimuovere volume {vol_name}: {e}")
+                    logger.warning(f"Cannot remove volume {vol_name}: {e}")
             
-            # Rimuovi l'immagine associata al container
+            # Remove image
             image_removed = False
             try:
-                docker_client.images.remove(image_id, force=True, noprune=False)
+                docker_client.images.remove(image_id, force=True, noprune=True)
                 image_removed = True
                 logger.info(f"Immagine rimossa: {image_id}")
             except Exception as e:
-                logger.warning(f"Impossibile rimuovere immagine {image_id}: {e}")
+                logger.warning(f"Cannot remove image {image_id}: {e}")
             
             return {
                 "status": "removed",
                 "name": container_name,
                 "image_removed": image_removed,
-                "volumes_removed": volumes_removed_for_container
+                "volumes_removed": removed_items,
+                "volumes_protected": protected_items
             }
+        
         except Exception as e:
             logger.error(f"Failed to cleanup {c.name}: {e}")
             return {
@@ -771,32 +828,44 @@ async def cleanup_all_background(operation_id: str, containers):
                 "name": c.name,
                 "error": str(e),
                 "image_removed": False,
-                "volumes_removed": []
+                "volumes_removed": [],
+                "volumes_protected": []
             }
     
     loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(containers))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [loop.run_in_executor(executor, cleanup_cont, c) for c in containers]
         
         for future in asyncio.as_completed(futures):
-            result = await future
+            try:
+                result = await future
+                
+                if result["status"] == "removed":
+                    removed.append(result["name"])
+                    if result.get("image_removed"):
+                        images_removed.append(result["name"])
+                    volumes_removed.extend(result.get("volumes_removed", []))
+                    volumes_protected.extend(result.get("volumes_protected", []))
+                
+                elif result["status"] == "failed":
+                    failed.append(result["name"])
+                
+                update_operation(
+                    operation_id,
+                    removed=len(removed),
+                    failed=len(failed),
+                    images_removed=len(images_removed),
+                    volumes_removed=len(volumes_removed),
+                    volumes_protected=len(volumes_protected),
+                    containers=removed
+                )
             
-            if result["status"] == "removed":
-                removed.append(result["name"])
-                if result.get("image_removed"):
-                    images_removed.append(result["name"])
-                volumes_removed.extend(result.get("volumes_removed", []))
-            elif result["status"] == "failed":
-                failed.append(result["name"])
-            
-            update_operation(
-                operation_id,
-                removed=len(removed),
-                failed=len(failed),
-                images_removed=len(images_removed),
-                volumes_removed=len(volumes_removed),
-                containers=removed
-            )
+            except Exception as e:
+                logger.error(f"Error in cleanup_all_background: {e}")
+                failed.append("unknown")
+    
+    logger.info("cleanup_all completed: %d removed, %d failed, %d volumes protected",
+                len(removed), len(failed), len(volumes_protected))
     
     complete_operation(
         operation_id,
@@ -804,10 +873,14 @@ async def cleanup_all_background(operation_id: str, containers):
         failed=len(failed),
         images_removed=len(images_removed),
         volumes_removed=len(volumes_removed),
+        volumes_protected=len(volumes_protected),
         containers=removed
     )
     
-    complete_operation(operation_id, removed=len(removed), failed=len(failed), containers=removed)
+    # Cleanup old backups
+    old_backups_removed = cleanup_old_backups()
+    if old_backups_removed > 0:
+        logger.info(f"Cleaned up {old_backups_removed} old backups")
 
 @router.get("/api/system-info")
 async def system_info():
