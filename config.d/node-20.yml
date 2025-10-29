@@ -7,3 +7,26 @@ images:
     scripts:
       post_start: node_init.sh
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Node 20 Development Environment                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (npm):
+         npm install package_name                 # Install package
+         npm install                              # Install from package.json
+         npm list                                 # List installed packages
+         npm init                                 # Create package.json
+
+      🚀 Quick Start:
+         node                                     # Interactive REPL
+         node script.js                           # Run a script
+         npm start                                # Run npm start script
+
+      🔧 Development Tools:
+         node --version                           # Check version
+         npm install -g nodemon                   # Auto-restart on changes
+         npm install -g pm2                       # Process manager
+
+      💡 Workspace: /shared/projects/
+      📚 Docs: https://nodejs.org/docs/

@@ -4,7 +4,7 @@ images:
     description: Python 3.13 (Latest)
     image: python:3.13
     keep_alive_cmd: sleep infinity
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                 Python 3.13 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝

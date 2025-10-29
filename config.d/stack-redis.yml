@@ -1,13 +1,13 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "Redis-Stack"
   description: "Redis database with RedisInsight web interface"
   category: database
-  containers: 
+  containers:
     - redis-stack
     - redisinsight-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   redis-stack:
     category: database
@@ -27,14 +27,14 @@ images:
         inline: |
           #!/bin/sh
           set -e
-          
+
           echo "Initializing Redis..."
-          
+
           CONTAINER="${CONTAINER_NAME}"
           MAX_WAIT=60
           COUNT=0
           BACKUP_FILE="${SHARED_DIR}/backups/redis-stack/backup.txt"
-          
+
           # 1. Wait for Redis to be ready
           echo "Waiting for Redis to respond..."
           while [ $COUNT -lt $MAX_WAIT ]; do
@@ -45,12 +45,12 @@ images:
             sleep 1
             COUNT=$((COUNT + 1))
           done
-          
+
           if [ $COUNT -ge $MAX_WAIT ]; then
             echo "✗ Redis failed to start"
             exit 1
           fi
-          
+
           # 2. Try to load from backup file
           if [ -f "$BACKUP_FILE" ]; then
             echo "Found backup file: backup.txt"
@@ -71,16 +71,16 @@ images:
             echo "✓ Backup restored! Keys loaded: ${KEYS}"
             exit 0
           fi
-          
+
           # 3. No backup, create sample data
           echo "No backup found. Creating sample data..."
-          
+
           docker exec "${CONTAINER}" redis-cli SET welcome "Welcome to Redis Stack!" > /dev/null
           docker exec "${CONTAINER}" redis-cli HMSET user:1 username admin email admin@playground.local > /dev/null
           docker exec "${CONTAINER}" redis-cli LPUSH tasks "Task 1" "Task 2" "Task 3" > /dev/null
-          
+
           echo "✓ Redis initialized with sample data"
-          
+
           # Save it as backup for next time
           mkdir -p "$(dirname "$BACKUP_FILE")"
           cat > "$BACKUP_FILE" << 'REDIS_BACKUP'
@@ -88,37 +88,37 @@ images:
           HMSET user:1 username admin email admin@playground.local
           LPUSH tasks "Task 1" "Task 2" "Task 3"
           REDIS_BACKUP
-          
+
           echo "✓ Backup created at shared-volumes/backups/redis-stack/backup.txt"
-      
+
       pre_stop:
         inline: |
           #!/bin/sh
           BACKUP_DIR="${SHARED_DIR}/backups/redis-stack"
           BACKUP_FILE="${BACKUP_DIR}/backup.txt"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
+
           mkdir -p "$BACKUP_DIR"
-          
+
           echo "Creating backup..."
-          
+
           # Get all keys
           KEYS=$(docker exec "${CONTAINER_NAME}" redis-cli --raw KEYS '*' 2>/dev/null)
-          
+
           if [ -z "$KEYS" ]; then
             echo "✗ No data to backup"
             exit 0
           fi
-          
+
           # Create temp backup file
           TEMP_BACKUP="${BACKUP_DIR}/backup_${TIMESTAMP}_tmp.txt"
           > "$TEMP_BACKUP"
-          
+
           # Export each key with its value and type
           echo "# Redis Backup - ${TIMESTAMP}" >> "$TEMP_BACKUP"
           echo "# Generated from playground" >> "$TEMP_BACKUP"
           echo "" >> "$TEMP_BACKUP"
-          
+
           while IFS= read -r key; do
             # Get key type
             KEY_TYPE=$(docker exec "${CONTAINER_NAME}" redis-cli TYPE "$key" 2>/dev/null)
@@ -151,14 +151,14 @@ images:
                 ;;
             esac
           done <<< "$KEYS"
-          
+
           # Move to backup.txt (overwrite)
           mv "$TEMP_BACKUP" "$BACKUP_FILE"
-          
+
           # Show size
           SIZE=$(wc -l < "$BACKUP_FILE")
           echo "✓ Backup created: backup.txt (${SIZE} lines)"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                Redis 7 Database Server                       ║
@@ -212,20 +212,20 @@ images:
         inline: |
           #!/bin/sh
           echo "Configuring RedisInsight..."
-          
+
           # Wait for RedisInsight
           sleep 10
-          
+
           echo "✓ RedisInsight ready at http://localhost:8001"
           echo "Add Redis connection: redis-stack:6379"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║              RedisInsight - Web Interface                   ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🌐 Access: http://localhost:8001
-      
+
       💡 Setup:
          1. Click "Add Redis Database"
          2. Host: redis-stack

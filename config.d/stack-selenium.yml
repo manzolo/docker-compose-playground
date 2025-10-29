@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "Selenium-Stack"
   description: "Selenium browser automation with Chrome, Firefox and Hub"
@@ -8,7 +8,7 @@ group:
     - selenium-firefox
     - selenium-hub
 
-# Configurazioni dei container
+# Container configurations
 images:
   selenium-chrome:
     category: testing
@@ -60,8 +60,8 @@ images:
 
         chrome_options = Options()
         driver = webdriver.Remote(
-          command_executor='http://localhost:4444',
-          options=chrome_options
+         command_executor='http://localhost:4444',
+         options=chrome_options
         )
         
         driver.get('https://www.google.com')
@@ -73,8 +73,8 @@ images:
 
       🔧  Java Example:
         WebDriver driver = new RemoteWebDriver(
-          new URL("http://localhost:4444"),
-          new ChromeOptions()
+         new URL("http://localhost:4444"),
+         new ChromeOptions()
         );
         
         driver.get("https://www.google.com");
@@ -89,9 +89,9 @@ images:
         const chrome = require('selenium-webdriver/chrome');
 
         let driver = new Builder()
-          .usingServer('http://localhost:4444')
-          .forBrowser('chrome')
-          .build();
+         .usingServer('http://localhost:4444')
+         .forBrowser('chrome')
+         .build();
 
         driver.get('https://www.google.com');
         driver.quit();
@@ -168,8 +168,8 @@ images:
 
         firefox_options = Options()
         driver = webdriver.Remote(
-          command_executor='http://localhost:4445',
-          options=firefox_options
+         command_executor='http://localhost:4445',
+         options=firefox_options
         )
         
         driver.get('https://www.google.com')
@@ -177,8 +177,8 @@ images:
 
       🔧  Java Example:
         WebDriver driver = new RemoteWebDriver(
-          new URL("http://localhost:4445"),
-          new FirefoxOptions()
+         new URL("http://localhost:4445"),
+         new FirefoxOptions()
         );
         
         driver.get("https://www.google.com");
@@ -195,14 +195,14 @@ images:
 
       🎯  Browser Comparison:
         Chrome:
-          • Faster, more stable
-          • Better for automated testing
-          • More resources
+         • Faster, more stable
+         • Better for automated testing
+         • More resources
         
         Firefox:
-          • More compatible
-          • Open source
-          • Lighter weight
+         • More compatible
+         • Open source
+         • Lighter weight
 
       🚀  Testing Strategy:
         • Use Chrome for speed (default)
@@ -253,18 +253,18 @@ images:
 
       🚀  Next Steps:
         1. Connect nodes to hub:
-           docker run --network host \
-             -e SE_HUB_HOST=localhost \
-             -e SE_HUB_PORT=4446 \
-             selenium/node-chrome
+         docker run --network host \
+         -e SE_HUB_HOST=localhost \
+         -e SE_HUB_PORT=4446 \
+         selenium/node-chrome
 
         2. Send tests to hub from client:
-           driver = webdriver.Remote(
-             'http://localhost:4446'
-           )
+         driver = webdriver.Remote(
+         'http://localhost:4446'
+         )
         
         3. Monitor in console:
-           http://localhost:4446
+         http://localhost:4446
 
       ⚙️  Configuration:
         Hub listens on port 4446

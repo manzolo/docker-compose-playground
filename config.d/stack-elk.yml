@@ -2,7 +2,7 @@ group:
   name: "ELK-Stack"
   description: "Elasticsearch, Logstash, Kibana - Log management and analytics"
   category: monitoring
-  containers: 
+  containers:
     - elasticsearch-stack
     - kibana-stack
 
@@ -23,13 +23,13 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║                   Elasticsearch Stack                        ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🔍 Search & Analytics Engine
       📊 Port: 9200
-      
+
       🌐 Web Access:
          URL: http://localhost:9200
-      
+
       📋 Quick Commands:
          # Check cluster health
          curl http://localhost:9200/_cluster/health
@@ -39,10 +39,10 @@ images:
          
          # Node info
          curl http://localhost:9200/_nodes/stats?pretty
-      
+
       🔗 Connected Services:
          • Kibana: http://localhost:5601
-      
+
       💡 Tips:
          - Security is disabled for development
          - Single-node cluster for testing
@@ -63,28 +63,28 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║                      Kibana Dashboard                        ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       📈 Data Visualization & Exploration
       🌐 Port: 5601
-      
+
       🌐 Web Access:
          URL: http://localhost:5601
-      
+
       🚀 Quick Start:
          1. Open http://localhost:5601
          2. Go to "Discover" to explore data
          3. Create "logs-*" index pattern
          4. Build dashboards in "Dashboard"
-      
+
       📋 Features:
          • Discover: Search and filter logs
          • Dashboard: Create visualizations
          • Visualize: Build charts and graphs
          • Dev Tools: Run Elasticsearch queries
-      
+
       🔗 Data Source:
          Connected to Elasticsearch: elasticsearch-stack:9200
-      
+
       💡 Tips:
          - First setup may take 1-2 minutes
          - Use 'logs-*' pattern for Logstash data

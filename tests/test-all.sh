@@ -42,8 +42,79 @@ declare -a SUCCESS_GROUPS=()
 declare -a FAILED_GROUPS=()
 declare -a STOP_FAILED_GROUPS=()
 
+# Test mode flags
+TEST_CONTAINERS=true
+TEST_GROUPS=true
+SPECIFIC_CONTAINER=""
+SPECIFIC_GROUP=""
+
 # Start time for duration calculation
 START_TIME=$(date +%s)
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --containers-only)
+            TEST_CONTAINERS=true
+            TEST_GROUPS=false
+            shift
+            ;;
+        --groups-only)
+            TEST_CONTAINERS=false
+            TEST_GROUPS=true
+            shift
+            ;;
+        --container)
+            SPECIFIC_CONTAINER="$2"
+            TEST_CONTAINERS=true
+            TEST_GROUPS=false
+            shift 2
+            ;;
+        --group)
+            SPECIFIC_GROUP="$2"
+            TEST_CONTAINERS=false
+            TEST_GROUPS=true
+            shift 2
+            ;;
+        --skip-containers)
+            TEST_CONTAINERS=false
+            shift
+            ;;
+        --skip-groups)
+            TEST_GROUPS=false
+            shift
+            ;;
+        --help|-h)
+            cat << 'HELP'
+Docker Playground Test Suite
+
+Usage: ./tests/test-all.sh [OPTIONS]
+
+Options:
+  --containers-only        Test only containers (skip groups)
+  --groups-only            Test only groups (skip containers)
+  --container NAME         Test only the specified container
+  --group NAME             Test only the specified group
+  --skip-containers        Skip container tests
+  --skip-groups            Skip group tests
+  -h, --help               Show this help message
+
+Examples:
+  ./tests/test-all.sh                          # Test everything
+  ./tests/test-all.sh --containers-only        # Test only containers
+  ./tests/test-all.sh --groups-only            # Test only groups
+  ./tests/test-all.sh --container mysql-8      # Test only mysql-8 container
+  ./tests/test-all.sh --group MySQL-Stack      # Test only MySQL-Stack group
+HELP
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Banner
 cat << 'EOF'
@@ -117,21 +188,10 @@ get_containers_list() {
 # Function to extract groups from YAML files
 get_groups_from_yaml() {
     local yaml_file=$1
+    if [ ! -f "$yaml_file" ]; then return; fi
 
-    if [ ! -f "$yaml_file" ]; then
-        return
-    fi
-
-    # Extract group name using sed for more reliable parsing
-    # Look for "name:" field within "group:" section
-    local group_name
-    group_name=$(sed -n '/^group:/,/^[a-z]/ {
-        s/^[[:space:]]*name:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*/\1/p
-    }' "$yaml_file" | head -1)
-
-    if [ -n "$group_name" ]; then
-        echo "$group_name"
-    fi
+    # Use yq to extract .group.name if it exists
+    yq eval '.group.name' "$yaml_file" 2>/dev/null | grep -v '^null$' | grep -v '^$'
 }
 
 # Function to get the list of containers in a group
@@ -538,74 +598,121 @@ main() {
     docker network create playground-network 2>/dev/null || true
     log "Network playground-network verified/created"
 
-    echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}📦 PHASE 1: CONTAINER DISCOVERY${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    # Container testing phase
+    if [ "$TEST_CONTAINERS" = true ]; then
+        echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${CYAN}📦 PHASE 1: CONTAINER DISCOVERY${NC}"
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
-    echo -e "${YELLOW}⏳ Scanning configuration files...${NC}"
-    mapfile -t CONTAINERS < <(get_containers_list)
-
-    if [ ${#CONTAINERS[@]} -eq 0 ]; then
-        echo -e "${RED}❌ ERROR: No containers found${NC}"
-        echo -e "${YELLOW}Please verify:${NC}"
-        echo "   1. Does config.yml exist in root?"
-        echo "   2. Does it contain 'images' section?"
-        echo "   3. Are there files in config.d/ or custom.d/?"
-
-        echo -e "\n${YELLOW}Files found:${NC}"
-        ls -la *.yml 2>/dev/null || echo "  ❌ No config.yml found"
-        ls -la config.d/*.yml 2>/dev/null || echo "  ❌ No files in config.d/"
-        ls -la custom.d/*.yml 2>/dev/null || echo "  ❌ No files in custom.d/"
-
-        exit 1
-    fi
-
-    TOTAL_CONTAINERS=${#CONTAINERS[@]}
-    echo -e "${GREEN}✅ Found $TOTAL_CONTAINERS containers${NC}\n"
-
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}🔬 PHASE 2: CONTAINER TESTING${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-    local index=1
-    for container in "${CONTAINERS[@]}"; do
-        if [ -z "$container" ] || [[ "$container" =~ ^[[:space:]]*$ ]]; then
-            ((SKIPPED++))
-            continue
+        if [ -n "$SPECIFIC_CONTAINER" ]; then
+            echo -e "${YELLOW}⏳ Testing specific container: ${MAGENTA}$SPECIFIC_CONTAINER${NC}"
+            CONTAINERS=("$SPECIFIC_CONTAINER")
+        else
+            echo -e "${YELLOW}⏳ Scanning configuration files...${NC}"
+            mapfile -t CONTAINERS < <(get_containers_list)
         fi
 
-        test_container "$container" "$index" "$TOTAL_CONTAINERS"
-        ((index++))
-    done
+        if [ ${#CONTAINERS[@]} -eq 0 ]; then
+            echo -e "${RED}❌ ERROR: No containers found${NC}"
+            echo -e "${YELLOW}Please verify:${NC}"
+            echo "   1. Does config.yml exist in root?"
+            echo "   2. Does it contain 'images' section?"
+            echo "   3. Are there files in config.d/ or custom.d/?"
 
-    # Test groups
-    echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}🎯 PHASE 3: GROUP TESTING${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+            echo -e "\n${YELLOW}Files found:${NC}"
+            ls -la *.yml 2>/dev/null || echo "  ❌ No config.yml found"
+            ls -la config.d/*.yml 2>/dev/null || echo "  ❌ No files in config.d/"
+            ls -la custom.d/*.yml 2>/dev/null || echo "  ❌ No files in custom.d/"
 
-    echo -e "${YELLOW}⏳ Scanning for groups...${NC}"
-    mapfile -t GROUPS < <(get_groups_list)
+            exit 1
+        fi
 
-    TOTAL_GROUPS=${#GROUPS[@]}
+        TOTAL_CONTAINERS=${#CONTAINERS[@]}
+        echo -e "${GREEN}✅ Found $TOTAL_CONTAINERS container(s)${NC}\n"
 
-    if [ ${#GROUPS[@]} -eq 0 ]; then
-        echo -e "${YELLOW}⚠️  No groups found${NC}\n"
-    else
-        echo -e "${GREEN}✅ Found $TOTAL_GROUPS groups:${NC}"
-        for grp in "${GROUPS[@]}"; do
-            echo -e "   • ${MAGENTA}$grp${NC}"
-        done
-        echo
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${CYAN}🔬 PHASE 2: CONTAINER TESTING${NC}"
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-        local group_index=1
-        for group in "${GROUPS[@]}"; do
-            if [ -z "$group" ] || [[ "$group" =~ ^[[:space:]]*$ ]]; then
+        local index=1
+        for container in "${CONTAINERS[@]}"; do
+            if [ -z "$container" ] || [[ "$container" =~ ^[[:space:]]*$ ]]; then
+                ((SKIPPED++))
                 continue
             fi
 
-            test_group "$group" "$group_index" "$TOTAL_GROUPS"
-            ((group_index++))
+            test_container "$container" "$index" "$TOTAL_CONTAINERS"
+            ((index++))
         done
+    else
+        echo -e "\n${YELLOW}⏩ Skipping container tests${NC}"
+    fi
+
+    # Group testing phase
+    if [ "$TEST_GROUPS" = true ]; then
+        echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${CYAN}🎯 PHASE 3: GROUP TESTING${NC}"
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+
+        if [ -n "$SPECIFIC_GROUP" ]; then
+            echo -e "${YELLOW}⏳ Testing specific group: ${MAGENTA}$SPECIFIC_GROUP${NC}"
+            GROUPS=("$SPECIFIC_GROUP")
+        else
+            echo -e "${YELLOW}⏳ Scanning for groups...${NC}"
+            # Write to temp file to completely avoid subshell issues
+            local temp_groups="/tmp/groups_$$_$RANDOM.txt"
+            get_groups_list > "$temp_groups"
+            # Explicitly unset GROUPS before mapfile
+            unset GROUPS
+            mapfile -t GROUPS < "$temp_groups"
+            rm -f "$temp_groups"
+        fi
+
+        TOTAL_GROUPS=0
+
+        if [ ${#GROUPS[@]} -eq 0 ]; then
+            echo -e "${YELLOW}⚠️  No groups found${NC}\n"
+        else
+            # Count valid groups first
+            for grp in "${GROUPS[@]}"; do
+                if [ -n "$grp" ] && ! [[ "$grp" =~ ^[[:space:]]*$ ]]; then
+                    local grp_containers
+                    grp_containers=$(get_group_containers "$grp")
+                    if [ -n "$grp_containers" ]; then
+                        ((TOTAL_GROUPS++))
+                    fi
+                fi
+            done
+
+            echo -e "${GREEN}✅ Found $TOTAL_GROUPS group(s):${NC}"
+            for grp in "${GROUPS[@]}"; do
+                if [ -n "$grp" ] && ! [[ "$grp" =~ ^[[:space:]]*$ ]]; then
+                    echo -e "   • ${MAGENTA}$grp${NC}"
+                fi
+            done
+            echo
+
+            local group_index=1
+            for group in "${GROUPS[@]}"; do
+                if [ -z "$group" ] || [[ "$group" =~ ^[[:space:]]*$ ]]; then
+                    continue
+                fi
+
+                local group_containers
+                group_containers=$(get_group_containers "$group")
+
+                if [ -z "$group_containers" ]; then
+                    echo -e "  ⚠️  ${YELLOW}SKIPPED: Group '$group' has no containers${NC}"
+                    log "SKIPPED: Group $group has no containers"
+                    continue
+                fi
+
+                test_group "$group" "$group_index" "$TOTAL_GROUPS"
+                ((group_index++))
+            done
+        fi
+    else
+        echo -e "\n${YELLOW}⏩ Skipping group tests${NC}"
     fi
 
     generate_report
@@ -643,4 +750,7 @@ main() {
 
 trap 'echo -e "\n${RED}Test interrupted${NC}"; generate_report; exit 1' INT
 
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return
+fi
 main

@@ -4,7 +4,7 @@ images:
     description: Rust 1.75 (Latest stable)
     image: rust:1.75
     keep_alive_cmd: sleep infinity
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                  Rust 1.75 Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
@@ -25,12 +25,12 @@ images:
 
       🚀 Quick Program:
          Create /shared/hello.rs:
-           fn main() {
-               println!("Hello from Rust!");
-               let numbers = vec![1, 2, 3, 4, 5];
-               let sum: i32 = numbers.iter().sum();
-               println!("Sum: {}", sum);
-           }
+         fn main() {
+         println!("Hello from Rust!");
+         let numbers = vec![1, 2, 3, 4, 5];
+         let sum: i32 = numbers.iter().sum();
+         println!("Sum: {}", sum);
+         }
          rustc /shared/hello.rs -o /shared/hello
          /shared/hello
 

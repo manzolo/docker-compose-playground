@@ -4,7 +4,7 @@ images:
     description: Node.js 22 LTS (Latest)
     image: node:22
     keep_alive_cmd: sleep infinity
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                Node.js 22 LTS Quick Reference                 ║
       ╚══════════════════════════════════════════════════════════════╝

@@ -1,0 +1,66 @@
+# Template: Database Container
+# Use this template for: PostgreSQL, MySQL, MongoDB, Redis, etc.
+
+images:
+  CONTAINER_NAME:
+    category: database
+    description: DATABASE_NAME VERSION - Brief description
+    image: DOCKER_IMAGE:TAG
+    keep_alive_cmd: DATABASE_DAEMON_CMD
+    shell: /bin/bash
+    ports:
+      - "HOST_PORT:CONTAINER_PORT"
+    environment:
+      # Database-specific environment variables
+      DB_NAME: playground
+      DB_USER: playground
+      DB_PASSWORD: playground
+    volumes:  # Optional: for data persistence
+      - type: volume
+        source: CONTAINER_NAME-data
+        target: /var/lib/DATABASE
+    scripts:
+      post_start: DATABASE_init.sh    # Optional: initialization script
+      pre_stop: DATABASE_halt.sh      # Optional: backup before shutdown
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           DATABASE_NAME VERSION Quick Reference              ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Information:
+         Host: localhost (from host) / CONTAINER_NAME (from other containers)
+         Port: CONTAINER_PORT
+         User: playground
+         Password: playground
+         Database: playground
+
+      📊 Essential Commands:
+         CONNECT_CMD                              # Connect to database
+         LIST_DATABASES                           # List all databases
+         USE_DATABASE                             # Switch database
+         LIST_TABLES                              # List tables
+         DESCRIBE_TABLE                           # Show table structure
+         QUIT_CMD                                 # Exit client
+
+      💾 Backup & Restore:
+         # Export to /shared for persistence
+         BACKUP_CMD > /shared/backups/DB_backup_$(date +%Y%m%d).sql
+         RESTORE_CMD < /shared/backups/DB_backup_YYYYMMDD.sql
+
+      📝 Quick Example:
+         CREATE_TABLE_EXAMPLE
+         INSERT_EXAMPLE
+         SELECT_EXAMPLE
+
+      🔍 Useful Queries:
+         VERSION_QUERY                            # Database version
+         DATABASE_SIZE_QUERY                      # Database size
+         TABLE_LIST_QUERY                         # List all tables
+
+      💡 Tips:
+         • Backups are stored in: /shared/backups/
+         • Data persists in Docker volume: CONTAINER_NAME-data
+         • Use transactions for data integrity
+         • Monitor performance with built-in tools
+
+      📚 Documentation: DOCS_URL

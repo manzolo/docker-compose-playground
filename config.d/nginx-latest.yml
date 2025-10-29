@@ -30,13 +30,13 @@ images:
          
          cat > /etc/nginx/conf.d/mysite.conf <<'EOF'
          server {
-             listen 80;
-             server_name localhost;
-             root /shared;
-             index index.html;
-             location / {
-                 try_files $uri $uri/ =404;
-             }
+         listen 80;
+         server_name localhost;
+         root /shared;
+         index index.html;
+         location / {
+         try_files $uri $uri/ =404;
+         }
          }
          EOF
          
@@ -50,5 +50,5 @@ images:
          tail -f /var/log/nginx/access.log             # Access log
          tail -f /var/log/nginx/error.log              # Error log
     ports:
-    - 8080:80
+      - 8080:80
     shell: /bin/bash

@@ -12,40 +12,40 @@ images:
         inline: |
           #!/bin/bash
           echo "Installing Nushell on Arch Linux..."
-          
+
           docker exec "${CONTAINER_NAME}" bash -c '
           # Update system
           pacman -Syu --noconfirm
-          
+
           # Install Nushell and dependencies
           pacman -S --noconfirm \
             nushell git vim nano htop tree net-tools \
             curl wget base-devel
-          
+
           # Install Starship
           pacman -S --noconfirm starship
-          
+
           # Create config directory
           mkdir -p ~/.config/nushell
-          
+
           # Create env.nu
           cat > ~/.config/nushell/env.nu << "EOFNU"
           $env.LANG = "en_US.UTF-8"
           $env.TERM = "xterm-256color"
           EOFNU
-          
+
           # Create config.nu
           cat > ~/.config/nushell/config.nu << "EOFNU"
           $env.config = {
             show_banner: true
             edit_mode: "vi"
           }
-          
+
           # Init Starship
           use std/assert
           $env.PROMPT_COMMAND = {|| starship module character }
           $env.PROMPT_COMMAND_RIGHT = ""
-          
+
           alias ls = ls -lah
           alias ll = ls -lh
           alias gs = git status
@@ -53,21 +53,21 @@ images:
           alias gc = git commit
           alias gp = git push
           alias gl = git log --oneline -n 10
-          
+
           def mkcd [dir: string] {
             mkdir $dir
             cd $dir
           }
-          
+
           def weather [] {
             curl -s wttr.in
           }
-          
+
           def myip [] {
             curl -s https://ifconfig.me
           }
           EOFNU
-          
+
           # Create Starship config
           mkdir -p ~/.config
           cat > ~/.config/starship.toml << EOFSTAR
@@ -80,37 +80,37 @@ images:
           $cmd_duration\
           $line_break\
           $character """
-          
+
           [character]
           success_symbol = "[➜](bold green)"
           error_symbol = "[➜](bold red)"
-          
+
           [directory]
           truncation_length = 3
           truncate_to_repo = true
-          
+
           [git_branch]
           format = "on [\$symbol\$branch](\$style) "
-          
+
           [git_status]
           format = "([\\\\\$all_status\$ahead_behind](\$style) )"
-          
+
           [cmd_duration]
           min_time = 500
           format = "took [\$duration](\$style) "
           EOFSTAR
-          
+
           # Change default shell to nushell
           usermod -s /usr/bin/nu root
           '
-          
+
           echo "✓ Nushell + Starship installed"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║         Arch Linux with Nushell + Starship                  ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       Inside Nushell:
         help                - Show all commands
         ls, ll              - List files
@@ -128,12 +128,12 @@ images:
         weather             - Show weather
         myip                - Show public IP
         htop                - System monitor
-      
+
       📁 Configuration:
         ~/.config/nushell/config.nu     - Main configuration
         ~/.config/nushell/env.nu        - Environment setup
         ~/.config/starship.toml         - Prompt configuration
-      
+
       Arch Linux:
         pacman -Syu         - Update system
         pacman -S <pkg>     - Install package
