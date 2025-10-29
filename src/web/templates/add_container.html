@@ -11,9 +11,13 @@
     <link rel="stylesheet" href="/static/css/core/base.css">
     <link rel="stylesheet" href="/static/css/core/header.css">
     <link rel="stylesheet" href="/static/css/core/modal.css">
-    <link rel="stylesheet" href="/static/css/core/operation-monitor.css">    
+    <link rel="stylesheet" href="/static/css/core/operation-monitor.css">
     <link rel="stylesheet" href="/static/css/core/dark-mode.css">
     <link rel="stylesheet" href="/static/css/pages/add-container.css">
+
+    <!-- Load dark mode early to prevent flash (must be synchronous in head) -->
+    <script src="/static/js/core/dark-mode.js"></script>
+
 </head>
 
 <body>
@@ -236,7 +240,7 @@
     <!-- Shared Modules -->
     <script src="/static/js/core/core-modules.js"></script>
     <script src="/static/js/core/api-service.js"></script>
-    <script src="/static/js/core/dark-mode.js"></script>
+    <!-- dark-mode.js loaded in <head> to prevent flash -->
     <script src="/static/js/core/reload-manager.js"></script>
     <script src="/static/js/managers/filter-manager.js"></script>
     <script src="/static/js/managers/container-manager.js"></script>

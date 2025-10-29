@@ -10,28 +10,28 @@ const OperationMonitor = {
      * Start monitoring an operation with persistent widget
      */
     startMonitoring(operationId, operationName = 'Operation') {
-        // Evita duplicati
+        // Avoid duplicates
         if (this.activeOperations[operationId]) {
-            console.warn(`Operation ${operationId} already being monitored`);
+            // console.warn(`Operation ${operationId} already being monitored`);
             return;
         }
 
-        // Crea widget se non esiste
+        // Create widget if it doesn't exist
         if (!DOM.get('operation-monitor-container')) {
             this.createMonitorContainer();
         }
 
-        // Aggiungi operazione al tracking
+        // Add operation to tracking
         this.activeOperations[operationId] = {
             name: operationName,
             startTime: new Date(),
             status: 'running'
         };
 
-        // Crea card per l'operazione
+        // Create card for operation
         this.createOperationCard(operationId, operationName);
 
-        // Inizia il polling
+        // Start polling
         this.pollOperation(operationId);
     },
 
@@ -64,7 +64,7 @@ const OperationMonitor = {
                 <button class="operation-close" onclick="OperationMonitor.closeOperation('${operationId}')">×</button>
             </div>
             <div class="operation-content">
-                <div class="operation-message" id="message-${operationId}">Inizializzazione...</div>
+                <div class="operation-message" id="message-${operationId}">Initializing...</div>
                 <div class="operation-progress" id="progress-${operationId}"></div>
             </div>
         `;
@@ -83,7 +83,7 @@ const OperationMonitor = {
                 const statusData = await fetch(`/api/operation-status/${operationId}`)
                     .then(r => r.json());
 
-                // Aggiorna card
+                // Update card
                 this.updateOperationCard(operationId, statusData);
 
                 if (statusData.status === 'completed') {
@@ -96,17 +96,17 @@ const OperationMonitor = {
                     return;
                 }
 
-                // Continua il polling
+                // Continue polling
                 attempts++;
                 if (attempts < maxAttempts) {
                     const timeoutId = setTimeout(poll, 1000);
-                    // Traccia il timeout per cleanup
+                    // Track timeout for cleanup
                     this.pollTimeouts[`${operationId}_${attempts}`] = timeoutId;
                 } else {
                     this.timeoutOperation(operationId);
                 }
             } catch (error) {
-                console.error('Polling error:', error);
+                // console.error('Polling error:', error);
                 attempts++;
                 if (attempts < maxAttempts) {
                     const timeoutId = setTimeout(poll, 1000);
@@ -203,6 +203,27 @@ const OperationMonitor = {
     },
 
     /**
+     * Handle single container operation completion
+     */
+    async handleSingleContainerComplete(operationName, statusData) {
+        // Extract container name from operation name
+        const match = operationName.match(/(?:Starting|Stopping|Restarting|Cleaning up)\s+(.+)/);
+        if (!match) return;
+
+        const containerName = match[1];
+
+        // Refresh the card state if ContainerManager is available
+        if (window.ContainerManager && typeof ContainerManager.refreshCardState === 'function') {
+            try {
+                await ContainerManager.refreshCardState(containerName);
+                // console.log(`Refreshed card state for ${containerName}`);
+            } catch (error) {
+                // console.error(`Failed to refresh card state for ${containerName}:`, error);
+            }
+        }
+    },
+
+    /**
      * Calculate elapsed time from ISO timestamp
      */
     getElapsedTime(startedAt) {
@@ -223,9 +244,9 @@ const OperationMonitor = {
     },
 
     /**
-     * Complete operation - CHIUDE IL LOADER
+     * Complete operation
      */
-    completeOperation(operationId, statusData) {
+    async completeOperation(operationId, statusData) {
         const card = DOM.get(`operation-${operationId}`);
         if (!card) return;
 
@@ -240,29 +261,30 @@ const OperationMonitor = {
         const messageEl = card.querySelector('.operation-message');
         const operationName = this.activeOperations[operationId]?.name || 'Operation';
 
-        // Verifica se l'operazione è un'operazione di gruppo
+        // Check if operation is a group operation
         if (operationName.startsWith('Group:') || operationName.startsWith('Stopping Group:')) {
             const groupName = operationName.replace(/^Group: |^Stopping Group: /, '');
             const operationType = operationName.startsWith('Group:') ? 'start' : 'stop';
-            GroupOperations.handleGroupOperationComplete(statusData, groupName, operationType);
+            await GroupOperations.handleGroupOperationComplete(statusData, groupName, operationType);
         } else {
             messageEl.textContent = 'Operation completed!';
+
+            await this.handleSingleContainerComplete(operationName, statusData);
         }
 
         this.activeOperations[operationId].status = 'completed';
 
-        // Pulisci timeouts
+        // Cleanup timeouts
         this.cleanupPollTimeouts(operationId);
 
-        // Auto-chiudi dopo 5 secondi
+        // Auto-close after 3 seconds
         setTimeout(() => {
             this.closeOperation(operationId);
-            ReloadManager.showReloadToast(7000);
-        }, 5000);
+        }, 3000);
     },
 
     /**
-     * Fail operation - CHIUDE IL LOADER
+     * Fail operation
      */
     failOperation(operationId, statusData) {
         const card = DOM.get(`operation-${operationId}`);
@@ -277,18 +299,18 @@ const OperationMonitor = {
         icon.textContent = '✗';
 
         const messageEl = card.querySelector('.operation-message');
-        messageEl.textContent = `Errore: ${statusData.error || 'Operazione fallita'}`;
+        messageEl.textContent = `Error: ${statusData.error || 'Operation failed'}`;
 
         this.activeOperations[operationId].status = 'failed';
 
-        // Pulisci timeouts
+        // Cleanup timeouts
         this.cleanupPollTimeouts(operationId);
 
         ToastManager.show(`Task failed: ${statusData.error || 'Unknown'}`, 'error');
     },
 
     /**
-     * Timeout operation - CHIUDE IL LOADER
+     * Timeout operation
      */
     timeoutOperation(operationId) {
         const card = DOM.get(`operation-${operationId}`);
@@ -307,7 +329,7 @@ const OperationMonitor = {
 
         this.activeOperations[operationId].status = 'timeout';
 
-        // Pulisci timeouts
+        // Cleanup timeouts
         this.cleanupPollTimeouts(operationId);
 
         ToastManager.show('Operation timed out - continues in background', 'warning');
@@ -327,18 +349,18 @@ const OperationMonitor = {
             }, 300);
         }
 
-        // Pulisci tracciamento
+        // Cleanup tracking
         delete this.activeOperations[operationId];
         this.cleanupPollTimeouts(operationId);
 
-        // Cleanup di sicurezza
+        // Safety cleanup
         if (OperationHelper) {
             OperationHelper.cleanup();
         }
     },
 
     /**
-     * Cleanup poll timeouts per operazione
+     * Cleanup poll timeouts for operation
      */
     cleanupPollTimeouts(operationId) {
         const keys = Object.keys(this.pollTimeouts);
@@ -351,16 +373,16 @@ const OperationMonitor = {
     },
 
     /**
-     * Cleanup globale (per beforeunload)
+     * Global cleanup (for beforeunload)
      */
     cleanup() {
-        // Chiudi tutti i poll timeouts
+        // Close all poll timeouts
         Object.values(this.pollTimeouts).forEach(timeoutId => {
             clearTimeout(timeoutId);
         });
         this.pollTimeouts = {};
 
-        // Chiudi tutte le operazioni
+        // Close all operations
         Object.keys(this.activeOperations).forEach(operationId => {
             this.closeOperation(operationId);
         });

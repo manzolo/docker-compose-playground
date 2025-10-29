@@ -17,7 +17,6 @@ const ApiService = {
             timeoutMs
         );
 
-        // Traccia la richiesta
         this.activeRequests.set(url, { controller, timeoutId });
 
         try {
@@ -42,6 +41,24 @@ const ApiService = {
      */
     async fetchJson(url, options = {}) {
         const response = await this.fetchWithTimeout(url, options);
+
+        // Check for HTTP errors
+        if (!response.ok) {
+            const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            error.status = response.status;
+            error.statusText = response.statusText;
+
+            // Try to get error details from response body
+            try {
+                const errorData = await response.json();
+                error.detail = errorData.detail || errorData.message || response.statusText;
+            } catch (e) {
+                error.detail = response.statusText;
+            }
+
+            throw error;
+        }
+
         return response.json();
     },
 
@@ -78,6 +95,15 @@ const ApiService = {
         return this.fetchJson(`/api/stop/${encodeURIComponent(containerName)}`, {
             method: 'POST',
             timeout: Config.POLLING.TIMEOUT.STOP
+        });
+    },
+
+    /**
+     * GET container status and info
+     */
+    async getContainerInfo(containerName) {
+        return this.fetchJson(`/api/containers/${encodeURIComponent(containerName)}/info`, {
+            method: 'GET'
         });
     },
 
@@ -226,7 +252,7 @@ const ApiService = {
     },
 
     /**
-     * Server logs - SINGLE definition (removed duplication)
+     * Server logs
      */
     async getServerLogs() {
         return this.fetchText('/api/logs');
@@ -311,8 +337,6 @@ const ApiService = {
 };
 
 window.ApiService = ApiService;
-
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     ApiService.abortAllRequests();
 });

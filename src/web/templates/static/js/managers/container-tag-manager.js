@@ -2,11 +2,16 @@
 // CONTAINER TAG MANAGER - manage container tags in groups + name badges
 // =========================================================
 const ContainerTagManager = {
+    initialized: false,
+
     /**
      * initialize container tag and name badge handlers
      */
     init() {
-        this.initializeClickHandlers();
+        if (!this.initialized) {
+            this.initializeClickHandlers();
+            this.initialized = true;
+        }
         this.refreshContainerTagStatuses();
     },
 
@@ -15,47 +20,55 @@ const ContainerTagManager = {
      * used after DOM changes (e.g., after updateCardUI)
      */
     reinitializeHandlers() {
-        this.attachClickListeners();
         this.refreshContainerTagStatuses();
     },
 
     /**
      * initialize click handlers for both container tags and name badges
-     * consolidated to avoid duplicate filter calls
+     * uses event delegation to avoid duplicate listeners
      */
     initializeClickHandlers() {
-        this.attachClickListeners();
+        // Use event delegation - single listener on document
+        document.addEventListener('click', (e) => {
+            // Check if click was on container-tag or container-name-badge
+            const tag = e.target.closest('.container-tag');
+            const badge = e.target.closest('.container-name-badge');
+
+            if (tag) {
+                e.stopPropagation();
+                const containerName = tag.getAttribute('data-container');
+                if (containerName) {
+                    FilterManager.quickSearchContainer(containerName);
+                }
+            } else if (badge) {
+                e.stopPropagation();
+                const containerName = badge.getAttribute('data-container');
+                if (containerName) {
+                    FilterManager.quickSearchContainer(containerName);
+                }
+            }
+        });
+
+        // Set cursor and title for existing elements
+        this.updateElementStyles();
     },
 
     /**
-     * attach click event listeners to tags and badges
+     * Update cursor and title for container tags and badges
      */
-    attachClickListeners() {
-        // container tag handlers (in groups)
+    updateElementStyles() {
         const containerTags = DOM.queryAll('.container-tag');
         containerTags.forEach(tag => {
             const containerName = tag.getAttribute('data-container');
             if (containerName) {
-                DOM.on(tag, 'click', (e) => {
-                    e.stopPropagation();
-                    FilterManager.quickSearchContainer(containerName);
-                });
                 tag.style.cursor = 'pointer';
                 tag.title = `Click to filter by ${containerName}`;
             }
         });
 
-        // container name badge handlers (on container cards)
         const nameBadges = DOM.queryAll('.container-name-badge');
         nameBadges.forEach(badge => {
-            const containerName = badge.getAttribute('data-container');
-            if (containerName) {
-                DOM.on(badge, 'click', (e) => {
-                    e.stopPropagation();
-                    FilterManager.quickSearchContainer(containerName);
-                });
-                badge.style.cursor = 'pointer';
-            }
+            badge.style.cursor = 'pointer';
         });
     },
 

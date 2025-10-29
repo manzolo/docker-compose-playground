@@ -18,12 +18,11 @@ const ManagerOperations = {
             const response = await ApiService.stopAll();
 
             if (response.operation_id) {
-                //ToastManager.show('Stop operation started...', 'info');
                 OperationMonitor.startMonitoring(response.operation_id, 'Stopping All');
                 this.pollOperation(response.operation_id, 'stop', 'Stopping');
             }
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleError(error, 'stop');
         }
     },
@@ -43,12 +42,11 @@ const ManagerOperations = {
             const response = await ApiService.restartAll();
 
             if (response.operation_id) {
-                //ToastManager.show('Restart operation started...', 'info');
                 OperationMonitor.startMonitoring(response.operation_id, 'Restarting All');
                 this.pollOperation(response.operation_id, 'restart', 'Restarting');
             }
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleError(error, 'restart');
         }
     },
@@ -75,12 +73,11 @@ const ManagerOperations = {
             const response = await ApiService.cleanupAll();
 
             if (response.operation_id) {
-                //ToastManager.show('Cleanup operation started...', 'warning');
                 OperationMonitor.startMonitoring(response.operation_id, 'Cleaning Up All');
                 this.pollOperation(response.operation_id, 'cleanup', 'Cleaning up');
             }
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleError(error, 'cleanup');
         }
     },
@@ -99,27 +96,18 @@ const ManagerOperations = {
 
                 let loaderMessage = `${verbName} containers: ${count} of ${total}`;
 
-                // Add script tracking info if available
                 const scriptStatus = Utils.formatScriptStatus(statusData);
                 if (scriptStatus) {
                     loaderMessage += `\n${scriptStatus}`;
                 }
 
-                //showLoader(loaderMessage);
-
                 if (statusData.status === 'completed') {
-                    hideLoader(); // Safety: chiudi loader esplicitamente
-                    //ToastManager.show(`${verbName} operation completed!`, 'success');
-                    //setTimeout(() => {
-                        //ReloadManager.showReloadToast(5000);
-                        //setTimeout(() => location.reload(), 1000);
-                    //}, 5000);
-                    //setTimeout(() => location.reload(), 2500);
+                    hideLoader();
                     return;
                 }
 
                 if (statusData.status === 'error') {
-                    hideLoader(); // Safety: chiudi loader esplicitamente
+                    hideLoader();
                     ToastManager.show(`${verbName} operation failed: ${statusData.error}`, 'error');
                     return;
                 }
@@ -128,16 +116,16 @@ const ManagerOperations = {
                 if (attempts < Config.POLLING.MAX_ATTEMPTS) {
                     setTimeout(poll, Config.POLLING.INTERVAL);
                 } else {
-                    hideLoader(); // Safety: chiudi loader esplicitamente
+                    hideLoader();
                     ToastManager.show('Operation timed out. Please check manually.', 'warning');
                 }
             } catch (error) {
-                console.error('Polling error:', error);
+                // console.error('Polling error:', error);
                 attempts++;
                 if (attempts < Config.POLLING.MAX_ATTEMPTS) {
                     setTimeout(poll, Config.POLLING.INTERVAL);
                 } else {
-                    hideLoader(); // Safety: chiudi loader esplicitamente
+                    hideLoader();
                     ToastManager.show('Polling failed after maximum attempts.', 'error');
                 }
             }
@@ -189,7 +177,7 @@ const CategoryOperations = {
 
             await this.performCategoryOperation(category, 'start');
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleCategoryError(error, 'start');
         }
     },
@@ -208,7 +196,7 @@ const CategoryOperations = {
 
             await this.performCategoryOperation(category, 'start');
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleCategoryError(error, 'start');
         }
     },
@@ -239,9 +227,10 @@ const CategoryOperations = {
                 );
             }
 
-            setTimeout(() => location.reload(), 2000);
+            ToastManager.show('✓ Operation completed - updating interface', 'success');
+            // setTimeout(() => window.location.href = window.location.href.split('#')[0], 500);
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleCategoryError(error, operation);
         }
     },
@@ -328,7 +317,6 @@ const CategoryOperations = {
     handleCategoryError(error, operation) {
         if (error.name === 'AbortError') {
             ToastManager.show('Operation timeout - please wait and refresh manually', 'warning');
-            setTimeout(() => location.reload(), 5000);
         } else {
             ToastManager.show(`${operation} operation failed: ${error.message}`, 'error');
         }

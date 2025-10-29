@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="/static/css/core/command-output.css">
     <link rel="stylesheet" href="/static/css/core/quick-commands.css">
 
+    <!-- Load dark mode early to prevent flash (must be synchronous in head) -->
+    <script src="/static/js/core/dark-mode.js"></script>
 
 </head>
 
@@ -175,7 +177,8 @@
             {% set running_info = running.get(name) %}
 
             <div class="container-card" data-name="{{ name }}" data-category="{{ data.category }}"
-                data-container="playground-{{ name }}" data-search="{{ name|lower }} {{ data.description|lower }}">
+                data-container="playground-{{ name }}" data-search="{{ name|lower }} {{ data.description|lower }}"
+                data-commands='{{ data.motd_commands_json|safe }}'>
 
                 <!-- HEADER CON NOME CLICCABILE E CATEGORIA A DESTRA -->
                 <div class="container-header">
@@ -442,7 +445,7 @@
     <!-- shared core modules and utilities -->
     <script src="/static/js/core/core-modules.js"></script>
     <script src="/static/js/core/api-service.js"></script>
-    <script src="/static/js/core/dark-mode.js"></script>
+    <!-- dark-mode.js loaded in <head> to prevent flash -->
     <script src="/static/js/core/reload-manager.js"></script>
 
     <!-- feature managers -->

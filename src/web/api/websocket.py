@@ -21,16 +21,16 @@ active_sessions_lock = asyncio.Lock()
 
 class WebSocketConfig:
     """WebSocket performance configuration"""
-    
-    # Buffer sizes
-    SOCKET_RECV_BUFFER = 4096  # bytes
-    SOCKET_SEND_BUFFER = 4096  # bytes
-    
+
+    # Buffer sizes (increased for better throughput)
+    SOCKET_RECV_BUFFER = 16384  # 16KB - larger buffer for faster reads
+    SOCKET_SEND_BUFFER = 16384  # 16KB - larger buffer for faster writes
+
     # Polling optimization
-    # Instead of fixed 0.01s sleep (100x/sec), use select with timeout
-    SOCKET_SELECT_TIMEOUT = 0.1  # 100ms - reduces CPU usage
-    POLL_BACKOFF_MIN = 0.01  # 10ms minimum
-    POLL_BACKOFF_MAX = 0.5   # 500ms maximum
+    # Reduced timeout for more responsive interactive terminal
+    SOCKET_SELECT_TIMEOUT = 0.05  # 50ms - better balance between CPU and latency
+    POLL_BACKOFF_MIN = 0.005  # 5ms minimum - more responsive
+    POLL_BACKOFF_MAX = 0.2   # 200ms maximum - faster response when idle
     
     # Connection limits
     MAX_CONCURRENT_SESSIONS = 50
@@ -240,51 +240,62 @@ async def websocket_console(websocket: WebSocket, container: str):
             """Read output from container and send to WebSocket client"""
             nonlocal read_count
             backoff = WebSocketConfig.POLL_BACKOFF_MIN
-            
+            bytes_sent_since_update = 0
+
             while True:
                 try:
                     # Use select instead of sleep
                     data = await read_from_socket_safe(sock, WebSocketConfig.SOCKET_RECV_BUFFER)
-                    
+
                     if data:
                         try:
                             text = data.decode('utf-8', errors='replace')
                             await websocket.send_text(text)
-                            
-                            # Update session stats
-                            async with active_sessions_lock:
-                                if session_id in active_sessions:
-                                    active_sessions[session_id]["bytes_sent"] += len(data)
-                            
+
+                            # Batch session stats updates (update every 10KB to reduce lock contention)
+                            bytes_sent_since_update += len(data)
+                            if bytes_sent_since_update >= 10240:  # 10KB
+                                async with active_sessions_lock:
+                                    if session_id in active_sessions:
+                                        active_sessions[session_id]["bytes_sent"] += bytes_sent_since_update
+                                bytes_sent_since_update = 0
+
                             # Log every N reads to reduce noise
                             read_count += 1
                             if read_count % WebSocketConfig.LOG_BUFFER_SIZE_EVERY_N_READS == 0:
                                 logger.debug("Session %s: read %d buffers", session_id, read_count)
-                            
+
                             # Reset backoff on successful read
                             backoff = WebSocketConfig.POLL_BACKOFF_MIN
-                        
+
                         except Exception as e:
                             logger.error("Error sending to WebSocket: %s", str(e))
                             break
-                    
+
                     else:
                         # No data available - adaptive backoff
                         await asyncio.sleep(backoff)
                         backoff = min(backoff * 1.5, WebSocketConfig.POLL_BACKOFF_MAX)
-                
+
                 except WebSocketDisconnect:
                     logger.info("WebSocket disconnected while reading (session: %s)", session_id)
+                    # Flush remaining stats
+                    if bytes_sent_since_update > 0:
+                        async with active_sessions_lock:
+                            if session_id in active_sessions:
+                                active_sessions[session_id]["bytes_sent"] += bytes_sent_since_update
                     break
                 except Exception as e:
                     logger.error("Error reading from container %s: %s", container, str(e))
                     break
         
         # ====================================================
-        # WRITE TASK: WebSocket → Container (Unchanged but with better error handling)
+        # WRITE TASK: WebSocket → Container (Optimized)
         # ====================================================
         async def write_to_container():
             """Read input from WebSocket client and send to container"""
+            bytes_received_since_update = 0
+
             while True:
                 try:
                     # Receive data from WebSocket client
@@ -293,18 +304,18 @@ async def websocket_console(websocket: WebSocket, container: str):
                         try:
                             # Try to parse as JSON for control messages
                             json_data = parse_control_message(data)
-                            
+
                             # Handle control messages (e.g., terminal resize)
                             if json_data and json_data.get("type") == "resize":
                                 try:
                                     cols = int(json_data.get("cols", 80))
                                     rows = int(json_data.get("rows", 24))
-                                    
+
                                     # Validate dimensions
                                     if cols <= 0 or rows <= 0:
                                         logger.warning("Invalid terminal dimensions: %dx%d", cols, rows)
                                         continue
-                                    
+
                                     # Resize the exec instance
                                     docker_client.api.exec_resize(
                                         exec_instance['Id'],
@@ -313,38 +324,46 @@ async def websocket_console(websocket: WebSocket, container: str):
                                     )
                                     logger.debug("Resized terminal for %s: %dx%d", container, cols, rows)
                                     continue
-                                
+
                                 except (ValueError, TypeError) as e:
                                     logger.warning("Invalid resize parameters: %s", str(e))
                                     continue
                                 except Exception as e:
                                     logger.error("Error resizing terminal for %s: %s", container, str(e))
                                     continue
-                            
+
                             # Send regular input to container
                             if data and json_data is None:
                                 success = await write_to_socket_safe(sock, data.encode('utf-8'))
                                 if success:
-                                    # Update session stats
-                                    async with active_sessions_lock:
-                                        if session_id in active_sessions:
-                                            active_sessions[session_id]["bytes_received"] += len(data)
+                                    # Batch session stats updates (update every 1KB)
+                                    bytes_received_since_update += len(data)
+                                    if bytes_received_since_update >= 1024:  # 1KB
+                                        async with active_sessions_lock:
+                                            if session_id in active_sessions:
+                                                active_sessions[session_id]["bytes_received"] += bytes_received_since_update
+                                        bytes_received_since_update = 0
                                 else:
                                     logger.error("Failed to write to socket")
                                     break
-                            
+
                             elif json_data and json_data.get("type") != "resize":
                                 logger.debug("Unknown control message type: %s", json_data.get("type"))
                                 success = await write_to_socket_safe(sock, data.encode('utf-8'))
                                 if not success:
                                     break
-                        
+
                         except OSError as e:
                             logger.error("Socket error writing to container %s: %s", container, str(e))
                             break
-                
+
                 except WebSocketDisconnect:
                     logger.info("WebSocket disconnected while writing (session: %s)", session_id)
+                    # Flush remaining stats
+                    if bytes_received_since_update > 0:
+                        async with active_sessions_lock:
+                            if session_id in active_sessions:
+                                active_sessions[session_id]["bytes_received"] += bytes_received_since_update
                     break
                 except Exception as e:
                     logger.error("Error writing to container %s: %s", container, str(e))
