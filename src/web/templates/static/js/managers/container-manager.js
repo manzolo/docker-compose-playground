@@ -27,7 +27,7 @@ const ContainerManager = {
             const isRunning = response.exists && response.status === 'running';
 
             if (!response.exists) {
-                console.log(`Container ${fullContainerName} not found (stopped/removed), updating UI to stopped state`);
+                // console.log(`Container ${fullContainerName} not found (stopped/removed), updating UI to stopped state`);
             }
 
             // Use updateCardUI to rebuild the buttons with correct state
@@ -126,7 +126,6 @@ const ContainerManager = {
 
                 if (restarted > 0) {
                     this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                    // Card state will be refreshed by OperationMonitor when operation completes
                 }
 
             } else if (statusData.status === 'error') {
@@ -187,7 +186,6 @@ const ContainerManager = {
     handleRestartError(error, image, btn, originalHTML) {
         if (error.name === 'AbortError') {
             ToastManager.show(`⏱ Timeout restarting ${image} - check container logs`, 'warning');
-            // No auto-reload on timeout - let user refresh manually if needed
         } else {
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
         }
@@ -229,7 +227,7 @@ const ContainerManager = {
                 throw new Error('No operation_id received');
             }
         } catch (error) {
-            console.error("Error in performCleanup:", error);
+            // console.error("Error in performCleanup:", error);
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
         }
     },
@@ -254,7 +252,6 @@ const ContainerManager = {
 
                 if (started > 0) {
                     this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                    // Card state will be refreshed by OperationMonitor when operation completes
                 }
 
             } else if (statusData.status === 'error') {
@@ -315,7 +312,6 @@ const ContainerManager = {
     handleStartError(error, image, btn, originalHTML) {
         if (error.name === 'AbortError') {
             ToastManager.show(`⏱ Timeout starting ${image} - check container logs`, 'warning');
-            // No auto-reload on timeout - let user refresh manually if needed
         } else {
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
         }
@@ -382,7 +378,6 @@ const ContainerManager = {
                 text: 'Stopping...',
                 showSpinner: true
             });
-            // No auto-reload on timeout - let user refresh manually if needed
         } else {
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
             Utils.updateButtonState(btn, {
@@ -422,26 +417,21 @@ const ContainerManager = {
             return;
         }
 
-        // Get the data-commands attribute from the card element (always available)
         const commandsData = card.getAttribute('data-commands') || '';
 
         if (isRunning) {
-            // running container
             card.setAttribute('data-container', containerName);
 
-            // update name badge indicator
             if (nameBadge) {
                 nameBadge.classList.remove('stopped');
                 nameBadge.classList.add('running');
             }
 
-            // update status dot
             if (statusDot) {
                 statusDot.classList.remove('stopped');
                 statusDot.classList.add('running');
             }
 
-            // update actions - include all running container buttons
             actionsContainer.innerHTML = `
                 <button class="btn-primary-action btn-stop"
                     onclick="ContainerManager.stopContainer('${imageName}', '${containerName}')">
@@ -484,22 +474,18 @@ const ContainerManager = {
                 </div>
             `;
         } else {
-            // stopped container
             card.removeAttribute('data-container');
 
-            // update name badge indicator
             if (nameBadge) {
                 nameBadge.classList.remove('running');
                 nameBadge.classList.add('stopped');
             }
 
-            // update status dot
             if (statusDot) {
                 statusDot.classList.remove('running');
                 statusDot.classList.add('stopped');
             }
 
-            // update actions - only start and clean for stopped container
             actionsContainer.innerHTML = `
                 <button class="btn-primary-action btn-start"
                     onclick="ContainerManager.startContainer('${imageName}')">
@@ -515,7 +501,6 @@ const ContainerManager = {
             `;
         }
 
-        // reinitialize handlers for new buttons (without triggering filter)
         if (ContainerTagManager && ContainerTagManager.reinitializeHandlers) {
             ContainerTagManager.reinitializeHandlers();
         }

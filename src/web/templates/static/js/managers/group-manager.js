@@ -108,15 +108,13 @@ const GroupOperations = {
             const response = await ApiService.startGroup(groupName);
 
             if (response.operation_id) {
-                //ToastManager.show(`Starting ${groupName}...`, 'info');
-                // Il widget si occupa del polling automaticamente
                 OperationMonitor.startMonitoring(response.operation_id, `Group: ${groupName}`);
             } else {
                 throw new Error('No operation ID received');
             }
 
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleGroupOperationError(error, 'start');
         }
     },
@@ -136,15 +134,13 @@ const GroupOperations = {
             const response = await ApiService.stopGroup(groupName);
 
             if (response.operation_id) {
-                //ToastManager.show(`Stopping ${groupName}...`, 'info');
-                // Il widget si occupa del polling automaticamente
                 OperationMonitor.startMonitoring(response.operation_id, `Stopping Group: ${groupName}`);
             } else {
                 throw new Error('No operation ID received');
             }
 
         } catch (error) {
-            hideLoader(); // Safety net
+            hideLoader();
             this.handleGroupOperationError(error, 'stop');
         }
     },
@@ -205,7 +201,7 @@ const GroupOperations = {
 
         try {
             await Promise.all(refreshPromises);
-            console.log(`Refreshed ${containers.length} container cards after group operation`);
+            // console.log(`Refreshed ${containers.length} container cards after group operation`);
         } catch (error) {
             console.error('Error refreshing group containers:', error);
         }

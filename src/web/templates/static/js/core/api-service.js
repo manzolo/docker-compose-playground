@@ -17,7 +17,6 @@ const ApiService = {
             timeoutMs
         );
 
-        // Traccia la richiesta
         this.activeRequests.set(url, { controller, timeoutId });
 
         try {
@@ -253,7 +252,7 @@ const ApiService = {
     },
 
     /**
-     * Server logs - SINGLE definition (removed duplication)
+     * Server logs
      */
     async getServerLogs() {
         return this.fetchText('/api/logs');
@@ -338,8 +337,6 @@ const ApiService = {
 };
 
 window.ApiService = ApiService;
-
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     ApiService.abortAllRequests();
 });
