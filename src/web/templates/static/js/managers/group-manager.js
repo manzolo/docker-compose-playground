@@ -138,7 +138,7 @@ const GroupOperations = {
             if (response.operation_id) {
                 //ToastManager.show(`Stopping ${groupName}...`, 'info');
                 // Il widget si occupa del polling automaticamente
-                OperationMonitor.startMonitoring(response.operation_id, `Stopping ${groupName}`);
+                OperationMonitor.startMonitoring(response.operation_id, `Stopping Group: ${groupName}`);
             } else {
                 throw new Error('No operation ID received');
             }
@@ -152,7 +152,7 @@ const GroupOperations = {
     /**
      * Handle group operation completion
      */
-    handleGroupOperationComplete(statusData, groupName, operationType) {
+    async handleGroupOperationComplete(statusData, groupName, operationType) {
         const isStart = operationType === 'start';
         const started = statusData.started || 0;
         const stopped = statusData.stopped || 0;
@@ -182,7 +182,33 @@ const GroupOperations = {
             ToastManager.showErrorsSequentially(statusData.errors, `Errors in group '${groupName}':`);
         }
 
-        //ReloadManager.showReloadToast(isStart ? 7000 : 2000);
+        // Refresh all container cards in the group without page reload
+        await this.refreshGroupContainers(statusData, isStart);
+    },
+
+    /**
+     * Refresh all container cards in a group
+     */
+    async refreshGroupContainers(statusData, isStart) {
+        // Get list of containers that were affected
+        const containers = statusData.containers || [];
+
+        if (containers.length === 0) return;
+
+        // Refresh each container card
+        const refreshPromises = containers.map(containerName => {
+            if (window.ContainerManager && typeof ContainerManager.refreshCardState === 'function') {
+                return ContainerManager.refreshCardState(containerName);
+            }
+            return Promise.resolve();
+        });
+
+        try {
+            await Promise.all(refreshPromises);
+            console.log(`Refreshed ${containers.length} container cards after group operation`);
+        } catch (error) {
+            console.error('Error refreshing group containers:', error);
+        }
     },
 
     /**

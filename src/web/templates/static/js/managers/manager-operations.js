@@ -239,7 +239,9 @@ const CategoryOperations = {
                 );
             }
 
-            setTimeout(() => location.reload(), 2000);
+            // Refresh all container cards without reload
+            ToastManager.show('✓ Operation completed - updating interface', 'success');
+            setTimeout(() => window.location.href = window.location.href.split('#')[0], 500);
         } catch (error) {
             hideLoader(); // Safety net
             this.handleCategoryError(error, operation);
@@ -328,7 +330,7 @@ const CategoryOperations = {
     handleCategoryError(error, operation) {
         if (error.name === 'AbortError') {
             ToastManager.show('Operation timeout - please wait and refresh manually', 'warning');
-            setTimeout(() => location.reload(), 5000);
+            // Don't auto-reload on timeout - let user refresh manually
         } else {
             ToastManager.show(`${operation} operation failed: ${error.message}`, 'error');
         }

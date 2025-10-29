@@ -203,6 +203,27 @@ const OperationMonitor = {
     },
 
     /**
+     * Handle single container operation completion
+     */
+    async handleSingleContainerComplete(operationName, statusData) {
+        // Extract container name from operation name (e.g., "Starting alpine-3.19" or "Stopping playground-alpine-3.19")
+        const match = operationName.match(/(?:Starting|Stopping|Restarting)\s+(.+)/);
+        if (!match) return;
+
+        const containerName = match[1];
+
+        // Refresh the card state if ContainerManager is available
+        if (window.ContainerManager && typeof ContainerManager.refreshCardState === 'function') {
+            try {
+                await ContainerManager.refreshCardState(containerName);
+                console.log(`Refreshed card state for ${containerName}`);
+            } catch (error) {
+                console.error(`Failed to refresh card state for ${containerName}:`, error);
+            }
+        }
+    },
+
+    /**
      * Calculate elapsed time from ISO timestamp
      */
     getElapsedTime(startedAt) {
@@ -225,7 +246,7 @@ const OperationMonitor = {
     /**
      * Complete operation - CHIUDE IL LOADER
      */
-    completeOperation(operationId, statusData) {
+    async completeOperation(operationId, statusData) {
         const card = DOM.get(`operation-${operationId}`);
         if (!card) return;
 
@@ -244,9 +265,12 @@ const OperationMonitor = {
         if (operationName.startsWith('Group:') || operationName.startsWith('Stopping Group:')) {
             const groupName = operationName.replace(/^Group: |^Stopping Group: /, '');
             const operationType = operationName.startsWith('Group:') ? 'start' : 'stop';
-            GroupOperations.handleGroupOperationComplete(statusData, groupName, operationType);
+            await GroupOperations.handleGroupOperationComplete(statusData, groupName, operationType);
         } else {
             messageEl.textContent = 'Operation completed!';
+
+            // Refresh card state without page reload for single container operations
+            await this.handleSingleContainerComplete(operationName, statusData);
         }
 
         this.activeOperations[operationId].status = 'completed';
@@ -254,11 +278,10 @@ const OperationMonitor = {
         // Pulisci timeouts
         this.cleanupPollTimeouts(operationId);
 
-        // Auto-chiudi dopo 5 secondi
+        // Auto-chiudi dopo 3 secondi (no reload needed)
         setTimeout(() => {
             this.closeOperation(operationId);
-            ReloadManager.showReloadToast(7000);
-        }, 5000);
+        }, 3000);
     },
 
     /**

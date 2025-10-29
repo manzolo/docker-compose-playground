@@ -177,7 +177,8 @@
             {% set running_info = running.get(name) %}
 
             <div class="container-card" data-name="{{ name }}" data-category="{{ data.category }}"
-                data-container="playground-{{ name }}" data-search="{{ name|lower }} {{ data.description|lower }}">
+                data-container="playground-{{ name }}" data-search="{{ name|lower }} {{ data.description|lower }}"
+                data-commands='{{ data.motd_commands_json|safe }}'>
 
                 <!-- HEADER CON NOME CLICCABILE E CATEGORIA A DESTRA -->
                 <div class="container-header">

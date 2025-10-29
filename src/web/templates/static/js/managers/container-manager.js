@@ -4,6 +4,47 @@
 
 const ContainerManager = {
     /**
+     * Refresh a single container card state without page reload
+     * @param {string} containerName - Container name (with or without playground- prefix)
+     */
+    async refreshCardState(containerName) {
+        try {
+            // Ensure container name has the playground- prefix for API call
+            const fullContainerName = containerName.startsWith('playground-')
+                ? containerName
+                : `playground-${containerName}`;
+
+            // Extract image name (without playground- prefix) for finding the card
+            const imageName = fullContainerName.replace('playground-', '');
+            const card = DOM.query(`[data-name="${imageName}"]`);
+            if (!card) return;
+
+            // Get container info from API (always returns 200, even if container doesn't exist)
+            const response = await ApiService.getContainerInfo(fullContainerName);
+
+            // Check if container exists and is running
+            // status can be: "running", "exited", "paused", "not_found", etc.
+            const isRunning = response.exists && response.status === 'running';
+
+            if (!response.exists) {
+                console.log(`Container ${fullContainerName} not found (stopped/removed), updating UI to stopped state`);
+            }
+
+            // Use updateCardUI to rebuild the buttons with correct state
+            // This ensures all buttons are created/removed appropriately
+            this.updateCardUI(imageName, isRunning, fullContainerName);
+
+            // Update filter counts
+            if (window.FilterManager) {
+                FilterManager.updateCounts();
+            }
+
+        } catch (error) {
+            console.error('Error refreshing card state:', error);
+        }
+    },
+
+    /**
      * start a container
      */
     async startContainer(image) {
@@ -85,7 +126,7 @@ const ContainerManager = {
 
                 if (restarted > 0) {
                     this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                    ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
+                    // Card state will be refreshed by OperationMonitor when operation completes
                 }
 
             } else if (statusData.status === 'error') {
@@ -146,7 +187,7 @@ const ContainerManager = {
     handleRestartError(error, image, btn, originalHTML) {
         if (error.name === 'AbortError') {
             ToastManager.show(`⏱ Timeout restarting ${image} - check container logs`, 'warning');
-            setTimeout(() => location.reload(), Config.TOAST.DELAY_BEFORE_RELOAD);
+            // No auto-reload on timeout - let user refresh manually if needed
         } else {
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
         }
@@ -213,7 +254,7 @@ const ContainerManager = {
 
                 if (started > 0) {
                     this.updateCardUI(image, true, statusData.container || `playground-${image}`);
-                    ReloadManager.showReloadToast(Config.TOAST.DELAY_BEFORE_RELOAD);
+                    // Card state will be refreshed by OperationMonitor when operation completes
                 }
 
             } else if (statusData.status === 'error') {
@@ -274,7 +315,7 @@ const ContainerManager = {
     handleStartError(error, image, btn, originalHTML) {
         if (error.name === 'AbortError') {
             ToastManager.show(`⏱ Timeout starting ${image} - check container logs`, 'warning');
-            setTimeout(() => location.reload(), Config.TOAST.DELAY_BEFORE_RELOAD);
+            // No auto-reload on timeout - let user refresh manually if needed
         } else {
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
         }
@@ -341,11 +382,7 @@ const ContainerManager = {
                 text: 'Stopping...',
                 showSpinner: true
             });
-
-            setTimeout(() => {
-                ToastManager.show('📄 Reloading to check status...', 'info');
-                location.reload();
-            }, 3000);
+            // No auto-reload on timeout - let user refresh manually if needed
         } else {
             ToastManager.show(`✗ Error: ${error.message}`, 'error');
             Utils.updateButtonState(btn, {
@@ -385,6 +422,9 @@ const ContainerManager = {
             return;
         }
 
+        // Get the data-commands attribute from the card element (always available)
+        const commandsData = card.getAttribute('data-commands') || '';
+
         if (isRunning) {
             // running container
             card.setAttribute('data-container', containerName);
@@ -410,27 +450,27 @@ const ContainerManager = {
                 </button>
 
                 <div class="container-quick-actions">
-                    <button class="btn-quick-action quick-commands" 
-                        data-commands='{{ data.motd_commands_json|safe }}'
-                        data-container="${containerName}" 
+                    <button class="btn-quick-action quick-commands"
+                        data-commands='${commandsData}'
+                        data-container="${containerName}"
                         data-image="${imageName}"
-                        onclick="QuickCommandsManager.openFromElement(this)" 
+                        onclick="QuickCommandsManager.openFromElement(this)"
                         title="View quick commands">📋</button>
 
-                    <button class="btn-quick-action restart" 
+                    <button class="btn-quick-action restart"
                         data-action="restart"
                         onclick="ContainerManager.restartContainer('${imageName}')"
                         title="Restart container">🔄</button>
 
-                    <button class="btn-quick-action logs" 
+                    <button class="btn-quick-action logs"
                         onclick="LogsManager.show('${containerName}', '${imageName}', true)"
                         title="View logs">📄</button>
 
-                    <button class="btn-quick-action console" 
+                    <button class="btn-quick-action console"
                         onclick="ConsoleManager.open('${containerName}', '${imageName}')"
                         title="Open console">💻</button>
 
-                    <button class="btn-quick-action execute" 
+                    <button class="btn-quick-action execute"
                         onclick="ExecuteCommandManager.open('${containerName}', '${imageName}')"
                         title="Execute shell command">⚡</button>
 
@@ -438,7 +478,7 @@ const ContainerManager = {
                         onclick="ExecuteCommandManager.openDiagnostics('${containerName}', '${imageName}')"
                         title="Run diagnostics">🔍</button>
 
-                    <button class="btn-quick-action clean" 
+                    <button class="btn-quick-action clean"
                         onclick="ContainerManager.cleanupContainer('${containerName}')"
                         title="Clean container data">🧹</button>
                 </div>
