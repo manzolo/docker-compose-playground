@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "RabbitMQ-Stack"
   description: "RabbitMQ message broker with Management web interface"
@@ -7,7 +7,7 @@ group:
     - rabbitmq-server
     - rabbitmq-management
 
-# Configurazioni dei container
+# Container configurations
 images:
   rabbitmq-server:
     category: message_queue

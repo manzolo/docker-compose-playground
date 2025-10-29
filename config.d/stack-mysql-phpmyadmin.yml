@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "MySQL-Stack"
   description: "MySQL 8 database with phpmyadmin-stack web interface"
@@ -7,7 +7,7 @@ group:
     - mysql-8-stack
     - phpmyadmin-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   mysql-8-stack:
     category: database

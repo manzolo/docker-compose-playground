@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "Selenium-Stack"
   description: "Selenium browser automation with Chrome, Firefox and Hub"
@@ -8,7 +8,7 @@ group:
     - selenium-firefox
     - selenium-hub
 
-# Configurazioni dei container
+# Container configurations
 images:
   selenium-chrome:
     category: testing

@@ -5,3 +5,12 @@ images:
     image: openjdk:17
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \       Openjdk 17 Development Environment                      ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F680 Quick Start:\n   java -version                            # Check\
+      \ version\n   javac HelloWorld.java                    # Compile\n   java HelloWorld\
+      \                          # Run\n\n\U0001F527 Development Tools:\n   jshell\
+      \                                   # Interactive REPL\n   jar cf app.jar files/\
+      \                    # Create JAR\n   java -jar app.jar                    \
+      \    # Run JAR\n\n\U0001F4A1 Workspace: /shared/projects/\n\U0001F4DA Docs:\
+      \ https://docs.oracle.com/javase/"

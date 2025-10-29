@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "WordPress-Stack"
   description: "WordPress with MySQL 8, phpMyAdmin and automatic backup/restore system for persistence between restarts"
@@ -8,7 +8,7 @@ group:
     - wordpress-stack
     - phpmyadmin-wp-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   mysql-wp-stack:
     category: database

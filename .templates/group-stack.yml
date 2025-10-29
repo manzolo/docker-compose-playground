@@ -1,0 +1,116 @@
+# Template: Group Stack Configuration
+# Use this template for: Multi-container stacks (LAMP, MEAN, ELK, etc.)
+
+# Group metadata
+group:
+  name: "STACK-NAME"
+  description: "Brief description of what this stack provides"
+  category: CATEGORY  # database, web, monitoring, etc.
+  containers:
+    - container-name-1
+    - container-name-2
+    - container-name-3
+
+# Container configurations
+images:
+  container-name-1:
+    category: CATEGORY
+    description: First component description
+    image: DOCKER_IMAGE:TAG
+    keep_alive_cmd: DAEMON_CMD
+    shell: /bin/bash
+    ports:
+      - "HOST_PORT:CONTAINER_PORT"
+    environment:
+      # Component-specific environment
+      KEY: value
+    volumes:  # Optional: shared data between containers
+      - type: volume
+        source: shared-data
+        target: /data
+    scripts:
+      post_start: component1_init.sh
+      pre_stop: component1_halt.sh
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║               COMPONENT_NAME - Part of STACK_NAME            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🎯 Role: Primary component description
+
+      🔐 Connection:
+         Host: container-name-1
+         Port: PORT
+         User: USERNAME
+         Password: PASSWORD
+
+      🔗 Connected Services:
+         • container-name-2: Description and connection info
+         • container-name-3: Description and connection info
+
+      📊 Quick Commands:
+         COMMAND_1                                # Description
+         COMMAND_2                                # Description
+
+      🌐 Web Access (if applicable):
+         http://localhost:HOST_PORT
+
+      💡 Stack Features:
+         • Feature 1 provided by this component
+         • Feature 2 provided by this component
+
+  container-name-2:
+    category: CATEGORY
+    description: Second component description
+    image: DOCKER_IMAGE:TAG
+    keep_alive_cmd: DAEMON_CMD
+    shell: /bin/bash
+    ports:
+      - "HOST_PORT:CONTAINER_PORT"
+    environment:
+      # Link to other containers
+      DEPENDS_ON_SERVICE: container-name-1
+      SERVICE_PORT: PORT
+    volumes:
+      - type: volume
+        source: shared-data
+        target: /data
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║               COMPONENT_NAME - Part of STACK_NAME            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🎯 Role: Secondary component description
+
+      🔗 Backend Connection:
+         Service: container-name-1:PORT
+         Status: Check with: HEALTH_CHECK_CMD
+
+      🌐 Access:
+         URL: http://localhost:HOST_PORT
+         Description: What this interface provides
+
+      📊 Usage:
+         COMMAND_EXAMPLE                          # What it does
+
+      💡 Tips:
+         • How to use this component effectively
+         • Integration with other stack components
+
+# Stack-level init/halt scripts best practices:
+#
+# post_start scripts:
+#   - Wait for services to be ready (health checks)
+#   - Initialize databases/schemas
+#   - Create default users/data
+#   - Set up connections between services
+#
+# pre_stop scripts:
+#   - Create backups of important data
+#   - Gracefully shutdown services
+#   - Save state for next startup
+#   - Clean temporary files
+#
+# Example scripts location:
+#   scripts/STACK_NAME/playground-container-name-init.sh
+#   scripts/STACK_NAME/playground-container-name-halt.sh

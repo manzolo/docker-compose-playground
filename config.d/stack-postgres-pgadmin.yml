@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "PostgreSQL-Stack"
   description: "PostgreSQL database with pgAdmin web interface"
@@ -7,7 +7,7 @@ group:
     - postgres-16-stack
     - pgadmin-7-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   postgres-16-stack:
     category: database

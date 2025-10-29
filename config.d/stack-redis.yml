@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "Redis-Stack"
   description: "Redis database with RedisInsight web interface"
@@ -7,7 +7,7 @@ group:
     - redis-stack
     - redisinsight-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   redis-stack:
     category: database

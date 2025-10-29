@@ -1,4 +1,4 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "Node-Express-Mongo-Stack"
   description: "Node.js with Express application and MongoDB database"
@@ -7,7 +7,7 @@ group:
     - mongodb-stack
     - node-express-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   mongodb-stack:
     category: database

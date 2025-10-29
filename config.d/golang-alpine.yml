@@ -5,3 +5,12 @@ images:
     image: golang:1.22-alpine
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
+    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
+      \       Golang Alpine Development Environment                      ║\n╚══════════════════════════════════════════════════════════════╝\n\
+      \n\U0001F4E6 Package Manager:\n   go get package                           #\
+      \ Install package\n   go mod init module_name                  # Initialize\
+      \ module\n   go mod tidy                              # Clean dependencies\n\
+      \n\U0001F680 Quick Start:\n   go run main.go                           # Run\
+      \ program\n   go build                                 # Compile program\n \
+      \  go test                                  # Run tests\n\n\U0001F4A1 Workspace:\
+      \ /shared/projects/\n\U0001F4DA Docs: https://go.dev/doc/"
