@@ -5,27 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🐳 Docker Playground Dashboard</title>
-    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
-    <link rel="stylesheet" href="/static/css/vendor/xterm-5.3.0.css">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ asset('css/vendor/xterm-5.3.0.css') }}">
 
     <!-- modular stylesheets -->
-    <link rel="stylesheet" href="/static/css/core/base.css">
-    <link rel="stylesheet" href="/static/css/core/header.css">
-    <link rel="stylesheet" href="/static/css/core/filters.css">
-    <link rel="stylesheet" href="/static/css/core/modal.css">
-    <link rel="stylesheet" href="/static/css/pages/dashboard.css">
-    <link rel="stylesheet" href="/static/css/core/dark-mode.css">
-    <link rel="stylesheet" href="/static/css/core/operation-monitor.css">
-    <link rel="stylesheet" href="/static/css/components/card_actions_tabs.css">
-    <link rel="stylesheet" href="/static/css/components/container-card.css">
-    <link rel="stylesheet" href="/static/css/components/motd.css">
-    <link rel="stylesheet" href="/static/css/components/log-viewer.css">
-    <link rel="stylesheet" href="/static/css/core/diagnostics-tables.css">
-    <link rel="stylesheet" href="/static/css/core/command-output.css">
-    <link rel="stylesheet" href="/static/css/core/quick-commands.css">
+    <link rel="stylesheet" href="{{ asset('css/core/base.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/header.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/filters.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/pages/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/operation-monitor.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/components/card_actions_tabs.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/components/container-card.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/components/motd.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/components/log-viewer.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/diagnostics-tables.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/command-output.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/core/quick-commands.css') }}">
 
     <!-- Load dark mode early to prevent flash (must be synchronous in head) -->
-    <script src="/static/js/core/dark-mode.js"></script>
+    <script src="{{ asset('js/core/dark-mode.js') }}"></script>
 
 </head>
 
@@ -438,43 +438,43 @@
     <div id="confirmModal" class="modal"></div>
 
     <!-- core vendor libraries for terminal and ui functionality -->
-    <script src="/static/js/vendor/xterm-5.3.0.js"></script>
-    <script src="/static/js/vendor/xterm-addon-fit-0.8.0.js"></script>
-    <script src="/static/js/vendor/xterm-addon-webgl-0.16.0.js"></script>
+    <script src="{{ asset('js/vendor/xterm-5.3.0.js') }}"></script>
+    <script src="{{ asset('js/vendor/xterm-addon-fit-0.8.0.js') }}"></script>
+    <script src="{{ asset('js/vendor/xterm-addon-webgl-0.16.0.js') }}"></script>
 
     <!-- shared core modules and utilities -->
-    <script src="/static/js/core/core-modules.js"></script>
-    <script src="/static/js/core/api-service.js"></script>
+    <script src="{{ asset('js/core/core-modules.js') }}"></script>
+    <script src="{{ asset('js/core/api-service.js') }}"></script>
     <!-- dark-mode.js loaded in <head> to prevent flash -->
-    <script src="/static/js/core/reload-manager.js"></script>
+    <script src="{{ asset('js/core/reload-manager.js') }}"></script>
 
     <!-- feature managers -->
-    <script src="/static/js/managers/filter-manager.js"></script>
-    <script src="/static/js/managers/container-manager.js"></script>
-    <script src="/static/js/managers/logs-manager.js"></script>
-    <script src="/static/js/managers/console-manager.js"></script>
-    <script src="/static/js/managers/group-manager.js"></script>
-    <script src="/static/js/managers/bulk-operations.js"></script>
-    <script src="/static/js/managers/manager-operations.js"></script>
-    <script src="/static/js/managers/system-info-manager.js"></script>
-    <script src="/static/js/managers/backup-export-manager.js"></script>
-    <script src="/static/js/managers/add-container-manager.js"></script>
-    <script src="/static/js/managers/fullscreen-manager.js"></script>
-    <script src="/static/js/managers/motd-manager.js"></script>
-    <script src="/static/js/managers/container-tag-manager.js"></script>
-    <script src="/static/js/managers/container-name-badge-manager.js"></script>
-    <script src="/static/js/managers/filter-persistence-manager.js"></script>
-    <script src="/static/js/managers/diagnostics-parser.js"></script>
-    <script src="/static/js/managers/monitoring-stats.js"></script>
-    <script src="/static/js/managers/execute-command.js"></script>
-    <script src="/static/js/managers/health-monitor.js"></script>
-    <script src="/static/js/managers/quick-commands-manager.js"></script>
+    <script src="{{ asset('js/managers/filter-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/container-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/logs-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/console-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/group-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/bulk-operations.js') }}"></script>
+    <script src="{{ asset('js/managers/manager-operations.js') }}"></script>
+    <script src="{{ asset('js/managers/system-info-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/backup-export-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/add-container-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/fullscreen-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/motd-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/container-tag-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/container-name-badge-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/filter-persistence-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/diagnostics-parser.js') }}"></script>
+    <script src="{{ asset('js/managers/monitoring-stats.js') }}"></script>
+    <script src="{{ asset('js/managers/execute-command.js') }}"></script>
+    <script src="{{ asset('js/managers/health-monitor.js') }}"></script>
+    <script src="{{ asset('js/managers/quick-commands-manager.js') }}"></script>
 
     <!-- core operation monitoring -->
-    <script src="/static/js/core/operation-monitor.js"></script>
+    <script src="{{ asset('js/core/operation-monitor.js') }}"></script>
 
     <!-- page-specific initialization and setup -->
-    <script src="/static/js/pages/page-init-dashboard.js"></script>
+    <script src="{{ asset('js/pages/page-init-dashboard.js') }}"></script>
 </body>
 
 </html>

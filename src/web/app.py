@@ -380,14 +380,22 @@ async def startup_event():
     """Startup tasks and initialization"""
     global startup_time
     startup_time = time.time()
-    
+
     from src.web.api.config_mgmt import cleanup_temp_files
     from src.web.core.state import cleanup_old_operations
     from src.web.api.cleanup import cleanup_old_backups
-    
+    from src.web.utils.assets import init_asset_manager
+
     logger.info("=" * 80)
     logger.info("STARTUP SEQUENCE INITIATED")
     logger.info("=" * 80)
+
+    # Initialize asset versioning manager
+    try:
+        asset_manager = init_asset_manager(str(STATIC_DIR))
+        logger.info("✓ Asset versioning initialized")
+    except Exception as e:
+        logger.warning("! Failed to initialize asset manager: %s", str(e))
     
     # Cleanup old temp files
     try:
