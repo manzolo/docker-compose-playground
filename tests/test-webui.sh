@@ -147,24 +147,135 @@ wait_for_api() {
     return 1
 }
 
+wait_for_container_running() {
+    local container_name=$1
+    local max_wait=${2:-60}
+    local elapsed=0
+    local full_name="playground-${container_name}"
+
+    while [ $elapsed -lt "$max_wait" ]; do
+        local stats=$(curl -s "$API_URL/container-stats/$full_name" 2>/dev/null || echo "{}")
+
+        if echo "$stats" | grep -q "cpu"; then
+            return 0
+        fi
+
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+
+    return 1
+}
+
+wait_for_group_running() {
+    local group_name=$1
+    local max_wait=${2:-60}
+
+    # Get group details to extract container list
+    local group_info=$(curl -s "$API_URL/groups/$group_name")
+
+    if ! echo "$group_info" | grep -q "containers"; then
+        log_error "Could not retrieve group info for $group_name"
+        return 1
+    fi
+
+    # Extract container names from JSON (basic parsing)
+    # Assumes format: "containers":[{"name":"container1",...},{"name":"container2",...}]
+    local containers=$(echo "$group_info" | grep -o '"name":"[^"]*"' | grep -v "$group_name" | cut -d'"' -f4)
+
+    if [ -z "$containers" ]; then
+        log_error "No containers found in group $group_name"
+        return 1
+    fi
+
+    local total_containers=$(echo "$containers" | wc -l)
+    local verified=0
+
+    echo "  → Verifying $total_containers containers in $group_name..."
+
+    # Verify each container
+    for container in $containers; do
+        echo -n "    • $container: "
+        if wait_for_container_running "$container" "$max_wait"; then
+            echo "✓ running"
+            verified=$((verified + 1))
+        else
+            echo "✗ timeout"
+        fi
+    done
+
+    echo "  → Result: $verified/$total_containers containers running"
+
+    if [ "$verified" -eq "$total_containers" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 wait_for_container_stop() {
     local container_name=$1
     local max_wait=${2:-30}
     local elapsed=0
     local full_name="playground-${container_name}"
-    
+
     while [ $elapsed -lt "$max_wait" ]; do
         local stats=$(curl -s "$API_URL/container-stats/$full_name" 2>/dev/null || echo "{}")
-        
+
         if echo "$stats" | grep -q "not found\|error\|detail" || [ -z "$stats" ]; then
             return 0
         fi
-        
+
         sleep 2
         elapsed=$((elapsed + 2))
     done
-    
+
     return 1
+}
+
+wait_for_group_stopped() {
+    local group_name=$1
+    local max_wait=${2:-30}
+
+    # Get group details to extract container list
+    local group_info=$(curl -s "$API_URL/groups/$group_name")
+
+    if ! echo "$group_info" | grep -q "containers"; then
+        log_error "Could not retrieve group info for $group_name"
+        return 1
+    fi
+
+    # Extract container names from JSON
+    local containers=$(echo "$group_info" | grep -o '"name":"[^"]*"' | grep -v "$group_name" | cut -d'"' -f4)
+
+    if [ -z "$containers" ]; then
+        log_error "No containers found in group $group_name"
+        return 1
+    fi
+
+    local total_containers=$(echo "$containers" | wc -l)
+    local stopped=0
+
+    echo "  → Verifying $total_containers containers stopped in $group_name..."
+
+    # Verify each container is stopped
+    for container in $containers; do
+        echo -n "    • $container: "
+        if wait_for_container_stop "$container" "$max_wait"; then
+            echo "✓ stopped"
+            stopped=$((stopped + 1))
+        else
+            echo "✗ timeout"
+        fi
+    done
+
+    echo "  → Result: $stopped/$total_containers containers stopped"
+
+    if [ "$stopped" -eq "$total_containers" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # ============================================================================
@@ -299,15 +410,12 @@ run_phase_3() {
     else
         log_warning "Group start unclear"
     fi
-    
-    sleep 10
-    
-    print_test "Verify group containers are running"
-    local stats=$(curl -s "$API_URL/container-stats/playground-elasticsearch-stack")
-    if echo "$stats" | grep -q "cpu"; then
-        log_success "Group container verified running"
+
+    print_test "Verify ALL group containers are running - retry up to 60 sec per container"
+    if wait_for_group_running "ELK-Stack" 60; then
+        log_success "All group containers verified running"
     else
-        log_warning "Could not verify group containers"
+        log_warning "Some group containers failed to start"
     fi
     
     print_test "Stop group: ELK-Stack"
@@ -318,18 +426,12 @@ run_phase_3() {
         log_warning "Group stop unclear"
     fi
     
-    print_test "Verify group containers are stopped - retry up to 30 sec"
-    local stopped=0
-    for container in elasticsearch-stack kibana-stack; do
-        if wait_for_container_stop "$container" 30; then
-            log_success "Group container confirmed stopped ($container)"
-            stopped=$((stopped + 1))
-        else
-            log_warning "Container stop not verified ($container)"
-        fi
-    done
-    
-    sleep 2
+    print_test "Verify ALL group containers are stopped - retry up to 30 sec per container"
+    if wait_for_group_stopped "ELK-Stack" 30; then
+        log_success "All group containers verified stopped"
+    else
+        log_warning "Some group containers failed to stop"
+    fi
 }
 
 # ============================================================================
