@@ -9,6 +9,7 @@ import time
 
 from typing import List, Dict, Any
 
+from src.web.api.cleanup import cleanup_old_backups
 from src.web.core.config import load_config
 from src.web.core.docker import (
     docker_client, ensure_network, SHARED_DIR, NETWORK_NAME,
