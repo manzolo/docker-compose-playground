@@ -9,6 +9,10 @@ const ConsoleManager = {
     webglAddon: null,
     resizeHandler: null, // Track resize handler per cleanup
     container: null, // Track current container
+    messageBuffer: [], // Buffer for batching writes
+    bufferTimer: null, // Timer for flushing buffer
+    lastScrollCheck: 0, // Throttle scroll checks
+    isAtBottom: true, // Track scroll position
 
     /**
      * Open console
@@ -165,23 +169,14 @@ const ConsoleManager = {
 
         const onMessage = (event) => {
             let data = event.data;
-            
-            // Scarta i messaggi di ridimensionamento
+
+            // Discard resize messages
             if (data.startsWith('{"type":"resize"')) {
                 return;
             }
-            
-            data = data.replace(/\r?\n/g, '\r\n');
-            this.term.write(data);
-            this.scrollToBottomIfAtBottom();
-            
-            if (Math.random() < 0.1) {
-                setTimeout(() => {
-                    if (this.term) {
-                        this.term.refresh(0, this.term.rows - 1);
-                    }
-                }, 10);
-            }
+
+            // Add to buffer for batched processing
+            this.addToBuffer(data);
         };
 
         const onError = (error) => {
@@ -227,23 +222,62 @@ const ConsoleManager = {
     },
 
     /**
-     * Scroll to bottom if at bottom
+     * Add message to buffer for batched writing (improves performance)
      */
-    scrollToBottomIfAtBottom() {
+    addToBuffer(data) {
+        this.messageBuffer.push(data);
+
+        // Clear existing timer
+        if (this.bufferTimer) {
+            clearTimeout(this.bufferTimer);
+        }
+
+        // Flush immediately if buffer is large, otherwise wait a bit for more messages
+        if (this.messageBuffer.length >= 10) {
+            this.flushBuffer();
+        } else {
+            this.bufferTimer = setTimeout(() => this.flushBuffer(), 16); // ~60fps
+        }
+    },
+
+    /**
+     * Flush buffered messages to terminal
+     */
+    flushBuffer() {
+        if (!this.term || this.messageBuffer.length === 0) return;
+
+        // Join all buffered messages
+        const data = this.messageBuffer.join('');
+        this.messageBuffer = [];
+        this.bufferTimer = null;
+
+        // Write to terminal (xterm.js handles newlines correctly)
+        this.term.write(data);
+
+        // Throttled scroll check (max once per 100ms)
+        const now = Date.now();
+        if (now - this.lastScrollCheck > 100) {
+            this.lastScrollCheck = now;
+            this.checkAndScroll();
+        }
+    },
+
+    /**
+     * Check scroll position and scroll to bottom if needed
+     */
+    checkAndScroll() {
         if (!this.term) return;
 
         const viewport = DOM.query('.xterm-viewport');
         if (!viewport) return;
 
-        const isAtBottom = (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) < 10;
+        // Check if user is at bottom
+        const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+        this.isAtBottom = distanceFromBottom < 50;
 
-        if (isAtBottom) {
+        // Auto-scroll if at bottom
+        if (this.isAtBottom) {
             this.term.scrollToBottom();
-            setTimeout(() => {
-                if (this.term) {
-                    this.term.refresh(0, this.term.rows - 1);
-                }
-            }, 0);
         }
     },
 
@@ -251,6 +285,15 @@ const ConsoleManager = {
      * Close console - with proper cleanup
      */
     close() {
+        // Flush any remaining buffered messages
+        if (this.bufferTimer) {
+            clearTimeout(this.bufferTimer);
+            this.bufferTimer = null;
+        }
+        if (this.messageBuffer.length > 0) {
+            this.flushBuffer();
+        }
+
         // Chiudi WebSocket
         if (this.ws) {
             this.ws.onopen = null;
