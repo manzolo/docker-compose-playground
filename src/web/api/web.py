@@ -17,8 +17,12 @@ logger = logging.getLogger("uvicorn")
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# Registra i filtri Jinja2
+# Register Jinja2 filters
 templates.env.filters['motd_to_html'] = motd_to_html
+
+# Register asset versioning function
+from src.web.utils.assets import asset_url
+templates.env.globals['asset'] = asset_url
 
 
 
