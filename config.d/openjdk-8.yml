@@ -5,12 +5,20 @@ images:
     image: openjdk:8
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \       Openjdk 8 Development Environment                      ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F680 Quick Start:\n   java -version                            # Check\
-      \ version\n   javac HelloWorld.java                    # Compile\n   java HelloWorld\
-      \                          # Run\n\n\U0001F527 Development Tools:\n   jshell\
-      \                                   # Interactive REPL\n   jar cf app.jar files/\
-      \                    # Create JAR\n   java -jar app.jar                    \
-      \    # Run JAR\n\n\U0001F4A1 Workspace: /shared/projects/\n\U0001F4DA Docs:\
-      \ https://docs.oracle.com/javase/"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Openjdk 8 Development Environment                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Start:
+         java -version                            # Check version
+         javac HelloWorld.java                    # Compile
+         java HelloWorld                          # Run
+
+      🔧 Development Tools:
+         jshell                                   # Interactive REPL
+         jar cf app.jar files/                    # Create JAR
+         java -jar app.jar                        # Run JAR
+
+      💡 Workspace: /shared/projects/
+      📚 Docs: https://docs.oracle.com/javase/

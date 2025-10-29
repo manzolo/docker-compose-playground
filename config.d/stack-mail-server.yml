@@ -94,7 +94,7 @@ images:
           docker exec "${CONTAINER_NAME}" /tmp/${CONTAINER_NAME}-init.sh
           #docker restart "${CONTAINER_NAME}"
           echo "✓ Dovecot IMAP/POP3 configured and started"
-          
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║          Dovecot IMAP/POP3 Server - Mail Stack              ║
@@ -109,11 +109,11 @@ images:
          Port 25: SMTP (plain)
          Port 587: Submission (TLS/STARTTLS)
          Port 465: SMTPS (implicit TLS)
-      
+
       🔐 Configuration:
          Hostname: mail.example.com
          Database: mailserver on mysql-mail-stack
-      
+
       👤 Default Accounts:
          admin@localhost.local / admin123
          user1@localhost.local / user123
@@ -153,7 +153,7 @@ images:
       🛡️  Spam Protection:
          Spamd Port: 783 (TCP)
          Threshold: 5.0 points
-      
+
       📊 Features Enabled:
          ✓ Bayes Filter
          ✓ Auto-learn
@@ -204,19 +204,19 @@ images:
       🌐 Webmail Access:
          Dashboard: http://localhost:8082/
          Roundcube: http://localhost:8082/roundcube/
-      
+
       👤 Test Accounts:
          admin@localhost.local / admin123
          user1@localhost.local / user123
-      
+
       🔧 Backend Services:
          IMAP: dovecot-postfix-mail-stack:143
          SMTP: dovecot-postfix-mail-stack:25
          Database: mysql-mail-stack:3310
-      
+
       📄 Debug:
          cat /var/www/html/roundcube/logs/errors.log
          
 
-      
+
       ✅ Status: Running

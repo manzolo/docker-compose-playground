@@ -3,7 +3,7 @@ group:
   name: "MySQL-Stack"
   description: "MySQL 8 database with phpmyadmin-stack web interface"
   category: database
-  containers: 
+  containers:
     - mysql-8-stack
     - phpmyadmin-stack
 
@@ -26,19 +26,19 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║                MySQL 8 Database Server                       ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🔐 Connection:
          Host: mysql-8-stack or localhost
          Port: 3306
          User: root / playground
          Password: playground
          Database: playground
-      
+
       📊 Quick Commands:
          mysql -u root -pplayground playground
          SHOW TABLES;
          SELECT * FROM users;
-      
+
       🌐 phpmyadmin-stack: http://localhost:8088
 
   phpmyadmin-stack:
@@ -59,8 +59,8 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║              phpmyadmin-stack - Web Interface                     ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🌐 Access: http://localhost:8088
       🔐 Auto-login: Enabled (root user)
-      
+
       💡 Just open the URL - no login required!

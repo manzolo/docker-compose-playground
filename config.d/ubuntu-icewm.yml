@@ -12,24 +12,24 @@ images:
       - PGID=1000
       - TZ=UTC
     shm_size: 2g
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║ Ubuntu 24.04 + IceWM Window Manager - RDP                   ║
       ║ Source: linuxserver/rdesktop:ubuntu-icewm                   ║
       ║ Ephemeral Container (Resets on restart)                     ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       📋 CONNECTION INFO
       ─────────────────────────────────────────────────────────────
       🌐 Address:  localhost:3396
       👤 Username: abc
       🔑 Password: abc
-      
+
       📍 From host machine:
          • Remmina: localhost:3396
          • Windows RDP Client: localhost:3396
          • FreeRDP: xfreerdp /v:localhost:3396 /u:abc /p:abc
-      
+
       ⚙️  FEATURES
       ─────────────────────────────────────────────────────────────
       ✓ IceWM Window Manager (Retro & Lightweight)
@@ -38,19 +38,19 @@ images:
       ✓ Pre-configured RDP (xvfb-run + openbox)
       ✓ Persistent package installation during session
       ✓ Classic desktop experience
-      
+
       ⚠️  IMPORTANT
       ─────────────────────────────────────────────────────────────
       • Data is EPHEMERAL - everything resets on container restart
       • To persist changes: use volumes or rebuild the image
       • Run 'apt-get update && apt-get install' for extra packages
-      
+
       💡 TIPS
       ─────────────────────────────────────────────────────────────
       • IceWM is extremely lightweight - perfect for slow connections
       • For better performance: increase resolution in RDP client
       • Default resolution: 1280x720 (configurable via env vars)
       • Port 3396 maps to container's 3389 (RDP standard port)
-      
+
       🚀 READY TO USE - Connect now!
       ╚══════════════════════════════════════════════════════════════╝

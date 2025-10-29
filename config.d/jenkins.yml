@@ -16,7 +16,7 @@ images:
         name: jenkins_home
         path: /var/jenkins_home
 
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║            Jenkins LTS - CI/CD Automation Server             ║
@@ -29,7 +29,7 @@ images:
       🔐  Initial Setup:
         1. Open http://localhost:8080
         2. Get admin password:
-           cat /var/jenkins_home/secrets/initialAdminPassword
+         cat /var/jenkins_home/secrets/initialAdminPassword
         3. Follow setup wizard → Install suggested plugins
 
       📁  Important Directories:
@@ -59,8 +59,8 @@ images:
       🔧  Common Tasks:
         # Create job from CLI
         curl -X POST http://localhost:8080/createItem \
-          -H "Content-Type: application/xml" \
-          -d @job-config.xml -u admin:PASSWORD
+         -H "Content-Type: application/xml" \
+         -d @job-config.xml -u admin:PASSWORD
 
       🚀  Next Steps:
         1. Connect to Git repo (GitHub, GitLab, Gitea)

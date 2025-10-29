@@ -5,17 +5,28 @@ images:
     image: debian:9
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \        Debian 9 Quick Reference                            ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F4E6 Package Manager (apt):\n   apt update                         \
-      \      # Update package index\n   apt install package_name                 #\
-      \ Install package\n   apt remove package_name                  # Remove package\n\
-      \   apt search package_name                  # Search for package\n   apt list\
-      \ --installed                     # List installed packages\n\n\U0001F527 System\
-      \ Information:\n   uname -a                                 # Kernel and system\
-      \ info\n   cat /etc/debian_version                  # Debian version\n   cat\
-      \ /etc/os-release                      # Distribution details\n   df -h    \
-      \                                # Disk usage\n   free -h                  \
-      \                # Memory usage\n\n\U0001F4A1 Tips:\n   • Use apt-get for scripts,\
-      \ apt for interactive use\n   • Common packages: curl, wget, git, vim\n   •\
-      \ Use /shared for persistent files\n\n\U0001F4DA Documentation: https://www.debian.org/doc/"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Debian 9 Quick Reference                            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (apt):
+         apt update                               # Update package index
+         apt install package_name                 # Install package
+         apt remove package_name                  # Remove package
+         apt search package_name                  # Search for package
+         apt list --installed                     # List installed packages
+
+      🔧 System Information:
+         uname -a                                 # Kernel and system info
+         cat /etc/debian_version                  # Debian version
+         cat /etc/os-release                      # Distribution details
+         df -h                                    # Disk usage
+         free -h                                  # Memory usage
+
+      💡 Tips:
+         • Use apt-get for scripts, apt for interactive use
+         • Common packages: curl, wget, git, vim
+         • Use /shared for persistent files
+
+      📚 Documentation: https://www.debian.org/doc/

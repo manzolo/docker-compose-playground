@@ -3,7 +3,7 @@ group:
   name: "Node-Express-Mongo-Stack"
   description: "Node.js with Express application and MongoDB database"
   category: programming
-  containers: 
+  containers:
     - mongodb-stack
     - node-express-stack
 
@@ -24,13 +24,13 @@ images:
     volumes:
       - name: mongodb-data
         path: /data/db
-        type: named    
+        type: named
     scripts:
       post_start:
         inline: |
           #!/bin/bash
           echo "Initializing MongoDB..."
-          
+
           # Wait for MongoDB
           MAX_WAIT=60
           COUNT=0
@@ -42,7 +42,7 @@ images:
             sleep 2
             COUNT=$((COUNT + 2))
           done
-          
+
           # Insert sample data
           docker exec "${CONTAINER_NAME}" mongosh -u playground -p playground --authenticationDatabase admin --eval "
           db = db.getSiblingDB('playground');
@@ -73,46 +73,46 @@ images:
           db.orders.createIndex({ userId: 1 });
           print('✓ Sample data inserted');
           "
-          
+
           echo "✓ MongoDB initialized"
-      
+
       pre_stop:
         inline: |
           #!/bin/bash
           BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
           mkdir -p "${BACKUP_DIR}"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
+
           docker exec "${CONTAINER_NAME}" mongodump -u playground -p playground --authenticationDatabase admin --db playground --out /tmp/dump
           docker cp "${CONTAINER_NAME}:/tmp/dump" "${BACKUP_DIR}/mongo_${TIMESTAMP}"
           tar -czf "${BACKUP_DIR}/mongo_${TIMESTAMP}.tar.gz" -C "${BACKUP_DIR}" "mongo_${TIMESTAMP}"
           rm -rf "${BACKUP_DIR}/mongo_${TIMESTAMP}"
           echo "✓ Backup created"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                MongoDB 7 Database Server                     ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🔐  Connection:
         Host: mongodb-stack or localhost
         Port: 27017
         User: playground
         Password: playground
         Auth DB: admin
-      
+
       📊  Collections:
         • users (with role field)
         • products (with quantity tracking)
         • orders (order history)
-      
+
       📊  Quick Commands:
         mongosh -u playground -p playground --authenticationDatabase admin
         use playground
         db.users.find()
         db.products.find()
         show collections
-      
+
       🌐 Node App: http://localhost:3000
 
   node-express-stack:
@@ -132,10 +132,10 @@ images:
         inline: |
           #!/bin/bash
           echo "Setting up Node.js Express application..."
-          
+
           # Create app directory
           docker exec "${CONTAINER_NAME}" mkdir -p /app
-          
+
           # Create package.json
           docker exec "${CONTAINER_NAME}" sh -c 'cat > /app/package.json << "EOF"
           {
@@ -148,10 +148,10 @@ images:
             }
           }
           EOF'
-          
+
           # Install dependencies
           docker exec "${CONTAINER_NAME}" sh -c 'cd /app && npm install --no-audit --no-fund'
-          
+
           # Create HTML file
           docker exec "${CONTAINER_NAME}" sh -c 'cat > /app/index.html << "EOFHTML"
           <!DOCTYPE html>
@@ -183,7 +183,7 @@ images:
           <div class="container">
           <h1>🚀 Node-Express-MongoDB Stack</h1>
           <div class="grid">
-          
+
           <div class="box">
           <h2>👥 Users</h2>
           <button class="btn" onclick="fetchUsers()">List All</button>
@@ -191,7 +191,7 @@ images:
           <button class="btn btn-small" onclick="fetchUsersByRole(&quot;user&quot;)">Users</button>
           <div id="usersResponse" class="response loading">Click a button...</div>
           </div>
-          
+
           <div class="box">
           <h2>📦 Products</h2>
           <button class="btn" onclick="fetchProducts()">List All</button>
@@ -199,7 +199,7 @@ images:
           <button class="btn btn-small" onclick="fetchByCategory()">Categories</button>
           <div id="productsResponse" class="response loading">Click a button...</div>
           </div>
-          
+
           <div class="box">
           <h2>📋 Orders</h2>
           <button class="btn" onclick="fetchOrders()">List All</button>
@@ -207,14 +207,14 @@ images:
           <button class="btn btn-small" onclick="fetchOrdersByStatus(&quot;pending&quot;)">Pending</button>
           <div id="ordersResponse" class="response loading">Click a button...</div>
           </div>
-          
+
           <div class="box">
           <h2>📊 Statistics</h2>
           <button class="btn" onclick="fetchStats()">Load Stats</button>
           <button class="btn btn-small" onclick="fetchProductStats()">Product Stats</button>
           <div id="statsResponse" class="response loading">Click a button...</div>
           </div>
-          
+
           <div class="box">
           <h2>💰 Pricing</h2>
           <button class="btn" onclick="fetchPricingReport()">Price Report</button>
@@ -222,7 +222,7 @@ images:
           <button class="btn btn-small" onclick="fetchCheap()">Under 50</button>
           <div id="pricingResponse" class="response loading">Click a button...</div>
           </div>
-          
+
           <div class="box">
           <h2>🔍 Search</h2>
           <input type="text" id="searchInput" placeholder="Search products..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
@@ -230,10 +230,10 @@ images:
           <button class="btn btn-small" onclick="clearSearch()">Clear</button>
           <div id="searchResponse" class="response loading">Type and search...</div>
           </div>
-          
+
           </div>
           </div>
-          
+
           <script>
           async function fetchUsers() {
             var box = document.getElementById("usersResponse");
@@ -249,7 +249,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchUsersByRole(role) {
             var box = document.getElementById("usersResponse");
             box.className = "response loading";
@@ -264,7 +264,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchProducts() {
             var box = document.getElementById("productsResponse");
             box.className = "response loading";
@@ -279,7 +279,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchInStock() {
             var box = document.getElementById("productsResponse");
             box.className = "response loading";
@@ -294,7 +294,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchByCategory() {
             var box = document.getElementById("productsResponse");
             box.className = "response loading";
@@ -309,7 +309,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchOrders() {
             var box = document.getElementById("ordersResponse");
             box.className = "response loading";
@@ -324,7 +324,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchOrdersByStatus(status) {
             var box = document.getElementById("ordersResponse");
             box.className = "response loading";
@@ -339,7 +339,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchStats() {
             var box = document.getElementById("statsResponse");
             box.className = "response loading";
@@ -354,7 +354,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchProductStats() {
             var box = document.getElementById("statsResponse");
             box.className = "response loading";
@@ -369,7 +369,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchPricingReport() {
             var box = document.getElementById("pricingResponse");
             box.className = "response loading";
@@ -384,7 +384,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchExpensive() {
             var box = document.getElementById("pricingResponse");
             box.className = "response loading";
@@ -399,7 +399,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function fetchCheap() {
             var box = document.getElementById("pricingResponse");
             box.className = "response loading";
@@ -414,7 +414,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function searchProducts() {
             var input = document.getElementById("searchInput").value;
             var box = document.getElementById("searchResponse");
@@ -435,7 +435,7 @@ images:
               box.textContent = "Error: " + err.message;
             }
           }
-          
+
           async function clearSearch() {
             document.getElementById("searchInput").value = "";
             document.getElementById("searchResponse").className = "response loading";
@@ -445,7 +445,7 @@ images:
           </body>
           </html>
           EOFHTML'
-          
+
           # Create server.js
           docker exec "${CONTAINER_NAME}" sh -c 'cat > /app/server.js << "EOFSERVER"
           const express = require("express");
@@ -764,7 +764,7 @@ images:
 
           # Start the server
           docker exec -d "${CONTAINER_NAME}" node /app/server.js
-          
+
           sleep 3
           echo "✓ Node.js Express application started"
           echo "🌐 Application: http://localhost:3000"
@@ -773,9 +773,9 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║                Node.js 20 with Express                       ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🌐 Application: http://localhost:3000
-      
+
       📌 API Endpoints:
         GET  http://localhost:3000/api/users
         POST http://localhost:3000/api/users
@@ -786,7 +786,7 @@ images:
         DELETE http://localhost:3000/api/products/:id
         
         GET http://localhost:3000/api/stats
-      
+
       🔧 Features:
          • Node.js 20
          • Express framework

@@ -5,16 +5,26 @@ images:
     image: python:2.7
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \       Python 2.7 Development Environment                      ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F4E6 Package Manager (pip):\n   pip install package_name           \
-      \      # Install package\n   pip install -r requirements.txt          # Install\
-      \ from file\n   pip list                                 # List installed packages\n\
-      \   pip freeze > /shared/requirements.txt    # Save dependencies\n\n\U0001F680\
-      \ Quick Start:\n   python3                                  # Interactive REPL\n\
-      \   python3 script.py                        # Run a script\n   python3 -m venv\
-      \ /shared/myenv            # Create virtual environment\n\n\U0001F527 Development\
-      \ Tools:\n   python3 --version                        # Check version\n   pip\
-      \ install ipython jupyter              # Better REPL & notebooks\n   pip install\
-      \ pytest                       # Testing framework\n\n\U0001F4A1 Workspace:\
-      \ /shared/projects/\n\U0001F4DA Docs: https://docs.python.org/"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Python 2.7 Development Environment                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (pip):
+         pip install package_name                 # Install package
+         pip install -r requirements.txt          # Install from file
+         pip list                                 # List installed packages
+         pip freeze > /shared/requirements.txt    # Save dependencies
+
+      🚀 Quick Start:
+         python3                                  # Interactive REPL
+         python3 script.py                        # Run a script
+         python3 -m venv /shared/myenv            # Create virtual environment
+
+      🔧 Development Tools:
+         python3 --version                        # Check version
+         pip install ipython jupyter              # Better REPL & notebooks
+         pip install pytest                       # Testing framework
+
+      💡 Workspace: /shared/projects/
+      📚 Docs: https://docs.python.org/

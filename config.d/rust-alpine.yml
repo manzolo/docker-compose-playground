@@ -5,13 +5,21 @@ images:
     image: rust:alpine
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \       Rust Alpine Development Environment                      ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F4E6 Package Manager (cargo):\n   cargo new project_name           \
-      \        # Create new project\n   cargo build                              #\
-      \ Build project\n   cargo run                                # Run project\n\
-      \   cargo test                               # Run tests\n\n\U0001F527 Development\
-      \ Tools:\n   rustc --version                          # Check version\n   cargo\
-      \ fmt                                # Format code\n   cargo clippy        \
-      \                     # Linter\n\n\U0001F4A1 Workspace: /shared/projects/\n\U0001F4DA\
-      \ Docs: https://doc.rust-lang.org/"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Rust Alpine Development Environment                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (cargo):
+         cargo new project_name                   # Create new project
+         cargo build                              # Build project
+         cargo run                                # Run project
+         cargo test                               # Run tests
+
+      🔧 Development Tools:
+         rustc --version                          # Check version
+         cargo fmt                                # Format code
+         cargo clippy                             # Linter
+
+      💡 Workspace: /shared/projects/
+      📚 Docs: https://doc.rust-lang.org/

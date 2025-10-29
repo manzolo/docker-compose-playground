@@ -3,7 +3,7 @@ group:
   name: "RabbitMQ-Stack"
   description: "RabbitMQ message broker with Management web interface"
   category: message_queue
-  containers: 
+  containers:
     - rabbitmq-server
     - rabbitmq-management
 
@@ -34,35 +34,35 @@ images:
       post_start:
         inline: |
           #!/bin/sh
-          
+
           echo "Initializing RabbitMQ..."
-          
+
           CONTAINER="${CONTAINER_NAME}"
-          
+
           # Wait a bit for RabbitMQ to start
           sleep 10
-          
+
           # Enable management plugin (non-critical)
           echo "Enabling management plugin..."
           docker exec "${CONTAINER}" rabbitmq-plugins enable rabbitmq_management 2>/dev/null || true
-          
+
           sleep 3
-          
+
           # Create app user (non-critical)
           echo "Creating app user..."
           docker exec "${CONTAINER}" rabbitmqctl add_user app_user app_pass123 2>/dev/null || true
           docker exec "${CONTAINER}" rabbitmqctl set_permissions -p / app_user ".*" ".*" ".*" 2>/dev/null || true
-          
+
           echo "✓ RabbitMQ initialization completed"
           exit 0
-      
+
       pre_stop:
         inline: |
           #!/bin/sh
           echo "Stopping RabbitMQ gracefully..."
           docker exec "${CONTAINER_NAME}" rabbitmqctl stop_app 2>/dev/null || true
           sleep 2
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║              RabbitMQ 3.13 Message Broker                    ║
@@ -120,10 +120,10 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║         RabbitMQ Management - Info Container                ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🌐  Dashboard: http://localhost:15672
         User: admin
         Password: admin123
-      
+
       🔍 This is a helper container with CLI tools
       Connect to rabbitmq-server for AMQP connections

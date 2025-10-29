@@ -5,16 +5,27 @@ images:
     image: ubuntu:20.04
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \        Ubuntu 20 Quick Reference                            ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F4E6 Package Manager (apt):\n   apt update                         \
-      \      # Update package index\n   apt install package_name                 #\
-      \ Install package\n   apt remove package_name                  # Remove package\n\
-      \   apt search package_name                  # Search for package\n   apt list\
-      \ --installed                     # List installed packages\n\n\U0001F527 System\
-      \ Information:\n   uname -a                                 # Kernel and system\
-      \ info\n   lsb_release -a                           # Ubuntu version\n   df\
-      \ -h                                    # Disk usage\n   free -h           \
-      \                       # Memory usage\n\n\U0001F4A1 Tips:\n   • Ubuntu is Debian-based\n\
-      \   • Use /shared for persistent files\n   • Common packages: build-essential,\
-      \ git, curl\n\n\U0001F4DA Documentation: https://ubuntu.com/server/docs"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Ubuntu 20 Quick Reference                            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (apt):
+         apt update                               # Update package index
+         apt install package_name                 # Install package
+         apt remove package_name                  # Remove package
+         apt search package_name                  # Search for package
+         apt list --installed                     # List installed packages
+
+      🔧 System Information:
+         uname -a                                 # Kernel and system info
+         lsb_release -a                           # Ubuntu version
+         df -h                                    # Disk usage
+         free -h                                  # Memory usage
+
+      💡 Tips:
+         • Ubuntu is Debian-based
+         • Use /shared for persistent files
+         • Common packages: build-essential, git, curl
+
+      📚 Documentation: https://ubuntu.com/server/docs

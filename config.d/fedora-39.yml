@@ -5,16 +5,27 @@ images:
     image: fedora:39
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
-    motd: "╔══════════════════════════════════════════════════════════════╗\n║   \
-      \        Fedora 39 Quick Reference                            ║\n╚══════════════════════════════════════════════════════════════╝\n\
-      \n\U0001F4E6 Package Manager (dnf):\n   dnf install package_name           \
-      \      # Install package\n   dnf remove package_name                  # Remove\
-      \ package\n   dnf search package_name                  # Search for package\n\
-      \   dnf list installed                       # List installed packages\n   dnf\
-      \ update                               # Update all packages\n\n\U0001F527 System\
-      \ Information:\n   uname -a                                 # Kernel and system\
-      \ info\n   cat /etc/fedora-release                  # Fedora version\n   df\
-      \ -h                                    # Disk usage\n   free -h           \
-      \                       # Memory usage\n\n\U0001F4A1 Tips:\n   • Fedora uses\
-      \ dnf (next-gen yum)\n   • Use /shared for persistent files\n   • Bleeding edge\
-      \ packages\n\n\U0001F4DA Documentation: https://docs.fedoraproject.org/"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Fedora 39 Quick Reference                            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (dnf):
+         dnf install package_name                 # Install package
+         dnf remove package_name                  # Remove package
+         dnf search package_name                  # Search for package
+         dnf list installed                       # List installed packages
+         dnf update                               # Update all packages
+
+      🔧 System Information:
+         uname -a                                 # Kernel and system info
+         cat /etc/fedora-release                  # Fedora version
+         df -h                                    # Disk usage
+         free -h                                  # Memory usage
+
+      💡 Tips:
+         • Fedora uses dnf (next-gen yum)
+         • Use /shared for persistent files
+         • Bleeding edge packages
+
+      📚 Documentation: https://docs.fedoraproject.org/

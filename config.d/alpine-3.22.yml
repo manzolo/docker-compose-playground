@@ -5,7 +5,7 @@ images:
     image: alpine:3.22
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║           Alpine Linux 3.22 Quick Reference                  ║
       ╚══════════════════════════════════════════════════════════════╝

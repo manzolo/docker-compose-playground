@@ -7,7 +7,7 @@ images:
     shell: /bin/bash
     scripts:
       post_start: python_init.sh
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║          Python 3.12 Development Environment                 ║
       ╚══════════════════════════════════════════════════════════════╝
