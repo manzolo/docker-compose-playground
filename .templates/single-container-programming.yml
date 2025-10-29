@@ -1,0 +1,58 @@
+# Template: Programming Language Container
+# Use this template for: Python, Node.js, Java, Go, Rust, etc.
+
+images:
+  CONTAINER_NAME:
+    category: programming
+    description: LANGUAGE_NAME VERSION - Brief description
+    image: DOCKER_IMAGE:TAG
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    scripts:
+      post_start: LANGUAGE_init.sh    # Optional: install common packages
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║         LANGUAGE_NAME VERSION Development Environment        ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (PACKAGE_MANAGER):
+         INSTALL_CMD package_name                 # Install package
+         INSTALL_FILE_CMD                         # Install from file
+         LIST_CMD                                 # List installed packages
+         SEARCH_CMD package_name                  # Search for package
+         UNINSTALL_CMD package_name               # Uninstall package
+         SAVE_CMD > /shared/dependencies.txt      # Save dependencies
+
+      🚀 Quick Start:
+         REPL_CMD                                 # Interactive REPL
+         RUN_CMD script.EXT                       # Run a script
+         COMPILE_CMD                              # Compile (if applicable)
+
+      🔧 Development Tools:
+         VERSION_CMD                              # Check version
+         FORMATTER_CMD                            # Code formatter
+         LINTER_CMD                               # Code linter
+         DEBUGGER_CMD                             # Debugger
+         TEST_CMD                                 # Run tests
+
+      📝 Hello World Example:
+         HELLO_WORLD_CODE
+
+      🏗️  Project Structure:
+         /shared/projects/                        # Your projects here
+         /shared/libs/                            # Shared libraries
+         /shared/scripts/                         # Utility scripts
+
+      💡 Tips:
+         • Keep your code in /shared/projects/ for persistence
+         • Use version control (git) for your projects
+         • Install packages globally or use virtual environments
+         • Check LANGUAGE docs for best practices
+
+      🔗 Common Packages:
+         POPULAR_PACKAGE_1                        # Description
+         POPULAR_PACKAGE_2                        # Description
+         POPULAR_PACKAGE_3                        # Description
+
+      📚 Documentation: DOCS_URL
+      🎓 Tutorial: TUTORIAL_URL

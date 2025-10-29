@@ -4,7 +4,7 @@ images:
     description: Alpine Linux 3.19 (Lightweight - 5MB)
     image: alpine:3.19
     keep_alive_cmd: sleep infinity
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                 Alpine Linux Quick Reference                  ║
       ╚══════════════════════════════════════════════════════════════╝

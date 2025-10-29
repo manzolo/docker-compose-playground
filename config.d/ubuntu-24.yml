@@ -5,7 +5,7 @@ images:
     keep_alive_cmd: sleep infinity
     description: Ubuntu 24.04 LTS (Noble Numbat) - Latest LTS
     category: linux
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                Ubuntu 24.04 Quick Reference                  ║
       ╚══════════════════════════════════════════════════════════════╝

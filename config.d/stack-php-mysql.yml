@@ -1,14 +1,14 @@
-# Metadati del gruppo
+# Group metadata
 group:
   name: "PHP-MySQL-Stack"
   description: "PHP application with MySQL 8 database and phpMyAdmin web interface"
   category: programming
-  containers: 
+  containers:
     - mysql-8-stack
     - php-apache-stack
     - phpmyadmin-stack
 
-# Configurazioni dei container
+# Container configurations
 images:
   mysql-8-stack:
     category: database
@@ -28,7 +28,7 @@ images:
         inline: |
           #!/bin/bash
           echo "Initializing MySQL..."
-          
+
           # Wait for MySQL
           MAX_WAIT=60
           COUNT=0
@@ -40,9 +40,9 @@ images:
             sleep 2
             COUNT=$((COUNT + 2))
           done
-          
+
           sleep 5
-          
+
           # Create tables and insert data
           docker exec "${CONTAINER_NAME}" mysql -u root -pplayground playground -e "
           CREATE TABLE IF NOT EXISTS users (
@@ -51,14 +51,14 @@ images:
               email VARCHAR(100),
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
-          
+
           CREATE TABLE IF NOT EXISTS products (
               id INT AUTO_INCREMENT PRIMARY KEY,
               name VARCHAR(100) NOT NULL,
               price DECIMAL(10,2),
               category VARCHAR(50)
           );
-          
+
           CREATE TABLE IF NOT EXISTS posts (
               id INT AUTO_INCREMENT PRIMARY KEY,
               title VARCHAR(255) NOT NULL,
@@ -67,52 +67,52 @@ images:
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (user_id) REFERENCES users(id)
           );
-          
+
           INSERT IGNORE INTO users (id, username, email) VALUES 
             (1, 'admin', 'admin@playground.local'),
             (2, 'user1', 'user1@example.com'),
             (3, 'php_user', 'php@example.com');
-          
+
           INSERT IGNORE INTO products (id, name, price, category) VALUES 
             (1, 'Laptop', 999.99, 'Electronics'),
             (2, 'Mouse', 29.99, 'Electronics'),
             (3, 'Keyboard', 79.99, 'Electronics');
-          
+
           INSERT IGNORE INTO posts (id, title, content, user_id) VALUES 
             (1, 'Welcome to PHP Stack', 'This is a sample post from PHP application.', 1),
             (2, 'Database Connected', 'PHP is successfully connected to MySQL database.', 3);
           " 2>/dev/null
-          
+
           echo "✓ MySQL initialized with PHP-ready database"
-      
+
       pre_stop:
         inline: |
           #!/bin/bash
           BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
           mkdir -p "${BACKUP_DIR}"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          
+
           docker exec "${CONTAINER_NAME}" mysqldump -u root -pplayground playground > "${BACKUP_DIR}/mysql_${TIMESTAMP}.sql" 2>/dev/null
           gzip "${BACKUP_DIR}/mysql_${TIMESTAMP}.sql"
           echo "✓ Backup created"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                MySQL 8 Database Server                       ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🔐 Connection:
          Host: mysql-8-stack or localhost
          Port: 3306
          User: root / playground
          Password: playground
          Database: playground
-      
+
       📊 Quick Commands:
          mysql -u root -pplayground playground
          SHOW TABLES;
          SELECT * FROM users;
-      
+
       🌐 phpMyAdmin: http://localhost:8088
       🌐 PHP Application: http://localhost:8080
 
@@ -134,17 +134,17 @@ images:
         inline: |
           #!/bin/bash
           echo "Setting up PHP application..."
-          
+
           # Create necessary directories
           docker exec "${CONTAINER_NAME}" mkdir -p /var/www/html/api
-          
+
           # Check available MySQL extensions
           echo "Checking MySQL extensions..."
           docker exec "${CONTAINER_NAME}" php -m | grep -i mysql
-          
+
           # Deploy application files
           echo "Deploying PHP application..."
-          
+
           # Create main application file
           docker exec "${CONTAINER_NAME}" sh -c 'cat > /var/www/html/index.php << "EOF"
           <!DOCTYPE html>
@@ -278,10 +278,10 @@ images:
           </body>
           </html>
           EOF'
-          
+
           # Create phpinfo
           docker exec "${CONTAINER_NAME}" sh -c 'echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php'
-          
+
           # Create health endpoint
           docker exec "${CONTAINER_NAME}" sh -c 'cat > /var/www/html/api/health.php << "EOF"
           <?php
@@ -292,21 +292,21 @@ images:
               "status" => "operational",
               "components" => []
           ];
-          
+
           $status["components"]["php"] = [
               "version" => phpversion(),
               "status" => "operational"
           ];
-          
+
           $pdo_mysql = extension_loaded("pdo_mysql");
           $mysqli = extension_loaded("mysqli");
-          
+
           $status["components"]["mysql_extensions"] = [
               "pdo_mysql" => $pdo_mysql,
               "mysqli" => $mysqli,
               "status" => ($pdo_mysql && $mysqli) ? "operational" : "degraded"
           ];
-          
+
           if ($pdo_mysql) {
               $host = getenv("MYSQL_HOST") ?: "mysql-8-stack";
               $dbname = getenv("MYSQL_DATABASE") ?: "playground";
@@ -336,11 +336,11 @@ images:
               ];
               $status["status"] = "degraded";
           }
-          
+
           echo json_encode($status, JSON_PRETTY_PRINT);
           ?>
           EOF'
-          
+
           # Create users API
           docker exec "${CONTAINER_NAME}" sh -c 'cat > /var/www/html/api/users.php << "EOF"
           <?php
@@ -349,9 +349,9 @@ images:
           $dbname = getenv("MYSQL_DATABASE") ?: "playground";
           $username = getenv("MYSQL_USER") ?: "playground";
           $password = getenv("MYSQL_PASSWORD") ?: "playground";
-          
+
           $response = ["success" => false, "data" => []];
-          
+
           if (extension_loaded("pdo_mysql")) {
               try {
                   $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
@@ -369,7 +369,7 @@ images:
           } else {
               $response["error"] = "PDO MySQL extension not available";
           }
-          
+
           echo json_encode($response, JSON_PRETTY_PRINT);
           ?>
           EOF'
@@ -377,23 +377,23 @@ images:
           docker exec playground-php-apache-stack docker-php-ext-install mysqli pdo_mysql
           docker exec playground-php-apache-stack docker-php-ext-enable mysqli pdo_mysql
           docker restart playground-php-apache-stack
-          
+
           echo "✓ PHP application deployed successfully"
           echo "🌐 Application: http://localhost:8080"
           echo "ℹ️  PHP Info: http://localhost:8080/phpinfo.php"
           echo "🔌 API: http://localhost:8080/api/users.php"
           echo "❤️  Health: http://localhost:8080/api/health.php"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                PHP 8.3 with Apache                          ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🌐 Application: http://localhost:8080
       ℹ️  PHP Info: http://localhost:8080/phpinfo.php
       📊 API: http://localhost:8080/api/users.php
       ❤️  Health: http://localhost:8080/api/health.php
-      
+
       🔧 Features:
          • PHP 8.3 with Apache
          • MySQL Native Driver (mysqlnd)
@@ -421,7 +421,7 @@ images:
           #!/bin/bash
           echo "Configuring phpMyAdmin auto-login..."
           sleep 5
-          
+
           docker exec "${CONTAINER_NAME}" sh -c '
           cat > /etc/phpmyadmin/config.user.inc.php << "EOF"
           <?php
@@ -434,13 +434,13 @@ images:
           ?>
           EOF
           '
-          
+
           echo "✓ phpMyAdmin ready at http://localhost:8088"
-    
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║              phpMyAdmin - Web Interface                     ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🌐 Access: http://localhost:8088
       🔐 Auto-login: Enabled (root/playground)

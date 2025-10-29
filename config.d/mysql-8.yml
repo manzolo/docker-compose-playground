@@ -5,21 +5,20 @@ images:
     keep_alive_cmd: mysqld
     description: "MySQL 8.0 (Latest)"
     category: database
-    
+
     environment:
       MYSQL_ROOT_PASSWORD: playground
       MYSQL_DATABASE: playground
       MYSQL_USER: playground
       MYSQL_PASSWORD: playground
-    
+
     ports:
       - "3306:3306"
-    
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                    MySQL 8.0 Quick Reference                  ║
       ╚══════════════════════════════════════════════════════════════╝
-      
+
       🔐 Connection Info:
          Host: localhost / Container IP
          Port: 3306
@@ -28,11 +27,11 @@ images:
          User: playground
          Password: playground
          Database: playground
-      
+
       📊 Basic Commands:
          mysql -u root -pplayground                    # Connect as root
          mysql -u playground -pplayground playground   # Connect to playground DB
-      
+
       📁 Database Operations:
          SHOW DATABASES;                               # List all databases
          CREATE DATABASE mydb;                         # Create database
@@ -40,7 +39,7 @@ images:
          DROP DATABASE mydb;                           # Delete database
          SHOW TABLES;                                  # List tables
          DESCRIBE tablename;                           # Show table structure
-      
+
       💾 Backup & Restore:
          # Backup single database
          mysqldump -u root -pplayground playground > /shared/backup.sql
@@ -56,34 +55,34 @@ images:
          
          # Restore with creation
          mysql -u root -pplayground < /shared/backup.sql
-      
+
       📝 Quick Table Example:
          CREATE TABLE users (
-           id INT AUTO_INCREMENT PRIMARY KEY,
-           name VARCHAR(100),
-           email VARCHAR(100) UNIQUE,
-           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         name VARCHAR(100),
+         email VARCHAR(100) UNIQUE,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
          );
          
          INSERT INTO users (name, email) VALUES 
-           ('Alice', 'alice@example.com'),
-           ('Bob', 'bob@example.com');
+         ('Alice', 'alice@example.com'),
+         ('Bob', 'bob@example.com');
          
          SELECT * FROM users;
-      
+
       🔍 Useful Queries:
          SELECT USER(), DATABASE();                    # Current user & DB
          SHOW PROCESSLIST;                            # Active connections
          SHOW VARIABLES LIKE '%version%';             # MySQL version info
          SHOW TABLE STATUS;                           # Table information
          SHOW FULL PROCESSLIST;                       # Detailed process list
-      
+
       🔧 User Management:
          CREATE USER 'newuser'@'%' IDENTIFIED BY 'password';
          GRANT ALL PRIVILEGES ON database.* TO 'newuser'@'%';
          FLUSH PRIVILEGES;
          SHOW GRANTS FOR 'username'@'%';
-      
+
       💡 Tips:
          - Use /shared for SQL dumps
          - root password: playground

@@ -1,0 +1,39 @@
+# Template: Linux Distribution Container
+# Use this template for: Alpine, Debian, Ubuntu, Fedora, etc.
+
+images:
+  CONTAINER_NAME:
+    category: linux
+    description: DISTRO_NAME VERSION - Brief description
+    image: DOCKER_IMAGE:TAG
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash  # or /bin/sh for Alpine
+    motd: |-
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              DISTRO_NAME VERSION Quick Reference             ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager:
+         INSTALL_CMD package_name                 # Install package
+         UPDATE_CMD                               # Update package index
+         SEARCH_CMD package_name                  # Search for package
+         REMOVE_CMD package_name                  # Remove package
+         LIST_CMD                                 # List installed packages
+
+      🔧 System Information:
+         uname -a                                 # Kernel version
+         cat /etc/os-release                      # Distribution info
+         df -h                                    # Disk usage
+         free -h                                  # Memory usage
+
+      📁 File Operations:
+         ls -lah                                  # List files (detailed)
+         find /path -name "file"                  # Find files
+         grep -r "pattern" /path                  # Search in files
+
+      💡 Tips:
+         • Use /shared for persistent files across containers
+         • Your home directory: /root
+         • Shared workspace: /shared/workspace/
+
+      📚 Documentation: DOCS_URL

@@ -4,7 +4,7 @@ images:
     description: Go 1.21 (Latest)
     image: golang:1.21
     keep_alive_cmd: sleep infinity
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                   Go 1.21 Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
@@ -32,14 +32,14 @@ images:
 
       📝 Quick HTTP Server:
          Create /shared/server.go:
-           package main
-           import ("fmt"; "net/http")
-           func main() {
-             http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-               fmt.Fprintf(w, "Hello from Go!")
-             })
-             http.ListenAndServe(":8080", nil)
-           }
+         package main
+         import ("fmt"; "net/http")
+         func main() {
+         http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+         fmt.Fprintf(w, "Hello from Go!")
+         })
+         http.ListenAndServe(":8080", nil)
+         }
          go run /shared/server.go
 
       🔧 Useful Commands:

@@ -5,3 +5,20 @@ images:
     image: openjdk:8
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Openjdk 8 Development Environment                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Start:
+         java -version                            # Check version
+         javac HelloWorld.java                    # Compile
+         java HelloWorld                          # Run
+
+      🔧 Development Tools:
+         jshell                                   # Interactive REPL
+         jar cf app.jar files/                    # Create JAR
+         java -jar app.jar                        # Run JAR
+
+      💡 Workspace: /shared/projects/
+      📚 Docs: https://docs.oracle.com/javase/

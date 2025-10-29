@@ -5,3 +5,27 @@ images:
     image: fedora:39
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Fedora 39 Quick Reference                            ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (dnf):
+         dnf install package_name                 # Install package
+         dnf remove package_name                  # Remove package
+         dnf search package_name                  # Search for package
+         dnf list installed                       # List installed packages
+         dnf update                               # Update all packages
+
+      🔧 System Information:
+         uname -a                                 # Kernel and system info
+         cat /etc/fedora-release                  # Fedora version
+         df -h                                    # Disk usage
+         free -h                                  # Memory usage
+
+      💡 Tips:
+         • Fedora uses dnf (next-gen yum)
+         • Use /shared for persistent files
+         • Bleeding edge packages
+
+      📚 Documentation: https://docs.fedoraproject.org/

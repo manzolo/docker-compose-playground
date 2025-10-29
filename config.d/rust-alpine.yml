@@ -5,3 +5,21 @@ images:
     image: rust:alpine
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Rust Alpine Development Environment                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Manager (cargo):
+         cargo new project_name                   # Create new project
+         cargo build                              # Build project
+         cargo run                                # Run project
+         cargo test                               # Run tests
+
+      🔧 Development Tools:
+         rustc --version                          # Check version
+         cargo fmt                                # Format code
+         cargo clippy                             # Linter
+
+      💡 Workspace: /shared/projects/
+      📚 Docs: https://doc.rust-lang.org/

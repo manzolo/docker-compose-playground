@@ -4,16 +4,38 @@ images:
     description: Alpine Linux 3.22 (Lightweight - 8MB)
     image: alpine:3.22
     keep_alive_cmd: sleep infinity
-    motd: |-
+    shell: /bin/sh
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                 Alpine Linux Quick Reference                  ║
+      ║           Alpine Linux 3.22 Quick Reference                  ║
       ╚══════════════════════════════════════════════════════════════╝
 
-      📦 Package Management (apk):
-         apk update                                    # Update package index
-         apk add package_name                          # Install package
-         apk del package_name                          # Remove package
-         apk search package_name                       # Search package
+      📦 Package Manager (apk):
+         apk update                               # Update package index
+         apk add package_name                     # Install package
+         apk del package_name                     # Remove package
+         apk search package_name                  # Search for package
+         apk info                                 # List installed packages
 
-      ⚠️  Note: Alpine uses musl libc, not glibc
-    shell: /bin/sh
+      🔧 System Information:
+         uname -a                                 # Kernel and system info
+         cat /etc/alpine-release                  # Alpine version
+         cat /etc/os-release                      # Distribution details
+         df -h                                    # Disk usage
+         free -m                                  # Memory usage
+
+      📁 Common Packages:
+         apk add bash                             # Install Bash shell
+         apk add curl wget                        # Download tools
+         apk add git                              # Version control
+         apk add vim nano                         # Text editors
+         apk add python3 py3-pip                  # Python environment
+
+      💡 Tips:
+         • Alpine uses musl libc (not glibc) - some binaries may not work
+         • Very lightweight - perfect for containers
+         • Use /shared for persistent files across containers
+         • Most packages available in main/community repos
+
+      📚 Package search: https://pkgs.alpinelinux.org/packages
+      📖 Documentation: https://wiki.alpinelinux.org/

@@ -4,7 +4,7 @@ images:
     description: Redis (Latest) - In-memory cache
     image: redis:latest
     keep_alive_cmd: redis-server
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                   Redis latest Quick Reference                     ║
       ╚══════════════════════════════════════════════════════════════╝
@@ -43,5 +43,5 @@ images:
          HGET user:1 name                             # Get field
          HGETALL user:1                               # Get all fields
     ports:
-    - 6379:6379
+      - 6379:6379
     shell: /bin/sh

@@ -4,7 +4,7 @@ images:
     description: MongoDB 7 (Latest)
     image: mongo:7
     keep_alive_cmd: mongod
-    motd: |-
+    motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                  MongoDB 7 Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
@@ -35,9 +35,9 @@ images:
 
       📈 Aggregation:
          db.users.aggregate([
-           {$match: {age: {$gte: 18}}},
-           {$group: {_id: "$city", count: {$sum: 1}}}
+         {$match: {age: {$gte: 18}}},
+         {$group: {_id: "$city", count: {$sum: 1}}}
          ])
     ports:
-    - 27017:27017
+      - 27017:27017
     shell: /bin/bash
