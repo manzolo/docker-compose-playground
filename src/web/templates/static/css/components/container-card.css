@@ -350,6 +350,56 @@
 }
 
 /* ============================================
+   SCRIPT RUNNING INDICATOR
+   ============================================ */
+
+.script-running-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #92400e;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+    animation: pulse-indicator 2s ease-in-out infinite;
+    transition: opacity 0.3s ease-out;
+}
+
+.script-running-indicator .script-icon {
+    font-size: 16px;
+    animation: rotate-icon 2s linear infinite;
+}
+
+.script-running-indicator .script-text {
+    flex: 1;
+}
+
+@keyframes pulse-indicator {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+    }
+    50% {
+        opacity: 0.9;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+}
+
+@keyframes rotate-icon {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 
@@ -473,4 +523,22 @@ html.dark-mode .btn-quick-action.diagnostics:hover {
 html.dark-mode .btn-quick-action.clean:hover {
     background: #4d2d2d;
     border-color: #fecaca;
+}
+
+html.dark-mode .script-running-indicator {
+    background: linear-gradient(135deg, #3f3f1f, #4a4520);
+    border-left-color: #fbbf24;
+    color: #fde68a;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+@keyframes pulse-indicator {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+    }
+    50% {
+        opacity: 0.9;
+        box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+    }
 }

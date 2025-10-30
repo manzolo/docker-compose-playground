@@ -208,6 +208,12 @@
                 </div>
                 {% endif %}
 
+                <!-- SCRIPT RUNNING INDICATOR (hidden by default, shown via JS) -->
+                <div class="script-running-indicator" id="script-indicator-{{ name }}" style="display: none;">
+                    <span class="script-icon">⚙️</span>
+                    <span class="script-text">Running post-start script...</span>
+                </div>
+
                 <!-- DESCRIZIONE -->
                 <p class="container-description">{{ data.description }}</p>
 
@@ -469,6 +475,7 @@
     <script src="{{ asset('js/managers/execute-command.js') }}"></script>
     <script src="{{ asset('js/managers/health-monitor.js') }}"></script>
     <script src="{{ asset('js/managers/quick-commands-manager.js') }}"></script>
+    <script src="{{ asset('js/managers/script-indicator-manager.js') }}"></script>
 
     <!-- core operation monitoring -->
     <script src="{{ asset('js/core/operation-monitor.js') }}"></script>
