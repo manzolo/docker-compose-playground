@@ -31,32 +31,43 @@ done
 # Additional wait for code-server to be fully ready
 sleep 5
 
-# Install Python extension and debugpy (run as user abc with correct HOME)
-echo "Installing VS Code Python extensions..."
-docker exec -u abc "${CONTAINER_NAME}" bash -c '
-  export HOME=/config
+# Check if extensions are already installed
+EXTENSIONS_EXIST=$(docker exec "${CONTAINER_NAME}" bash -c '
+  [ -d /config/extensions ] && ls -1 /config/extensions | grep -q "ms-python.python" && echo "yes" || echo "no"
+')
 
-  # Install Python extension (ms-python.python)
-  /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension ms-python.python 2>/dev/null || true
+if [ "$EXTENSIONS_EXIST" = "yes" ]; then
+  echo "✓ Python extensions already installed, skipping"
+else
+  # Install Python extension and debugpy (run as user abc with correct HOME)
+  echo "Installing VS Code Python extensions..."
+  docker exec -u abc "${CONTAINER_NAME}" bash -c '
+    export HOME=/config
 
-  # Install Pylance for better IntelliSense
-  /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension ms-python.vscode-pylance 2>/dev/null || true
+    # Install Python extension (ms-python.python)
+    /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension ms-python.python 2>/dev/null || true
 
-  # Install additional useful extensions
-  /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension ms-python.debugpy 2>/dev/null || true
-  /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension donjayamanne.python-environment-manager 2>/dev/null || true
-  /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension KevinRose.vsc-python-indent 2>/dev/null || true
-  /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension njpwerner.autodocstring 2>/dev/null || true
-'
+    # Install Pylance for better IntelliSense
+    /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension ms-python.vscode-pylance 2>/dev/null || true
 
-echo "✓ Extensions installation triggered (may complete in background)"
+    # Install additional useful extensions
+    /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension ms-python.debugpy 2>/dev/null || true
+    /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension donjayamanne.python-environment-manager 2>/dev/null || true
+    /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension KevinRose.vsc-python-indent 2>/dev/null || true
+    /app/code-server/bin/code-server --extensions-dir /config/extensions --install-extension njpwerner.autodocstring 2>/dev/null || true
+  '
+
+  echo "✓ Extensions installation triggered (may complete in background)"
+fi
 
 # Create workspace settings for Python debugging (as user abc)
 echo "Configuring Python debugger..."
 docker exec -u abc "${CONTAINER_NAME}" bash -c 'mkdir -p /workspace/.vscode'
 
-# Create launch.json for debugging
-docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/launch.json << "EOF"
+# Create launch.json for debugging (only if not exists)
+if docker exec "${CONTAINER_NAME}" [ ! -f /workspace/.vscode/launch.json ]; then
+  echo "Creating launch.json..."
+  docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/launch.json << "EOF"
 {
     "version": "0.2.0",
     "configurations": [
@@ -131,9 +142,14 @@ docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/launch.json <<
     ]
 }
 EOF'
+else
+  echo "✓ launch.json already exists, skipping"
+fi
 
-# Create settings.json
-docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/settings.json << "EOF"
+# Create settings.json (only if not exists)
+if docker exec "${CONTAINER_NAME}" [ ! -f /workspace/.vscode/settings.json ]; then
+  echo "Creating settings.json..."
+  docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/settings.json << "EOF"
 {
     "python.defaultInterpreterPath": "/usr/bin/python3",
     "python.linting.enabled": true,
@@ -154,9 +170,14 @@ docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/settings.json 
     }
 }
 EOF'
+else
+  echo "✓ settings.json already exists, skipping"
+fi
 
-# Create tasks.json for common Python tasks
-docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/tasks.json << "EOF"
+# Create tasks.json for common Python tasks (only if not exists)
+if docker exec "${CONTAINER_NAME}" [ ! -f /workspace/.vscode/tasks.json ]; then
+  echo "Creating tasks.json..."
+  docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/tasks.json << "EOF"
 {
     "version": "2.0.0",
     "tasks": [
@@ -181,15 +202,19 @@ docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/.vscode/tasks.json << 
     ]
 }
 EOF'
+else
+  echo "✓ tasks.json already exists, skipping"
+fi
 
-# Create sample Python project
-echo "Creating sample Python project..."
+# Create sample Python project (only if not exists)
+if docker exec "${CONTAINER_NAME}" [ ! -f /workspace/src/main.py ]; then
+  echo "Creating sample Python project..."
 
-# Create project structure
-docker exec "${CONTAINER_NAME}" bash -c 'mkdir -p /workspace/src /workspace/tests'
+  # Create project structure
+  docker exec "${CONTAINER_NAME}" bash -c 'mkdir -p /workspace/src /workspace/tests'
 
-# Create main.py with sample code
-docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/src/main.py << "EOF"
+  # Create main.py with sample code
+  docker exec "${CONTAINER_NAME}" bash -c 'cat > /workspace/src/main.py << "EOF"
 """
 Sample Python application for debugging demonstration.
 """
@@ -338,6 +363,9 @@ Use Ctrl+Shift+P → "Tasks: Run Task" to run:
 - Python interpreter path: `/usr/local/bin/python`
 - Extensions auto-installed: Python, Pylance, debugpy
 EOF'
+else
+  echo "✓ Sample project already exists, skipping"
+fi
 
 # Fix ownership of all created files to match PUID:PGID (1000:1000)
 echo "Setting correct permissions..."
