@@ -131,6 +131,11 @@ const OperationMonitor = {
         if (messageEl) {
             messageEl.textContent = this.formatOperationMessage(statusData);
         }
+
+        // Update script indicators in container cards
+        if (window.ScriptIndicatorManager) {
+            ScriptIndicatorManager.updateIndicators(statusData);
+        }
     },
 
     /**
@@ -354,9 +359,9 @@ const OperationMonitor = {
         this.cleanupPollTimeouts(operationId);
 
         // Safety cleanup
-        if (OperationHelper) {
-            OperationHelper.cleanup();
-        }
+        //if (OperationHelper) {
+        //    OperationHelper.cleanup();
+        //}
     },
 
     /**
