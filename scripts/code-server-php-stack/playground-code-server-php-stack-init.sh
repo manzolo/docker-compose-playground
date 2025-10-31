@@ -64,6 +64,7 @@ fi
 
 # Create workspace settings for PHP debugging (as user abc)
 echo "Configuring PHP debugger..."
+docker exec "${CONTAINER_NAME}" chown -R 1000:1000 /workspace 2>/dev/null || true
 docker exec -u abc "${CONTAINER_NAME}" bash -c 'mkdir -p /workspace/.vscode'
 
 # Create launch.json for debugging (only if not exists)

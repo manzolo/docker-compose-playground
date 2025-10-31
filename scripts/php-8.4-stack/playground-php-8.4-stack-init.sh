@@ -70,6 +70,8 @@ exec php -S 0.0.0.0:8000
 EOF
 chmod +x /usr/local/bin/start-php-server'
 
+docker exec "${CONTAINER_NAME}" bash -c '/usr/local/bin/start-php-server &'
+
 echo "✅ PHP 8.4 configured with Xdebug and Composer"
 echo "🐘 PHP version: $(docker exec "${CONTAINER_NAME}" php -v | head -1)"
 echo "🐛 Xdebug port: 9003"

@@ -44,8 +44,8 @@ images:
 
       📋 CONNECTION INFO
       ─────────────────────────────────────────────────────────────
-      🌐 Address:  http://localhost:8444
-      🔑 Password: pythondev
+      🌐 VsCode Address: http://localhost:8444
+      pythondev # 🔑 VsCode Password
 
       ⚙️  FEATURES
       ─────────────────────────────────────────────────────────────
@@ -66,8 +66,8 @@ images:
 
       📁 WORKSPACE & CONFIG
       ─────────────────────────────────────────────────────────────
-      • Workspace: ./shared-volumes/data/python-dev-workspace
-      • Config: ./shared-volumes/data/python-dev-config
+      • Workspace: shared-volumes/data/python-dev-workspace
+      • Config: shared-volumes/data/python-dev-config
       • Shared workspace with: python-3.12-stack
       • Sample project included
       • Extensions in /config/extensions

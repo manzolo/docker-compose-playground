@@ -44,8 +44,10 @@ images:
 
       📋 CONNECTION INFO
       ─────────────────────────────────────────────────────────────
-      🌐 Address:  http://localhost:8445
-      🔑 Password: phpdev
+      🌐 VsCode Address: http://localhost:8445
+      phpdev # 🔑 VsCode Password
+
+      🌐 Php server Address: http://localhost:8082
 
       ⚙️  FEATURES
       ─────────────────────────────────────────────────────────────
@@ -64,8 +66,8 @@ images:
 
       📁 WORKSPACE & CONFIG
       ─────────────────────────────────────────────────────────────
-      • Workspace: ./shared-volumes/data/php-dev-workspace
-      • Config: ./shared-volumes/data/php-dev-config
+      • Workspace: shared-volumes/data/php-dev-workspace
+      • Config: shared-volumes/data/php-dev-config
       • Shared workspace with: php-8.4-stack
       • Sample project included
       • Extensions in /config/extensions
