@@ -8,6 +8,8 @@ from typing import Dict, Any, List, Tuple
 from pathlib import Path
 import time
 
+from .docker_compose_params import extract_docker_params
+
 # Logger che scrive direttamente su file
 logger = logging.getLogger("docker_ops")
 logger.setLevel(logging.DEBUG)
@@ -267,7 +269,13 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     all_volumes.extend(compose_volumes)
     
     ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}
-    
+
+    # Extract Docker Compose parameters
+    docker_params = extract_docker_params(img_data)
+
+    if docker_params:
+        logger.info("Using Docker Compose parameters: %s", list(docker_params.keys()))
+
     # Create and run container
     try:
         logger.info("Running Docker image: %s as %s", img_data["image"], full_container_name)
@@ -283,7 +291,8 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
             network=NETWORK_NAME,
             stdin_open=True,
             tty=True,
-            labels={"playground.managed": "true"}
+            labels={"playground.managed": "true"},
+            **docker_params  # Pass through Docker Compose parameters
         )
     except docker.errors.ImageNotFound:
         error_msg = f"Docker image not found: {img_data.get('image', 'unknown')}"

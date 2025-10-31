@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Tuple
 from rich.console import Console
 
 from .volumes import VolumeManager, validate_and_prepare_volumes
+from .docker_compose_params import extract_docker_params
 
 console = Console()
 
@@ -137,13 +138,22 @@ def start_container(
         volumes.extend(volume_manager.get_compose_volumes())
         
         console.print(f"[cyan]Starting container: {container_name}...[/cyan]")
-        
+
         if volume_manager.volumes:
             console.print("[cyan]Volumes:[/cyan]")
             for vol_str in volume_manager.list_volumes():
                 console.print(f"  • {vol_str}")
-        
-        # Start container
+
+        # Extract Docker Compose parameters
+        docker_params = extract_docker_params(img_data)
+
+        # Show additional Docker parameters if any
+        if docker_params:
+            console.print("[cyan]Additional Docker parameters:[/cyan]")
+            for key, value in docker_params.items():
+                console.print(f"  • {key}: {value}")
+
+        # Start container with base parameters + Docker Compose parameters
         container = docker_client.containers.run(
             img_data["image"],
             detach=True,
@@ -156,7 +166,8 @@ def start_container(
             network=NETWORK_NAME,
             stdin_open=True,
             tty=True,
-            labels={"playground.managed": "true"}
+            labels={"playground.managed": "true"},
+            **docker_params  # Pass through Docker Compose parameters
         )
         
         # Wait for container to be running
