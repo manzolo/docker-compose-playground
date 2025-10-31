@@ -1,5 +1,5 @@
 #!/bin/bash
-BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/data/backups/${CONTAINER_NAME#playground-}"
 mkdir -p "${BACKUP_DIR}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 

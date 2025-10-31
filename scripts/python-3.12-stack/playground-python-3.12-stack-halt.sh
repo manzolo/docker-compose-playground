@@ -8,7 +8,7 @@ SHARED_DIR="${SHARED_DIR:-./shared-volumes}"
 echo "Backing up Python environment..."
 
 # Create backup directory
-BACKUP_DIR="${SHARED_DIR}/backups/python-dev-stack"
+BACKUP_DIR="${SHARED_DIR}/data/backups/python-dev-stack"
 mkdir -p "${BACKUP_DIR}"
 
 # Generate timestamp

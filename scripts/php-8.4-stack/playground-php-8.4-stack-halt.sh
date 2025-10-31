@@ -8,7 +8,7 @@ SHARED_DIR="${SHARED_DIR:-./shared-volumes}"
 echo "Backing up PHP environment..."
 
 # Create backup directory
-BACKUP_DIR="${SHARED_DIR}/backups/php-dev-stack"
+BACKUP_DIR="${SHARED_DIR}/data/backups/php-dev-stack"
 mkdir -p "${BACKUP_DIR}"
 
 # Generate timestamp

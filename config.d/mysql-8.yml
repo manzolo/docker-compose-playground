@@ -51,19 +51,22 @@ images:
 
       💾 Backup & Restore:
          # Backup single database
-         mysqldump -u root -pplayground playground > /shared/backup.sql
-         
+         mysqldump -u root -pplayground playground > /shared/data/backup.sql
+
          # Backup all databases
-         mysqldump -u root -pplayground --all-databases > /shared/full_backup.sql
-         
+         mysqldump -u root -pplayground --all-databases > /shared/data/full_backup.sql
+
          # Backup specific table
-         mysqldump -u root -pplayground playground users > /shared/users_backup.sql
-         
+         mysqldump -u root -pplayground playground users > /shared/data/users_backup.sql
+
          # Restore database
-         mysql -u root -pplayground playground < /shared/backup.sql
-         
+         mysql -u root -pplayground playground < /shared/data/backup.sql
+
          # Restore with creation
-         mysql -u root -pplayground < /shared/backup.sql
+         mysql -u root -pplayground < /shared/data/backup.sql
+
+         # Note: Automatic backups on stop are saved to:
+         # ./shared-volumes/data/backups/mysql-8/
 
       📝 Quick Table Example:
          CREATE TABLE users (
@@ -93,6 +96,7 @@ images:
          SHOW GRANTS FOR 'username'@'%';
 
       💡 Tips:
-         - Use /shared for SQL dumps
+         - Use /shared/data for SQL dumps
+         - Automatic backups on stop: ./shared-volumes/data/backups/mysql-8/
          - root password: playground
          - Default character set: utf8mb4
