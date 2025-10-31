@@ -29,3 +29,6 @@ venv.log
 custom.d/*.yml
 !custom.d/.gitkeep
 
+playground_test_*.log
+playground_summary_*.txt
+test-cli_*.log
