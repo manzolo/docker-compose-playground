@@ -1,0 +1,160 @@
+# PHP Development Stack
+# Full development environment with VS Code Server (code-server) and PHP 8.4
+# Shared workspace volume for seamless development and testing
+
+# Group metadata
+group:
+  name: "PHP-Dev-Stack"
+  description: "Complete PHP development environment with VS Code Server, PHP 8.4, and built-in server"
+  category: development
+  containers:
+    - code-server-php-stack
+    - php-8.4-stack
+
+# Container configurations
+images:
+  code-server-php-stack:
+    category: development
+    description: VS Code Server with PHP development tools and debugger
+    image: linuxserver/code-server
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    ports:
+      - "8445:8443"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD=phpdev
+      - SUDO_PASSWORD=phpdev
+      - DEFAULT_WORKSPACE=/workspace
+    volumes:
+      - host: shared-volumes/php-dev-workspace
+        path: /workspace
+        type: bind
+      - host: shared-volumes/php-dev-config
+        path: /config
+        type: bind
+    scripts:
+      post_start: playground-code-server-php-stack-init.sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║        VS Code Server - PHP Development Edition              ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📋 CONNECTION INFO
+      ─────────────────────────────────────────────────────────────
+      🌐 Address:  http://localhost:8445
+      🔑 Password: phpdev
+
+      ⚙️  FEATURES
+      ─────────────────────────────────────────────────────────────
+      ✓ PHP 8.4 full support with IntelliSense
+      ✓ Debugging configured (Xdebug)
+      ✓ Extensions: PHP Intelephense, PHP Debug
+      ✓ Shared workspace with PHP container
+      ✓ Auto-formatting with PHP CS Fixer
+      ✓ Linting with PHPStan
+
+      🐛 DEBUGGING
+      ─────────────────────────────────────────────────────────────
+      • Local: F5 → "Listen for Xdebug"
+      • Set breakpoints by clicking line numbers
+      • Use Debug Console for expressions
+
+      📁 WORKSPACE & CONFIG
+      ─────────────────────────────────────────────────────────────
+      • Workspace: ./shared-volumes/php-dev-workspace
+      • Config: ./shared-volumes/php-dev-config
+      • Shared workspace with: php-8.4-stack
+      • Sample project included
+      • Extensions in /config/extensions
+
+      💡 QUICK COMMANDS
+      ─────────────────────────────────────────────────────────────
+      • Ctrl+Shift+P: Command palette
+      • F5: Start debugging
+      • Ctrl+`: Toggle terminal
+      • Shift+Alt+F: Format code
+
+      🚀 READY TO CODE!
+
+  php-8.4-stack:
+    category: programming
+    description: PHP 8.4 with built-in server and shared workspace
+    image: php:8.4-cli
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    ports:
+      - "9003:9003"  # Xdebug port
+      - "8082:8000"  # Built-in PHP server
+    environment:
+      - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d
+      - XDEBUG_MODE=debug
+    volumes:
+      - host: shared-volumes/php-dev-workspace
+        path: /workspace
+        type: bind
+    scripts:
+      post_start: playground-php-8.4-stack-init.sh
+      pre_stop: playground-php-8.4-stack-halt.sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              PHP 8.4 - Development Container                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🐘 PHP VERSION
+      ─────────────────────────────────────────────────────────────
+      PHP 8.4 CLI with Xdebug and Composer
+
+      🐛 DEBUGGING
+      ─────────────────────────────────────────────────────────────
+      Port: 9003 (Xdebug)
+
+      Enable Xdebug:
+        export XDEBUG_MODE=debug
+        php -dxdebug.start_with_request=yes index.php
+
+      🌐 BUILT-IN SERVER
+      ─────────────────────────────────────────────────────────────
+      Start server:
+        cd /workspace
+        php -S 0.0.0.0:8000
+
+      Access: http://localhost:8082
+
+      Quick start:
+        start-php-server
+
+      📁 WORKSPACE
+      ─────────────────────────────────────────────────────────────
+      • Container: /workspace
+      • Host: ./shared-volumes/php-dev-workspace
+      • Shared with Code Server
+      • Changes sync in real-time
+
+      📦 INSTALLED TOOLS
+      ─────────────────────────────────────────────────────────────
+      ✓ PHP 8.4 CLI
+      ✓ Composer (dependency manager)
+      ✓ Xdebug (debugging)
+      ✓ Git (version control)
+
+      💡 QUICK START
+      ─────────────────────────────────────────────────────────────
+      # Start built-in server
+      start-php-server
+
+      # Install dependencies
+      composer install
+
+      # Run PHP script
+      php /workspace/index.php
+
+      🔗 NETWORK
+      ─────────────────────────────────────────────────────────────
+      • Access other stack containers by name
+      • Connect to databases, APIs, etc.
+      • Container name: php-8.4-stack
+
+      🚀 READY FOR DEVELOPMENT!

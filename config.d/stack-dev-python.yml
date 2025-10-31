@@ -1,0 +1,162 @@
+# Python Development Stack
+# Full development environment with VS Code Server (code-server) and Python 3.12
+# Shared workspace volume for seamless development and debugging
+
+# Group metadata
+group:
+  name: "Python-Dev-Stack"
+  description: "Complete Python development environment with VS Code Server, Python 3.12, and debugging support"
+  category: development
+  containers:
+    - code-server-python-stack
+    - python-3.12-stack
+
+# Container configurations
+images:
+  code-server-python-stack:
+    category: development
+    description: VS Code Server with Python development tools and debugger
+    image: linuxserver/code-server
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    ports:
+      - "8444:8443"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD=pythondev
+      - SUDO_PASSWORD=pythondev
+      - DEFAULT_WORKSPACE=/workspace
+    volumes:
+      - host: shared-volumes/python-dev-workspace
+        path: /workspace
+        type: bind
+      - host: shared-volumes/python-dev-config
+        path: /config
+        type: bind
+    scripts:
+      post_start: playground-code-server-python-stack-init.sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║        VS Code Server - Python Development Edition          ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📋 CONNECTION INFO
+      ─────────────────────────────────────────────────────────────
+      🌐 Address:  http://localhost:8444
+      🔑 Password: pythondev
+
+      ⚙️  FEATURES
+      ─────────────────────────────────────────────────────────────
+      ✓ Python 3.12 full support with IntelliSense
+      ✓ Debugging configured (local + remote)
+      ✓ Extensions: Python, Pylance, debugpy
+      ✓ Launch configs for Django, Flask, FastAPI
+      ✓ Shared workspace with Python container
+      ✓ Auto-formatting with Black
+      ✓ Linting with Pylint
+
+      🐛 DEBUGGING
+      ─────────────────────────────────────────────────────────────
+      • Local: F5 → "Python: Current File"
+      • Remote: Connect to python-3.12-stack:5678
+      • Set breakpoints by clicking line numbers
+      • Use Debug Console for REPL
+
+      📁 WORKSPACE & CONFIG
+      ─────────────────────────────────────────────────────────────
+      • Workspace: ./shared-volumes/python-dev-workspace
+      • Config: ./shared-volumes/python-dev-config
+      • Shared workspace with: python-3.12-stack
+      • Sample project included
+      • Extensions in /config/extensions
+
+      💡 QUICK COMMANDS
+      ─────────────────────────────────────────────────────────────
+      • Ctrl+Shift+P: Command palette
+      • F5: Start debugging
+      • Ctrl+`: Toggle terminal
+      • Shift+Alt+F: Format code
+
+      🚀 READY TO CODE!
+
+  python-3.12-stack:
+    category: programming
+    description: Python 3.12 with debugging support (debugpy) and shared workspace
+    image: python:3.12
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    ports:
+      - "5678:5678"  # debugpy port
+      - "8001:8000"  # FastAPI/Django dev server
+      - "5010:5000"  # Flask dev server
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - host: shared-volumes/python-dev-workspace
+        path: /workspace
+        type: bind
+    scripts:
+      post_start: playground-python-3.12-stack-init.sh
+      pre_stop: playground-python-3.12-stack-halt.sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Python 3.12 - Development Container               ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🐍 PYTHON VERSION
+      ─────────────────────────────────────────────────────────────
+      Python 3.12 with debugpy and development tools
+
+      🐛 DEBUGGING
+      ─────────────────────────────────────────────────────────────
+      Port: 5678 (debugpy remote debugging)
+
+      Quick debug:
+        debug-script /workspace/src/main.py
+
+      Manual debug:
+        python -m debugpy --listen 0.0.0.0:5678 --wait-for-client script.py
+
+      🌐 WEB DEVELOPMENT PORTS
+      ─────────────────────────────────────────────────────────────
+      • 8001 → FastAPI/Django (python manage.py runserver 0.0.0.0:8000)
+      • 5010 → Flask (flask run --host=0.0.0.0)
+
+      📁 WORKSPACE
+      ─────────────────────────────────────────────────────────────
+      • Container: /workspace
+      • Host: ./shared-volumes/python-dev-workspace
+      • Shared with Code Server
+      • Changes sync in real-time
+
+      📦 INSTALLED TOOLS
+      ─────────────────────────────────────────────────────────────
+      ✓ debugpy (remote debugging)
+      ✓ ipython (enhanced REPL)
+      ✓ pytest (testing framework)
+      ✓ black (code formatter)
+      ✓ pylint (linter)
+      ✓ requests, pydantic, python-dotenv
+
+      💡 QUICK START
+      ─────────────────────────────────────────────────────────────
+      # Run sample code
+      python /workspace/src/main.py
+
+      # Install project dependencies
+      pip install -r /workspace/requirements.txt
+
+      # Start debugging
+      debug-script /workspace/src/main.py
+      (Then connect from Code Server with F5)
+
+      🔗 NETWORK
+      ─────────────────────────────────────────────────────────────
+      • Access other stack containers by name
+      • Connect to databases, APIs, etc.
+      • Container name: python-3.12-stack
+
+      🚀 READY FOR DEVELOPMENT!
