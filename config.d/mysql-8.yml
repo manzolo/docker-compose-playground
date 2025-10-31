@@ -14,6 +14,15 @@ images:
 
     ports:
       - "3306:3306"
+
+    # Health check to verify MySQL is ready
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pplayground"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+      start_period: "30s"
+
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║                    MySQL 8.0 Quick Reference                  ║
