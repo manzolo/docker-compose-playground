@@ -79,7 +79,7 @@ images:
       pre_stop:
         inline: |
           #!/bin/bash
-          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
           mkdir -p "${BACKUP_DIR}"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 

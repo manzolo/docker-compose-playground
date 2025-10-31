@@ -59,7 +59,7 @@ docker exec playground-code-server-python-stack chown -R 1000:1000 /workspace
    docker exec playground-code-server-python-stack ls -la /config/extensions/
 
    # From host (bind mount)
-   ls -la shared-volumes/python-dev-config/extensions/
+   ls -la shared-volumes/data/python-dev-config/extensions/
    ```
 
 ---
@@ -231,8 +231,8 @@ docker exec playground-code-server-python-stack ping -c 3 playground-python-3.12
 ./playground group stop Python-Dev-Stack
 
 # Optional: Remove workspace data (WARNING: deletes all files)
-rm -rf shared-volumes/python-dev-workspace
-rm -rf shared-volumes/python-dev-config
+rm -rf shared-volumes/data/python-dev-workspace
+rm -rf shared-volumes/data/python-dev-config
 
 # Start fresh
 ./playground group start Python-Dev-Stack
