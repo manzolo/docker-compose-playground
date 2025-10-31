@@ -16,6 +16,8 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - HOST_SHARED_VOLUMES_PATH=${PWD}/shared-volumes
+      - RUNNING_IN_DOCKER=true
     #command: ["/app/start-webui.sh", "--log-level", "DEBUG"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000"]

@@ -536,12 +536,12 @@ async def get_server_logs():
 async def get_backups():
     """
     Get list of all available backups.
-    
+
     Returns information about backup files in the shared directory.
     """
     try:
         backups = []
-        backup_dir = SHARED_DIR / "backups"
+        backup_dir = SHARED_DIR / "data" / "backups"
         
         if not backup_dir.exists():
             return BackupsList(backups=[])
@@ -583,12 +583,12 @@ async def download_backup(
 ):
     """
     Download a backup file.
-    
+
     **Path Parameters:**
     - `category`: Category directory name
     - `filename`: Filename to download
     """
-    backup_path = SHARED_DIR / "backups" / category / filename
+    backup_path = SHARED_DIR / "data" / "backups" / category / filename
     if not backup_path.exists():
         raise HTTPException(404, "Backup not found")
     return FileResponse(str(backup_path), filename=filename, media_type="application/octet-stream")

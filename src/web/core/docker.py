@@ -31,6 +31,14 @@ SHARED_DIR = BASE_DIR / "shared-volumes"
 NETWORK_NAME = "playground-network"
 SCRIPTS_DIR = BASE_DIR / "scripts"
 
+# Detect if running in Docker and get host paths
+RUNNING_IN_DOCKER = os.getenv("RUNNING_IN_DOCKER", "false").lower() == "true"
+HOST_SHARED_VOLUMES_PATH = os.getenv("HOST_SHARED_VOLUMES_PATH")
+
+if RUNNING_IN_DOCKER:
+    logger.info("Running in Docker mode - will use host paths for volumes")
+    logger.info("Host shared volumes path: %s", HOST_SHARED_VOLUMES_PATH)
+
 class TimeoutConfig:
     """Centralized timeout configuration"""
     
@@ -94,22 +102,46 @@ def ensure_named_volumes(volumes_config: List[Dict[str, Any]]):
                     docker_client.volumes.create(name=vol_name, driver="local")
 
 
+def convert_to_host_path(container_path: str) -> str:
+    """Convert container-internal path to host path when running in Docker
+
+    Args:
+        container_path: Path that may be inside the playground container
+
+    Returns:
+        str: Host path for volume mounting
+    """
+    if not RUNNING_IN_DOCKER or not HOST_SHARED_VOLUMES_PATH:
+        return container_path
+
+    # Convert /app/shared-volumes/... to host path
+    container_shared_dir = str(SHARED_DIR)
+    if container_path.startswith(container_shared_dir):
+        # Replace /app/shared-volumes with the actual host path
+        relative_path = container_path[len(container_shared_dir):].lstrip('/')
+        host_path = os.path.join(HOST_SHARED_VOLUMES_PATH, relative_path)
+        logger.debug("Converted path: %s -> %s", container_path, host_path)
+        return host_path
+
+    return container_path
+
+
 def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
     """Prepare volumes for docker-compose format"""
     if not volumes_config:
         return []
-    
+
     compose_volumes = []
-    
+
     for vol_data in volumes_config:
         vol_type = vol_data.get("type", "named")
         vol_path = vol_data.get("path", "")
         readonly = vol_data.get("readonly", False)
-        
+
         if not vol_path:
             logger.warning("Volume missing path: %s", vol_data)
             continue
-        
+
         if vol_type == "named":
             vol_name = vol_data.get("name")
             if vol_name:
@@ -117,13 +149,16 @@ def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
                 if readonly:
                     vol_str += ":ro"
                 compose_volumes.append(vol_str)
-        
+
         elif vol_type in ("bind", "file"):
             host_path = vol_data.get("host")
             if host_path:
                 if not host_path.startswith("/"):
                     host_path = str(BASE_DIR / host_path)
-                
+
+                # Convert to host path if running in Docker
+                host_path = convert_to_host_path(host_path)
+
                 try:
                     if vol_type == "bind":
                         Path(host_path).mkdir(parents=True, exist_ok=True)
@@ -132,12 +167,12 @@ def prepare_volumes(volumes_config: List[Dict[str, Any]]) -> List[str]:
                         Path(host_path).touch(exist_ok=True)
                 except Exception as e:
                     logger.warning("Failed to prepare volume path %s: %s", host_path, str(e))
-                
+
                 vol_str = f"{host_path}:{vol_path}"
                 if readonly:
                     vol_str += ":ro"
                 compose_volumes.append(vol_str)
-    
+
     return compose_volumes
 
 
@@ -263,9 +298,12 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     # Prepare volumes
     volumes_config = img_data.get("volumes", [])
     ensure_named_volumes(volumes_config)
-    
+
     compose_volumes = prepare_volumes(volumes_config)
-    all_volumes = [f"{SHARED_DIR}:/shared"]
+
+    # Use host path for shared directory when running in Docker
+    shared_host_path = convert_to_host_path(str(SHARED_DIR))
+    all_volumes = [f"{shared_host_path}:/shared"]
     all_volumes.extend(compose_volumes)
     
     ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}

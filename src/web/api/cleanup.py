@@ -18,10 +18,10 @@ router = APIRouter()
 
 class CleanupConfig:
     """Cleanup operation configuration"""
-    
+
     # Backup settings
     ENABLE_BACKUP_BEFORE_CLEANUP = True
-    BACKUP_DIR = Path(__file__).parent.parent.parent.parent / "backups" / "cleanup-backups"
+    BACKUP_DIR = Path(__file__).parent.parent.parent.parent / "shared-volumes" / "data" / "backups" / "cleanup-backups"
     MAX_BACKUP_RETENTION_DAYS = 7  # Keep backups for 7 days
     
     # Volume safety
