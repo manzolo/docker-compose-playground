@@ -1,7 +1,7 @@
 # Docker Playground - CLI and Docker Management Makefile
 # Quick commands for CLI and Docker container management
 
-.PHONY: help install uninstall test test-cli test-webui test-all clean cli web list ps categories version dev-setup docs setup docker-build docker-tag docker-push docker-up docker-down docker-stop docker-start docker-restart docker-logs
+.PHONY: help install uninstall test test-cli test-webui test-all test-docker-compose-params clean cli web list ps categories version dev-setup docs setup docker-build docker-tag docker-push docker-up docker-down docker-stop docker-start docker-restart docker-logs
 
 # Variables
 DOCKER_IMAGE_NAME := manzolo/docker-compose-playground
@@ -40,10 +40,11 @@ help:
 	@echo "  make docker-logs     View container logs"
 	@echo ""
 	@echo "$(GREEN)Test Commands:$(NC)"
-	@echo "  make test            Run all tests in cascade (cli → webui → all)"
-	@echo "  make test-cli        Run CLI test suite only"
-	@echo "  make test-webui      Run WebUI test suite only"
-	@echo "  make test-all        Run comprehensive tests only"
+	@echo "  make test                        Run all tests in cascade"
+	@echo "  make test-cli                    Run CLI test suite only"
+	@echo "  make test-webui                  Run WebUI test suite only"
+	@echo "  make test-all                    Run comprehensive tests only"
+	@echo "  make test-docker-compose-params  Run Docker Compose parameters tests"
 	@echo ""
 	@echo "$(GREEN)Quick Commands:$(NC)"
 	@echo "  make cli             Run CLI directly (without installing)"
@@ -78,7 +79,7 @@ uninstall:
 # Test Commands
 
 # Test cascade - runs all tests in sequence
-test: test-cli test-webui test-all
+test: test-cli test-webui test-docker-compose-params test-all
 	@echo ""
 	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo "$(GREEN)✓ All tests completed successfully!$(NC)"
@@ -108,6 +109,14 @@ test-all:
 	@chmod +x tests/test-all.sh playground
 	@./playground list
 	@./tests/test-all.sh
+	@echo ""
+
+test-docker-compose-params:
+	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo "$(CYAN)Running Docker Compose parameters tests...$(NC)"
+	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@chmod +x tests/test-docker-compose-params.sh
+	@./tests/test-docker-compose-params.sh
 	@echo ""
 
 # Quick Commands
@@ -143,7 +152,7 @@ version:
 # Development helpers
 dev-setup:
 	@echo "$(CYAN)Setting up development environment...$(NC)"
-	@chmod +x playground install-cli.sh uninstall-cli.sh tests/test-cli.sh tests/test-webui.sh tests/test-all.sh start-webui.sh
+	@chmod +x playground install-cli.sh uninstall-cli.sh tests/test-cli.sh tests/test-webui.sh tests/test-all.sh tests/test-docker-compose-params.sh start-webui.sh
 	@make clean
 	@echo "$(GREEN)✓ Development environment ready$(NC)"
 	@echo "$(YELLOW)Run 'make cli ARGS=\"list\"' to test$(NC)"

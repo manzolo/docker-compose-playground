@@ -706,7 +706,7 @@ parse_arguments() {
 main() {
     parse_arguments "$@"
     
-    rm -f "$PROJECT_DIR/venv"
+    rm -rf "$PROJECT_DIR/venv"
     rm -f "$LOG_FILE" "$ERROR_LOG_FILE" "$JSON_LOG_FILE"
     mkdir -p "$PROJECT_DIR/venv"
     

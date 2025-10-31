@@ -161,6 +161,64 @@ def validate_parameter_value(key: str, value: Any) -> Tuple[bool, str]:
     return True, ""
 
 
+def parse_duration_to_nanoseconds(duration_str: str) -> int:
+    """Convert duration string (e.g., '30s', '1m', '1h') to nanoseconds
+
+    Args:
+        duration_str: Duration string (e.g., '30s', '10ms', '1m')
+
+    Returns:
+        int: Duration in nanoseconds
+    """
+    duration_str = str(duration_str).strip()
+
+    # Parse the duration
+    if duration_str.endswith('ns'):
+        return int(duration_str[:-2])
+    elif duration_str.endswith('us'):
+        return int(duration_str[:-2]) * 1000
+    elif duration_str.endswith('ms'):
+        return int(duration_str[:-2]) * 1000000
+    elif duration_str.endswith('s'):
+        return int(duration_str[:-1]) * 1000000000
+    elif duration_str.endswith('m'):
+        return int(duration_str[:-1]) * 60 * 1000000000
+    elif duration_str.endswith('h'):
+        return int(duration_str[:-1]) * 3600 * 1000000000
+    else:
+        # Assume seconds if no unit
+        return int(duration_str) * 1000000000
+
+
+def convert_healthcheck(healthcheck: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert healthcheck config from docker-compose format to Docker SDK format
+
+    Args:
+        healthcheck: Healthcheck configuration dict
+
+    Returns:
+        Dict[str, Any]: Converted healthcheck for Docker SDK
+    """
+    converted = {}
+
+    if 'test' in healthcheck:
+        converted['test'] = healthcheck['test']
+
+    if 'interval' in healthcheck:
+        converted['interval'] = parse_duration_to_nanoseconds(healthcheck['interval'])
+
+    if 'timeout' in healthcheck:
+        converted['timeout'] = parse_duration_to_nanoseconds(healthcheck['timeout'])
+
+    if 'start_period' in healthcheck:
+        converted['start_period'] = parse_duration_to_nanoseconds(healthcheck['start_period'])
+
+    if 'retries' in healthcheck:
+        converted['retries'] = healthcheck['retries']
+
+    return converted
+
+
 def extract_docker_params(img_data: Dict[str, Any]) -> Dict[str, Any]:
     """Extract Docker SDK parameters from image configuration
 
@@ -188,8 +246,12 @@ def extract_docker_params(img_data: Dict[str, Any]) -> Dict[str, Any]:
                 logger.warning("Docker param validation: %s", error_msg)
                 continue
 
-            # Add to docker params with SDK key name
-            docker_params[sdk_key] = value
+            # Special handling for healthcheck - convert time strings to nanoseconds
+            if key == "healthcheck" and isinstance(value, dict):
+                docker_params[sdk_key] = convert_healthcheck(value)
+            else:
+                # Add to docker params with SDK key name
+                docker_params[sdk_key] = value
 
     return docker_params
 

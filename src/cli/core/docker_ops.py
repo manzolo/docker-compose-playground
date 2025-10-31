@@ -153,20 +153,28 @@ def start_container(
             for key, value in docker_params.items():
                 console.print(f"  • {key}: {value}")
 
+        # Prepare base parameters
+        base_params = {
+            "detach": True,
+            "name": container_name,
+            "environment": img_data.get("environment", {}),
+            "ports": ports if ports else None,
+            "volumes": volumes,
+            "command": img_data.get("keep_alive_cmd", "sleep infinity"),
+            "network": NETWORK_NAME,
+            "stdin_open": True,
+            "tty": True,
+            "labels": {"playground.managed": "true"}
+        }
+
+        # Only set hostname if not already in docker_params
+        if "hostname" not in docker_params:
+            base_params["hostname"] = image_name
+
         # Start container with base parameters + Docker Compose parameters
         container = docker_client.containers.run(
             img_data["image"],
-            detach=True,
-            name=container_name,
-            hostname=image_name,
-            environment=img_data.get("environment", {}),
-            ports=ports if ports else None,
-            volumes=volumes,
-            command=img_data.get("keep_alive_cmd", "sleep infinity"),
-            network=NETWORK_NAME,
-            stdin_open=True,
-            tty=True,
-            labels={"playground.managed": "true"},
+            **base_params,
             **docker_params  # Pass through Docker Compose parameters
         )
         
