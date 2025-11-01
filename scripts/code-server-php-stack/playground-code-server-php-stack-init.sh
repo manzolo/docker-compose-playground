@@ -9,10 +9,10 @@ echo "Setting up Code Server for PHP development..."
 # Install PHP in code-server container (needed for IntelliSense and local analysis)
 echo "Installing PHP 8.4 in code-server container..."
 docker exec "${CONTAINER_NAME}" bash -c '
-  apt-get update -qq 2>/dev/null
-  apt-get install -y php8.2-cli php8.2-xml php8.2-mbstring php8.2-curl -qq 2>/dev/null || \
-  apt-get install -y php-cli php-xml php-mbstring php-curl -qq 2>/dev/null
-  ln -sf /usr/bin/php /usr/local/bin/php 2>/dev/null || true
+  apt-get update -qq >/dev/null 2>&1
+  apt-get install -y php8.2-cli php8.2-xml php8.2-mbstring php8.2-curl -qq >/dev/null 2>&1 || \
+  apt-get install -y php-cli php-xml php-mbstring php-curl -qq >/dev/null 2>&1
+  ln -sf /usr/bin/php /usr/local/bin/php >/dev/null 2>&1 || true
   echo "✓ PHP installed"
 '
 
@@ -64,6 +64,7 @@ fi
 
 # Create workspace settings for PHP debugging (as user abc)
 echo "Configuring PHP debugger..."
+docker exec "${CONTAINER_NAME}" chown -R 1000:1000 /workspace 2>/dev/null || true
 docker exec -u abc "${CONTAINER_NAME}" bash -c 'mkdir -p /workspace/.vscode'
 
 # Create launch.json for debugging (only if not exists)
@@ -419,8 +420,8 @@ docker exec "${CONTAINER_NAME}" chown 1000:1000 /workspace/README.md 2>/dev/null
 echo "✅ Code Server configured for PHP development"
 echo "🌐 Access at: http://localhost:8445"
 echo "🔑 Password: phpdev"
-echo "📁 Workspace: ./shared-volumes/php-dev-workspace"
-echo "📁 Config: ./shared-volumes/php-dev-config"
+echo "📁 Workspace: ./shared-volumes/data/php-dev-workspace"
+echo "📁 Config: ./shared-volumes/data/php-dev-config"
 echo "🐘 PHP version: 8.4"
 echo ""
 echo "⚠️  NOTE: PHP extensions may take 30-60 seconds to fully activate"

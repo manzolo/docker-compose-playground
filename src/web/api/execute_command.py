@@ -3,9 +3,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import docker
 import logging
+from src.web.core.logging_config import get_logger
 import threading
 
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 docker_client = docker.from_env()
 
 router = APIRouter()
@@ -74,7 +75,7 @@ async def execute_command(container: str, request_body: ExecuteCommandRequest):
         504: Command execution timeout exceeded
     
     Examples:
-        curl -X POST "http://localhost:8000/api/execute-command/my-container" \\
+        curl -X POST "http://localhost:${PORT:-8000}/api/execute-command/my-container" \\
              -H "Content-Type: application/json" \\
              -d '{"command": "apt list --installed", "timeout": 30}'
     """
@@ -199,7 +200,7 @@ async def execute_diagnostic(container: str):
         - Output is decoded as UTF-8 with error replacement
     
     Examples:
-        curl -X POST "http://localhost:8000/api/execute-diagnostic/my-container" \\
+        curl -X POST "http://localhost:${PORT:-8000}/api/execute-diagnostic/my-container" \\
              -H "Accept: application/json"
     """
     try:

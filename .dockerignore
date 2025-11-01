@@ -40,3 +40,7 @@ shared-volumes/
 # Ignora altri file comuni non necessari
 *.DS_Store
 Thumbs.db
+
+playground_test_*.log
+playground_summary_*.txt
+test-cli_*.log

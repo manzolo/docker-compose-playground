@@ -44,8 +44,8 @@ images:
 
       💾 Backup & Restore:
          # Export to /shared for persistence
-         BACKUP_CMD > /shared/backups/DB_backup_$(date +%Y%m%d).sql
-         RESTORE_CMD < /shared/backups/DB_backup_YYYYMMDD.sql
+         BACKUP_CMD > /shared/data/backups/DB_backup_$(date +%Y%m%d).sql
+         RESTORE_CMD < /shared/data/backups/DB_backup_YYYYMMDD.sql
 
       📝 Quick Example:
          CREATE_TABLE_EXAMPLE
@@ -58,7 +58,7 @@ images:
          TABLE_LIST_QUERY                         # List all tables
 
       💡 Tips:
-         • Backups are stored in: /shared/backups/
+         • Backups are stored in: /shared/data/backups/
          • Data persists in Docker volume: CONTAINER_NAME-data
          • Use transactions for data integrity
          • Monitor performance with built-in tools

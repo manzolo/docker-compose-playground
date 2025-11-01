@@ -9,9 +9,9 @@ echo "Setting up Code Server for Python development..."
 # Install Python in code-server container (needed for IntelliSense and local debugging)
 echo "Installing Python 3 in code-server container..."
 docker exec "${CONTAINER_NAME}" bash -c '
-  apt-get update -qq 2>/dev/null
-  apt-get install -y python3 python3-pip python3-venv -qq 2>/dev/null
-  ln -sf /usr/bin/python3 /usr/bin/python 2>/dev/null || true
+  apt-get update -qq >/dev/null 2>&1
+  apt-get install -y python3 python3-pip python3-venv -qq  >/dev/null 2>&1
+  ln -sf /usr/bin/python3 /usr/bin/python  >/dev/null 2>&1 || true
   echo "✓ Python 3 installed"
 '
 
@@ -378,8 +378,8 @@ docker exec "${CONTAINER_NAME}" chown 1000:1000 /workspace/README.md 2>/dev/null
 echo "✅ Code Server configured for Python development"
 echo "🌐 Access at: http://localhost:8444"
 echo "🔑 Password: pythondev"
-echo "📁 Workspace: ./shared-volumes/python-dev-workspace"
-echo "📁 Config: ./shared-volumes/python-dev-config"
+echo "📁 Workspace: ./shared-volumes/data/python-dev-workspace"
+echo "📁 Config: ./shared-volumes/data/python-dev-config"
 echo "🐍 Python interpreter: /usr/bin/python3"
 echo ""
 echo "⚠️  NOTE: Python extensions may take 30-60 seconds to fully activate"

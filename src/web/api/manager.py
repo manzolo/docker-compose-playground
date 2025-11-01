@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import docker
 import logging
+from src.web.core.logging_config import get_logger
 
 # Importazioni dalla logica refactorizzata
 from src.web.core.config import load_config
@@ -11,7 +12,7 @@ from src.web.core.docker import get_running_container_features
 from src.web.utils.helpers import natural_sort_key
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 docker_client = docker.from_env()
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"

@@ -202,7 +202,7 @@ images:
       pre_stop:
         inline: |
           #!/bin/bash
-          mkdir -p "${SHARED_DIR}/backups"
+          mkdir -p "${SHARED_DIR}/data/backups"
 ```
 
 Container appears immediately in all interfaces without restart.

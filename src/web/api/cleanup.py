@@ -3,6 +3,7 @@ import asyncio
 import docker
 import uuid
 import logging
+from src.web.core.logging_config import get_logger
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -12,16 +13,16 @@ from src.web.core.docker import docker_client, get_stop_timeout
 from src.web.core.scripts import execute_script
 from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, active_operations
 
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 router = APIRouter()
 
 class CleanupConfig:
     """Cleanup operation configuration"""
-    
+
     # Backup settings
     ENABLE_BACKUP_BEFORE_CLEANUP = True
-    BACKUP_DIR = Path(__file__).parent.parent.parent.parent / "backups" / "cleanup-backups"
+    BACKUP_DIR = Path(__file__).parent.parent.parent.parent / "shared-volumes" / "data" / "backups" / "cleanup-backups"
     MAX_BACKUP_RETENTION_DAYS = 7  # Keep backups for 7 days
     
     # Volume safety

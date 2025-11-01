@@ -1,7 +1,7 @@
 #!/bin/bash
 CONTAINER_NAME="$1"
 echo "💾 Creating backup for $CONTAINER_NAME..."
-BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/backups"
+BACKUP_DIR="${SHARED_DIR:-./shared-volumes}/data/backups"
 mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/${CONTAINER_NAME}_$(date +%Y%m%d_%H%M%S).tar.gz"
 docker exec "$CONTAINER_NAME" tar czf - /data 2>/dev/null > "$BACKUP_FILE" 2>/dev/null || true

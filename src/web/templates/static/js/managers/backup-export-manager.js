@@ -27,39 +27,83 @@ const BackupExportManager = {
         if (!list) return;
 
         if (!backups || backups.length === 0) {
-            list.innerHTML = '<p style="color: #64748b;">No backups found</p>';
+            list.innerHTML = this.createEmptyState();
         } else {
             list.innerHTML = this.createBackupsTable(backups);
         }
     },
 
     /**
+     * Create empty state HTML
+     */
+    createEmptyState() {
+        return `
+            <div class="backups-empty">
+                <div class="backups-empty-icon">📦</div>
+                <div class="backups-empty-text">No backups found</div>
+                <div class="backups-empty-hint">Backups will appear here when available</div>
+            </div>
+        `;
+    },
+
+    /**
      * Create backups table HTML
      */
     createBackupsTable(backups) {
+        // Calculate stats
+        const totalCount = backups.length;
+        const totalSize = backups.reduce((sum, backup) => sum + backup.size, 0);
+
+        // Create table rows with proper CSS classes
         const rows = backups.map(backup => `
             <tr>
-                <td>${backup.category}</td>
-                <td>${backup.file}</td>
-                <td>${this.formatFileSize(backup.size)}</td>
-                <td>${new Date(backup.modified * 1000).toLocaleString()}</td>
-                <td><button class="btn btn-primary btn-sm" onclick="BackupExportManager.downloadBackup('${backup.category}', '${backup.file}')">Download</button></td>
+                <td data-label="Category">
+                    <span class="backup-category">${backup.category}</span>
+                </td>
+                <td data-label="File">
+                    <span class="backup-filename">${backup.file}</span>
+                </td>
+                <td data-label="Size">
+                    <span class="backup-size">${this.formatFileSize(backup.size)}</span>
+                </td>
+                <td data-label="Modified">
+                    <span class="backup-date">${new Date(backup.modified * 1000).toLocaleString()}</span>
+                </td>
+                <td data-label="Actions">
+                    <button class="backup-download-btn" onclick="BackupExportManager.downloadBackup('${backup.category}', '${backup.file}')">
+                        Download
+                    </button>
+                </td>
             </tr>
         `).join('');
 
         return `
-            <table class="backups-table">
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>File</th>
-                        <th>Size</th>
-                        <th>Modified</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
+            <div class="backups-stats">
+                <div class="backups-stats-item">
+                    <span class="backups-stats-icon">📦</span>
+                    <span>Total Backups:</span>
+                    <span class="backups-stats-value">${totalCount}</span>
+                </div>
+                <div class="backups-stats-item">
+                    <span class="backups-stats-icon">💾</span>
+                    <span>Total Size:</span>
+                    <span class="backups-stats-value">${this.formatFileSize(totalSize)}</span>
+                </div>
+            </div>
+            <div class="backups-table-wrapper">
+                <table class="backups-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>File</th>
+                            <th>Size</th>
+                            <th>Modified</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
         `;
     },
 

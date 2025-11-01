@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import json
 import logging
+from src.web.core.logging_config import get_logger
 
 from src.web.core.config import load_config
 from src.web.core.docker import docker_client, get_container_features
@@ -11,7 +12,7 @@ from src.web.utils.helpers import natural_sort_key
 from src.web.utils.motd_processor import parse_motd_commands, clean_motd_text, motd_to_html
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 # Templates setup
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"

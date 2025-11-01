@@ -12,16 +12,17 @@
 
 set -o pipefail
 
+readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Load configuration from .env file if present
 if [[ -f "${PROJECT_DIR}/.env" ]]; then
     set -a
     source "${PROJECT_DIR}/.env"
     set +a
 fi
-
-readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_BASE_DIR="${PROJECT_DIR}/venv/environments"
 readonly REQ_FILE="${PROJECT_DIR}/venv/requirements.txt"
+readonly REQ_CHECKSUM_FILE="${PROJECT_DIR}/venv/.requirements.checksum"
 readonly LOG_FILE="${PROJECT_DIR}/venv/web.log"
 readonly ERROR_LOG_FILE="${PROJECT_DIR}/venv/web_error.log"
 readonly JSON_LOG_FILE="${PROJECT_DIR}/venv/web.jsonl"
@@ -42,6 +43,7 @@ EXIT_CODE=0
 SHUTDOWN_IN_PROGRESS=false
 TAIL_PROCESS_PID=""
 ENABLE_TAIL=false
+FORCE_REINSTALL=false
 
 # Log configuration
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
@@ -275,21 +277,84 @@ check_dependencies() {
     fi
 }
 
+compute_requirements_checksum() {
+    if [[ -f "$REQ_FILE" ]]; then
+        if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$REQ_FILE" | awk '{print $1}'
+        elif command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "$REQ_FILE" | awk '{print $1}'
+        else
+            # Fallback: use md5
+            if command -v md5sum >/dev/null 2>&1; then
+                md5sum "$REQ_FILE" | awk '{print $1}'
+            elif command -v md5 >/dev/null 2>&1; then
+                md5 -q "$REQ_FILE"
+            else
+                # Last resort: just use file modification time
+                stat -c %Y "$REQ_FILE" 2>/dev/null || stat -f %m "$REQ_FILE" 2>/dev/null
+            fi
+        fi
+    fi
+}
+
+check_venv_needs_recreation() {
+    # Check if venv directory exists
+    if [[ ! -d "$VENV_PATH" ]]; then
+        log_info "Virtual environment not found - will create new one"
+        return 0  # needs recreation
+    fi
+
+    # Check if activation script exists
+    if [[ ! -f "$VENV_PATH/bin/activate" ]]; then
+        log_warning "Virtual environment is incomplete - will recreate"
+        return 0  # needs recreation
+    fi
+
+    # Check if requirements file exists
+    if [[ ! -f "$REQ_FILE" ]]; then
+        log_info "No requirements.txt found - will create with defaults"
+        return 0  # needs recreation
+    fi
+
+    # Check if checksum file exists
+    if [[ ! -f "$REQ_CHECKSUM_FILE" ]]; then
+        log_info "No checksum file found - requirements may have changed"
+        return 0  # needs recreation
+    fi
+
+    # Compare checksums
+    local current_checksum
+    local stored_checksum
+    current_checksum=$(compute_requirements_checksum)
+    stored_checksum=$(cat "$REQ_CHECKSUM_FILE" 2>/dev/null)
+
+    if [[ "$current_checksum" != "$stored_checksum" ]]; then
+        log_info "Requirements have changed - will recreate virtual environment"
+        log_debug "  Old checksum: $stored_checksum"
+        log_debug "  New checksum: $current_checksum"
+        return 0  # needs recreation
+    fi
+
+    # All checks passed - venv is up to date
+    log_info "Virtual environment is up to date - reusing existing installation"
+    return 1  # does NOT need recreation
+}
+
 create_virtualenv() {
     log_info "Setting up Python virtual environment..."
     [[ -d "$VENV_BASE_DIR" ]] && rm -rf "$VENV_BASE_DIR"
     mkdir -p "$VENV_BASE_DIR" "$(dirname "$LOG_FILE")"
-    
+
     if ! "$PYTHON_CMD" -m venv "$VENV_PATH"; then
         log_error "Failed to create virtual environment"
     fi
-    
+
     source "$VENV_PATH/bin/activate"
-    
+
     if [[ -z "$VIRTUAL_ENV" ]]; then
         log_error "Failed to activate virtual environment"
     fi
-    
+
     if ! pip install --upgrade pip --quiet; then
         log_error "Failed to upgrade pip"
     fi
@@ -336,6 +401,12 @@ EOF
     if [[ "$success" == false ]]; then
         log_error "Failed to install dependencies after $INSTALL_RETRIES attempts"
     fi
+
+    # Save checksum for future comparisons
+    local checksum
+    checksum=$(compute_requirements_checksum)
+    echo "$checksum" > "$REQ_CHECKSUM_FILE"
+    log_debug "Saved requirements checksum: $checksum"
 }
 
 create_python_log_config() {
@@ -394,7 +465,7 @@ health_check() {
         # Try curl first
         if command -v curl >/dev/null 2>&1; then
             if curl -sf --connect-timeout 2 --max-time 5 "$HEALTH_CHECK_URL" >/dev/null 2>&1; then
-                log_info "Server is healthy and ready!"
+                log_info "Server is healthy and ready at $HEALTH_CHECK_URL"
                 return 0
             fi
         # Fallback: netcat
@@ -510,7 +581,13 @@ start_server() {
 
     (
         source "$VENV_PATH/bin/activate"
-        uvicorn "${uvicorn_args[@]}" 2>&1 | tee -a "$LOG_FILE"
+        if [[ "$ENABLE_TAIL" == true ]]; then
+            # If tail is enabled, only write to log file (tail will display it)
+            uvicorn "${uvicorn_args[@]}" >> "$LOG_FILE" 2>&1
+        else
+            # If tail is disabled, show logs in console and write to file
+            uvicorn "${uvicorn_args[@]}" 2>&1 | tee -a "$LOG_FILE"
+        fi
     ) &
     
     WEB_PID=$!
@@ -623,6 +700,7 @@ Options:
                        (default: INFO)
   --tail               Enable live log viewing (tail -f $LOG_FILE)
   --use-docker         Enable Docker dependency checks
+  --force-reinstall    Force recreation of virtual environment (ignores cache)
   --health-check-endpoint ENDPOINT
                        Set custom health check endpoint (default: /)
   --status             Show server status and exit
@@ -636,10 +714,11 @@ Environment Variables:
                       Set health check endpoint (default: /)
 
 Examples:
-  $0                        # Start server with default settings
+  $0                        # Start server with default settings (fast if venv exists)
   $0 --debug --tail         # Start with debug logging and live logs
   $0 --log-level WARNING    # Start with WARNING log level
   $0 --use-docker           # Start with Docker support enabled
+  $0 --force-reinstall      # Force recreate virtual environment
   $0 --health-check-endpoint /health  # Use custom health check endpoint
   $0 --status               # Show server status
 
@@ -676,6 +755,10 @@ parse_arguments() {
                 USE_DOCKER=true
                 shift
                 ;;
+            --force-reinstall)
+                FORCE_REINSTALL=true
+                shift
+                ;;
             --health-check-endpoint)
                 HEALTH_CHECK_ENDPOINT="$2"
                 shift 2
@@ -705,31 +788,61 @@ parse_arguments() {
 
 main() {
     parse_arguments "$@"
-    
-    rm -f "$PROJECT_DIR/venv"
-    rm -f "$LOG_FILE" "$ERROR_LOG_FILE" "$JSON_LOG_FILE"
-    mkdir -p "$PROJECT_DIR/venv"
-    
-    trap graceful_shutdown SIGINT SIGTERM EXIT
-    
+
+    # Detect Python version first (needed for venv path)
     python_info=$(detect_python)
     readonly PYTHON_CMD="${python_info%:*}"
     readonly VENV_NAME="${python_info#*:}"
     readonly VENV_PATH="${VENV_BASE_DIR}/${VENV_NAME}"
-    
+
+    # Clean old logs but keep venv directory structure
+    mkdir -p "$PROJECT_DIR/venv"
+    rm -f "$LOG_FILE" "$ERROR_LOG_FILE" "$JSON_LOG_FILE"
+
+    trap graceful_shutdown SIGINT SIGTERM EXIT
+
     setup_logging
     validate_environment
     show_environment
+
+    # Smart venv management
+    local needs_venv_setup=true
+
+    if [[ "$FORCE_REINSTALL" == true ]]; then
+        log_warning "Force reinstall requested - will recreate virtual environment"
+        rm -rf "$VENV_BASE_DIR"
+        rm -f "$REQ_CHECKSUM_FILE"
+    else
+        # Check if we can reuse existing venv
+        if check_venv_needs_recreation; then
+            needs_venv_setup=true
+        else
+            needs_venv_setup=false
+        fi
+    fi
+
     preflight_checks
     check_dependencies
     kill_port "$PORT" true
-    create_virtualenv
-    install_dependencies
-    
+
+    # Only recreate venv if needed
+    if [[ "$needs_venv_setup" == true ]]; then
+        create_virtualenv
+        install_dependencies
+    else
+        # Just activate existing venv
+        log_info "Activating existing virtual environment..."
+        source "$VENV_PATH/bin/activate"
+        if [[ -z "$VIRTUAL_ENV" ]]; then
+            log_error "Failed to activate virtual environment"
+        fi
+        log_info "✓ Virtual environment activated (fast startup)"
+    fi
+
     if [[ ! -f "$PROJECT_DIR/src/web/app.py" ]]; then
         log_error "Missing application file: $PROJECT_DIR/src/web/app.py"
     fi
-    
+
     start_server
 }
 

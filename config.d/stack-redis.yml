@@ -33,7 +33,7 @@ images:
           CONTAINER="${CONTAINER_NAME}"
           MAX_WAIT=60
           COUNT=0
-          BACKUP_FILE="${SHARED_DIR}/backups/redis-stack/backup.txt"
+          BACKUP_FILE="${SHARED_DIR}/data/backups/redis-stack/backup.txt"
 
           # 1. Wait for Redis to be ready
           echo "Waiting for Redis to respond..."
@@ -89,12 +89,12 @@ images:
           LPUSH tasks "Task 1" "Task 2" "Task 3"
           REDIS_BACKUP
 
-          echo "✓ Backup created at shared-volumes/backups/redis-stack/backup.txt"
+          echo "✓ Backup created at shared-volumes/data/backups/redis-stack/backup.txt"
 
       pre_stop:
         inline: |
           #!/bin/sh
-          BACKUP_DIR="${SHARED_DIR}/backups/redis-stack"
+          BACKUP_DIR="${SHARED_DIR}/data/backups/redis-stack"
           BACKUP_FILE="${BACKUP_DIR}/backup.txt"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -179,7 +179,7 @@ images:
         DBSIZE
 
       💾  Backup & Restore:
-        • Plain text backup: shared-volumes/backups/redis-stack/backup.txt
+        • Plain text backup: shared-volumes/data/backups/redis-stack/backup.txt
         • Auto-created on shutdown
         • Auto-restored on startup
         • Easy to edit and view!
