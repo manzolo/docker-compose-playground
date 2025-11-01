@@ -28,4 +28,4 @@ EXPOSE ${PORT}
 
 # Comando di default: avvia la Web UI (puoi override per TUI o CLI)
 #CMD ["/app/start-webui.sh", "--tail"]
-CMD ["/app/start-webui.sh", "--tail"]
+CMD ["/app/start-webui.sh"]
