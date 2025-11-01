@@ -146,6 +146,19 @@
     background: #4299e1;
     color: white;
 }
+
+.quick-command-btn.btn-execute {
+    border-color: #f59e0b;
+    color: #f59e0b;
+    font-size: 16px;
+}
+
+.quick-command-btn.btn-execute:hover {
+    background: #f59e0b;
+    color: white;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
 .quick-commands-empty {
     padding: 60px 20px;
     text-align: center;
@@ -233,8 +246,74 @@ html.dark-mode .quick-command-btn.btn-open:hover {
     color: white;
 }
 
+html.dark-mode .quick-command-btn.btn-execute {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+html.dark-mode .quick-command-btn.btn-execute:hover {
+    background: #f59e0b;
+    color: white;
+}
+
 html.dark-mode .quick-commands-empty {
     color: #718096;
+}
+
+/* ============================================
+   COMMAND OUTPUT MODAL
+   ============================================ */
+
+.exit-code-label {
+    margin-left: 16px;
+    font-size: 13px;
+}
+
+.exit-code {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.exit-code.success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.exit-code.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.command-output {
+    background: #1a202c;
+    color: #e2e8f0;
+    padding: 16px;
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+html.dark-mode .exit-code.success {
+    background: #064e3b;
+    color: #6ee7b7;
+}
+
+html.dark-mode .exit-code.error {
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+html.dark-mode .command-output {
+    background: #0f172a;
+    color: #cbd5e1;
 }
 
 /* ============================================

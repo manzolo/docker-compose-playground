@@ -397,6 +397,32 @@
         </div>
     </div>
 
+    <!-- quick command output modal -->
+    <div id="quickCommandOutputModal" class="modal">
+        <div class="modal-overlay" onclick="QuickCommandsManager.closeOutputModal()"></div>
+        <div class="modal-content modal-medium">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <h2>⚡ Command Output</h2>
+                    <div class="log-info">
+                        Command: <strong id="quickCommandOutputCommand"></strong>
+                        <span class="exit-code-label">Exit Code: <span id="quickCommandOutputExitCode" class="exit-code">0</span></span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="QuickCommandsManager.closeOutputModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="quickCommandOutputContent" class="command-output"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="QuickCommandsManager.copyCommandOutput()">
+                    <span class="btn-icon">📋</span> Copy Output
+                </button>
+                <button class="btn btn-secondary" onclick="QuickCommandsManager.closeOutputModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- container diagnostics modal for system information and monitoring -->
     <div id="diagnosticsModal" class="modal">
         <div class="modal-overlay" onclick="ExecuteCommandManager.closeDiagnostics()"></div>

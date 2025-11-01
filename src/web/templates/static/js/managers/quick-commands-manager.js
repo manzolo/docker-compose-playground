@@ -121,7 +121,7 @@ const QuickCommandsManager = {
                         </div>
                     `;
                 } else {
-                    // Renderizza come comando - SOLO bottone Copy
+                    // Renderizza come comando - bottone Execute + Copy
                     html += `
                         <div class="quick-command-item">
                             <div class="quick-command-content">
@@ -129,7 +129,12 @@ const QuickCommandsManager = {
                                 ${description ? `<div class="quick-command-description">${this.escapeHtml(description)}</div>` : ''}
                             </div>
                             <div class="quick-command-actions">
-                                <button class="quick-command-btn btn-copy" 
+                                <button class="quick-command-btn btn-execute"
+                                    onclick="event.stopPropagation(); QuickCommandsManager.executeCommand('${this.escapeAttr(commandText)}')"
+                                    title="Execute command">
+                                    ⚡
+                                </button>
+                                <button class="quick-command-btn btn-copy"
                                     onclick="event.stopPropagation(); QuickCommandsManager.copyCommand('${this.escapeAttr(commandText)}')"
                                     title="Copy command">
                                     📋
@@ -142,6 +147,116 @@ const QuickCommandsManager = {
         });
 
         container.innerHTML = html || '<div class="quick-commands-empty"><p>No valid commands</p></div>';
+    },
+
+    /**
+     * Execute command directly
+     */
+    async executeCommand(command) {
+        if (!this.currentContainer) {
+            ToastManager.show('No container selected', 'error');
+            return;
+        }
+
+        if (!command || !command.trim()) {
+            ToastManager.show('Invalid command', 'warning');
+            return;
+        }
+
+        showLoader(`Executing: ${command}`);
+
+        try {
+            const response = await fetch(`/api/execute-command/${this.currentContainer}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: command.trim(),
+                    timeout: 30
+                })
+            });
+
+            const result = await response.json();
+            hideLoader();
+
+            if (!response.ok) {
+                const errorMsg = result.detail || 'Failed to execute command';
+                ToastManager.show(`Error: ${errorMsg}`, 'error');
+                return;
+            }
+
+            // Show output in a modal or toast
+            if (result.success) {
+                // Show success with output preview
+                const outputPreview = result.output.substring(0, 200);
+                const hasMore = result.output.length > 200;
+
+                ToastManager.show(`✓ Command executed successfully`, 'success');
+
+                // Show output modal if there's output
+                if (result.output && result.output.trim()) {
+                    this.showOutputModal(command, result.output, result.exit_code);
+                }
+            } else {
+                ToastManager.show(`✗ Command failed (exit code: ${result.exit_code})`, 'error');
+
+                // Show error output
+                if (result.output) {
+                    this.showOutputModal(command, result.output, result.exit_code);
+                }
+            }
+
+        } catch (error) {
+            hideLoader();
+            ToastManager.show(`Error: ${error.message}`, 'error');
+        }
+    },
+
+    /**
+     * Show command output in a modal
+     */
+    showOutputModal(command, output, exitCode) {
+        const modal = DOM.get('quickCommandOutputModal');
+        if (!modal) {
+            // Fallback: just log to console
+            console.log('Command output:', output);
+            return;
+        }
+
+        DOM.get('quickCommandOutputCommand').textContent = command;
+        DOM.get('quickCommandOutputExitCode').textContent = exitCode;
+        DOM.get('quickCommandOutputContent').textContent = output;
+
+        // Set exit code color
+        const exitCodeEl = DOM.get('quickCommandOutputExitCode');
+        if (exitCodeEl) {
+            exitCodeEl.className = exitCode === 0 ? 'exit-code success' : 'exit-code error';
+        }
+
+        ModalManager.open('quickCommandOutputModal');
+    },
+
+    /**
+     * Close output modal
+     */
+    closeOutputModal() {
+        ModalManager.close('quickCommandOutputModal');
+    },
+
+    /**
+     * Copy command output to clipboard
+     */
+    copyCommandOutput() {
+        const output = DOM.get('quickCommandOutputContent');
+        if (!output || !output.textContent) {
+            ToastManager.show('Nothing to copy', 'warning');
+            return;
+        }
+
+        navigator.clipboard.writeText(output.textContent).then(() => {
+            ToastManager.show('Output copied to clipboard!', 'success');
+        }).catch(() => {
+            ToastManager.show('Failed to copy output', 'error');
+        });
     },
 
     /**
