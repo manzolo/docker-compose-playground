@@ -4,6 +4,7 @@ import docker
 import uuid
 import concurrent.futures
 import logging
+from src.web.core.logging_config import get_logger
 import os
 import time
 
@@ -20,7 +21,7 @@ from src.web.core.scripts import execute_script
 from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, get_operation
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 
 @router.post("/api/start/{image_name}")

@@ -8,6 +8,7 @@ import tempfile
 import os
 import glob
 import logging
+from src.web.core.logging_config import get_logger
 import docker
 import re
 from typing import Tuple
@@ -16,7 +17,7 @@ from src.web.core.config import load_config, CUSTOM_CONFIG_DIR, BASE_DIR
 from src.web.core.docker import docker_client, SHARED_DIR
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 # Ensure custom.d exists
 CUSTOM_CONFIG_DIR.mkdir(exist_ok=True)
@@ -364,7 +365,7 @@ async def validate_image(request: ValidateImageRequest):
     
     **Example:**
     ```bash
-    curl -X POST http://localhost:8000/api/validate-image \\
+    curl -X POST http://localhost:${PORT:-8000}/api/validate-image \\
       -H "Content-Type: application/json" \\
       -d '{"image": "ubuntu:22.04"}'
     ```
@@ -436,7 +437,7 @@ async def detect_shell(request: DetectShellRequest):
     
     **Example:**
     ```bash
-    curl -X POST http://localhost:8000/api/detect-shell \\
+    curl -X POST http://localhost:${PORT:-8000}/api/detect-shell \\
       -H "Content-Type: application/json" \\
       -d '{"image": "playground-ubuntu-24"}'
     ```
@@ -536,12 +537,12 @@ async def get_server_logs():
 async def get_backups():
     """
     Get list of all available backups.
-    
+
     Returns information about backup files in the shared directory.
     """
     try:
         backups = []
-        backup_dir = SHARED_DIR / "backups"
+        backup_dir = SHARED_DIR / "data" / "backups"
         
         if not backup_dir.exists():
             return BackupsList(backups=[])
@@ -583,12 +584,12 @@ async def download_backup(
 ):
     """
     Download a backup file.
-    
+
     **Path Parameters:**
     - `category`: Category directory name
     - `filename`: Filename to download
     """
-    backup_path = SHARED_DIR / "backups" / category / filename
+    backup_path = SHARED_DIR / "data" / "backups" / category / filename
     if not backup_path.exists():
         raise HTTPException(404, "Backup not found")
     return FileResponse(str(backup_path), filename=filename, media_type="application/octet-stream")

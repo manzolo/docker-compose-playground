@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Any
 import typer
 from rich.console import Console
+from .docker_compose_params import validate_all_params
 
 console = Console()
 
@@ -156,14 +157,14 @@ def get_image_config(image_name: str) -> Dict[str, Any]:
 def validate_image_config(image_name: str, img_data: Dict[str, Any]) -> tuple[bool, list[str]]:
     """Validate image configuration"""
     errors = []
-    
+
     # Check required fields
     if "image" not in img_data:
         errors.append(f"Missing 'image' field for {image_name}")
-    
+
     if "keep_alive_cmd" not in img_data:
         errors.append(f"Missing 'keep_alive_cmd' field for {image_name}")
-    
+
     # Validate volumes if present
     if "volumes" in img_data:
         volumes = img_data["volumes"]
@@ -172,18 +173,18 @@ def validate_image_config(image_name: str, img_data: Dict[str, Any]) -> tuple[bo
                 if not isinstance(vol, dict):
                     errors.append(f"Volume {i} in {image_name} is not a dictionary")
                     continue
-                
+
                 vol_type = vol.get("type", "named")
-                
+
                 if not vol.get("path"):
                     errors.append(f"Volume {i} in {image_name} missing 'path'")
-                
+
                 if vol_type == "named" and not vol.get("name"):
                     errors.append(f"Named volume {i} in {image_name} missing 'name'")
-                
+
                 if vol_type in ("bind", "file") and not vol.get("host"):
                     errors.append(f"{vol_type.capitalize()} volume {i} in {image_name} missing 'host'")
-    
+
     # Validate ports if present
     if "ports" in img_data:
         ports = img_data["ports"]
@@ -191,7 +192,17 @@ def validate_image_config(image_name: str, img_data: Dict[str, Any]) -> tuple[bo
             for i, port in enumerate(ports):
                 if not isinstance(port, str) or ':' not in port:
                     errors.append(f"Port {i} in {image_name} has invalid format (use 'host:container')")
-    
+
+    # Validate Docker Compose parameters
+    is_valid, param_errors, param_warnings = validate_all_params(img_data, strict=False)
+
+    # Add parameter errors
+    errors.extend(param_errors)
+
+    # Show warnings (non-blocking)
+    for warning in param_warnings:
+        console.print(f"[yellow]⚠ {image_name}: {warning}[/yellow]")
+
     return len(errors) == 0, errors
 
 

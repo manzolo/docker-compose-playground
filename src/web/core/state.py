@@ -1,8 +1,9 @@
 from typing import Dict, Any
 from datetime import datetime
 import logging
+from src.web.core.logging_config import get_logger
 
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 # Global state for background operations
 active_operations: Dict[str, dict] = {}

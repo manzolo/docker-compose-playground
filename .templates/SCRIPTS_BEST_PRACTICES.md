@@ -185,7 +185,7 @@ set -e
 
 CONTAINER_NAME="$1"
 SHARED_DIR="${2:-./shared-volumes}"
-BACKUP_DIR="$SHARED_DIR/backups"
+BACKUP_DIR="$SHARED_DIR/data/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_PREFIX="[CONTAINER_NAME-halt]"
 
@@ -236,7 +236,7 @@ set -e
 
 CONTAINER_NAME="$1"
 SHARED_DIR="${2:-./shared-volumes}"
-BACKUP_DIR="$SHARED_DIR/backups"
+BACKUP_DIR="$SHARED_DIR/data/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_PREFIX="[postgres-halt]"
 
@@ -267,7 +267,7 @@ set -e
 
 CONTAINER_NAME="$1"
 SHARED_DIR="${2:-./shared-volumes}"
-BACKUP_DIR="$SHARED_DIR/backups"
+BACKUP_DIR="$SHARED_DIR/data/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_PREFIX="[mongodb-halt]"
 
@@ -364,7 +364,7 @@ Backup all components in correct order:
 set -e
 
 SHARED_DIR="${SHARED_DIR:-./shared-volumes}"
-BACKUP_DIR="$SHARED_DIR/backups"
+BACKUP_DIR="$SHARED_DIR/data/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_PREFIX="[STACK_NAME-halt]"
 

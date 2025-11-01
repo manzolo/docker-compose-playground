@@ -1,0 +1,450 @@
+/* ============================================
+   BACKUPS TABLE - Modern table styling
+   ============================================ */
+
+.backups-table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.backups-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-size: 14px;
+    background: white;
+}
+
+.backups-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.backups-table thead tr {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.backups-table thead th {
+    padding: 16px 20px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: white;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.backups-table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.backups-table thead th:last-child {
+    border-top-right-radius: 12px;
+    text-align: center;
+}
+
+.backups-table tbody {
+    background: white;
+}
+
+.backups-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.backups-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.backups-table tbody tr:hover {
+    background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+    transform: translateX(4px);
+    box-shadow: -4px 0 0 0 #667eea;
+}
+
+.backups-table tbody td {
+    padding: 16px 20px;
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+.backups-table tbody td:last-child {
+    text-align: center;
+}
+
+/* Category Badge */
+.backup-category {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    gap: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+.backup-category::before {
+    content: "📁";
+    font-size: 14px;
+}
+
+/* File Name */
+.backup-filename {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    color: #334155;
+    font-weight: 500;
+}
+
+/* File Size */
+.backup-size {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Date */
+.backup-date {
+    color: #64748b;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* Download Button */
+.backup-download-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.backup-download-btn::before {
+    content: "⬇️";
+    font-size: 14px;
+}
+
+.backup-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.backup-download-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+/* Empty State */
+.backups-empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: #64748b;
+}
+
+.backups-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.backups-empty-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #475569;
+    margin-bottom: 8px;
+}
+
+.backups-empty-hint {
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+/* Stats Bar */
+.backups-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px 12px 0 0;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 0;
+}
+
+.backups-stats-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.backups-stats-value {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 18px;
+}
+
+.backups-stats-icon {
+    font-size: 20px;
+}
+
+/* Loading State */
+.backups-loading {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.backups-loading-spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.backups-loading-text {
+    margin-top: 16px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Modal Body Adjustment for Backups */
+#backupsModal .modal-body {
+    padding: 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    /* Enable scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth on iOS */
+}
+
+#backupsModal .backups-table-wrapper {
+    max-height: calc(70vh - 80px);
+    /* Adjust based on stats bar height */
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: 0 0 12px 12px;
+    /* Optional: round bottom */
+}
+
+#backupsModal .modal-content {
+    max-width: 1200px;
+}
+
+/* Scrollbar for table */
+.backups-table-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.backups-table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.backups-table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 5px;
+}
+
+.backups-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 968px) {
+    .backups-table {
+        font-size: 13px;
+    }
+
+    .backups-table thead th,
+    .backups-table tbody td {
+        padding: 12px 16px;
+    }
+
+    .backup-category {
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+
+    .backup-download-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 640px) {
+
+    /* Stack table on mobile */
+    .backups-table-wrapper {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .backups-table thead {
+        display: none;
+    }
+
+    .backups-table,
+    .backups-table tbody,
+    .backups-table tr,
+    .backups-table td {
+        display: block;
+    }
+
+    .backups-table tbody tr {
+        margin-bottom: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .backups-table tbody tr:hover {
+        transform: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .backups-table tbody td {
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .backups-table tbody td:last-child {
+        border-bottom: none;
+        padding-top: 16px;
+        text-align: left;
+    }
+
+    .backups-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #475569;
+        display: block;
+        margin-bottom: 4px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .backup-download-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .backups-stats {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-radius: 12px 12px 0 0;
+    }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+html.dark-mode .backups-table-wrapper {
+    background: #1a202c;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+html.dark-mode .backups-table {
+    background: #1a202c;
+}
+
+html.dark-mode .backups-table tbody {
+    background: #1a202c;
+}
+
+html.dark-mode .backups-table tbody tr {
+    border-bottom-color: #2d3748;
+}
+
+html.dark-mode .backups-table tbody tr:hover {
+    background: linear-gradient(90deg, #2d3748 0%, #374151 100%);
+}
+
+html.dark-mode .backups-table tbody td {
+    color: #e2e8f0;
+}
+
+html.dark-mode .backup-filename {
+    color: #cbd5e1;
+}
+
+html.dark-mode .backup-size,
+html.dark-mode .backup-date {
+    color: #a0aec0;
+}
+
+html.dark-mode .backups-stats {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+    border-bottom-color: #4a5568;
+}
+
+html.dark-mode .backups-stats-item {
+    color: #cbd5e1;
+}
+
+html.dark-mode .backups-empty {
+    color: #a0aec0;
+}
+
+html.dark-mode .backups-empty-text {
+    color: #cbd5e1;
+}
+
+html.dark-mode .backups-empty-hint {
+    color: #718096;
+}
+
+html.dark-mode .backups-loading-spinner {
+    border-color: #2d3748;
+    border-top-color: #667eea;
+}
+
+html.dark-mode .backups-loading-text {
+    color: #a0aec0;
+}
+
+html.dark-mode .backups-table-wrapper::-webkit-scrollbar-track {
+    background: #2d3748;
+}
+
+html.dark-mode .backups-table-wrapper::-webkit-scrollbar-thumb {
+    background: #4a5568;
+}
+
+html.dark-mode .backups-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #718096;
+}

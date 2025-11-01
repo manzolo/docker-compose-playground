@@ -413,7 +413,7 @@ images:
         inline: |
           #!/bin/bash
           echo "Creating backup..."
-          mkdir -p "${SHARED_DIR}/backups"
+          mkdir -p "${SHARED_DIR}/data/backups"
 ```
 
 Container appears immediately in all interfaces.
@@ -447,7 +447,7 @@ docker exec docker-compose-playground /app/playground group start PHP-MySQL-Stac
 ### Create Database Backup (any interface)
 The `pre_stop` script in PostgreSQL config automatically creates backups when stopping:
 ```bash
-# Backup created in: shared-volumes/backups/postgres-16/
+# Backup created in: shared-volumes/data/backups/postgres-16/
 ```
 
 ### Access Container Shell

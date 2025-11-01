@@ -65,7 +65,7 @@ images:
           sleep 3
 
           # Restore from the latest backup if available
-          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
           echo "Checking for database backups in ${BACKUP_DIR}..."
           if [ -d "${BACKUP_DIR}" ] && [ "$(ls -A "${BACKUP_DIR}"/*.sql.gz 2>/dev/null)" ]; then
             # Find the latest database backup
@@ -104,7 +104,7 @@ images:
       pre_stop:
         inline: |
           #!/bin/bash
-          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
           mkdir -p "${BACKUP_DIR}"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -243,7 +243,7 @@ images:
           fi
 
           # Restore WordPress files from backup if available
-          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
           if [ -d "${BACKUP_DIR}" ] && [ "$(ls -A "${BACKUP_DIR}"/*.tar.gz 2>/dev/null)" ]; then
             LATEST_FILES_BACKUP=$(ls -t "${BACKUP_DIR}"/wordpress_files_*.tar.gz 2>/dev/null | head -1)
             if [ -n "${LATEST_FILES_BACKUP}" ]; then
@@ -305,7 +305,7 @@ images:
       pre_stop:
         inline: |
           #!/bin/bash
-          BACKUP_DIR="${SHARED_DIR}/backups/${CONTAINER_NAME#playground-}"
+          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
           mkdir -p "${BACKUP_DIR}"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 

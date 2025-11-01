@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 import asyncio
 import uuid
 import logging
+from src.web.core.logging_config import get_logger
 
 from src.web.core.config import load_config
 from src.web.core.docker import (
@@ -11,7 +12,7 @@ from src.web.core.docker import (
 from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, get_operation
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 @router.get("/api/groups")
 async def list_groups():

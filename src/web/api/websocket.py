@@ -4,6 +4,7 @@ import asyncio
 from typing import Optional
 import asyncio
 import logging
+from src.web.core.logging_config import get_logger
 import docker
 import json
 import time
@@ -13,7 +14,7 @@ from src.web.core.docker import docker_client
 from src.web.utils.motd_processor import format_motd_for_terminal
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 # Track active WebSocket sessions
 active_sessions: dict = {}

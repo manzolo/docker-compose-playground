@@ -29,10 +29,10 @@ images:
       - SUDO_PASSWORD=phpdev
       - DEFAULT_WORKSPACE=/workspace
     volumes:
-      - host: shared-volumes/php-dev-workspace
+      - host: shared-volumes/data/php-dev-workspace
         path: /workspace
         type: bind
-      - host: shared-volumes/php-dev-config
+      - host: shared-volumes/data/php-dev-config
         path: /config
         type: bind
     scripts:
@@ -44,8 +44,10 @@ images:
 
       📋 CONNECTION INFO
       ─────────────────────────────────────────────────────────────
-      🌐 Address:  http://localhost:8445
-      🔑 Password: phpdev
+      🌐 VsCode Address: http://localhost:8445
+      phpdev # 🔑 VsCode Password
+
+      🌐 Php server Address: http://localhost:8082
 
       ⚙️  FEATURES
       ─────────────────────────────────────────────────────────────
@@ -64,8 +66,8 @@ images:
 
       📁 WORKSPACE & CONFIG
       ─────────────────────────────────────────────────────────────
-      • Workspace: ./shared-volumes/php-dev-workspace
-      • Config: ./shared-volumes/php-dev-config
+      • Workspace: shared-volumes/data/php-dev-workspace
+      • Config: shared-volumes/data/php-dev-config
       • Shared workspace with: php-8.4-stack
       • Sample project included
       • Extensions in /config/extensions
@@ -92,7 +94,7 @@ images:
       - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d
       - XDEBUG_MODE=debug
     volumes:
-      - host: shared-volumes/php-dev-workspace
+      - host: shared-volumes/data/php-dev-workspace
         path: /workspace
         type: bind
     scripts:
@@ -129,7 +131,7 @@ images:
       📁 WORKSPACE
       ─────────────────────────────────────────────────────────────
       • Container: /workspace
-      • Host: ./shared-volumes/php-dev-workspace
+      • Host: ./shared-volumes/data/php-dev-workspace
       • Shared with Code Server
       • Changes sync in real-time
 

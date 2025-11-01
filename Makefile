@@ -1,7 +1,11 @@
 # Docker Playground - CLI and Docker Management Makefile
 # Quick commands for CLI and Docker container management
 
-.PHONY: help install uninstall test test-cli test-webui test-all clean cli web list ps categories version dev-setup docs setup docker-build docker-tag docker-push docker-up docker-down docker-stop docker-start docker-restart docker-logs
+.PHONY: help install uninstall test test-cli test-webui test-all test-docker-compose-params clean cli web list ps categories version dev-setup docs setup docker-build docker-tag docker-push docker-up docker-down docker-stop docker-start docker-restart docker-logs
+
+# Load .env file if it exists
+-include .env
+export
 
 # Variables
 DOCKER_IMAGE_NAME := manzolo/docker-compose-playground
@@ -9,6 +13,7 @@ DOCKER_IMAGE_NAME := manzolo/docker-compose-playground
 GIT_TAG_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
 
 VERSION ?= $(if $(GIT_TAG_VERSION),$(GIT_TAG_VERSION),latest)
+PORT ?= 8000
 
 # Colors
 CYAN := \033[0;36m
@@ -40,10 +45,11 @@ help:
 	@echo "  make docker-logs     View container logs"
 	@echo ""
 	@echo "$(GREEN)Test Commands:$(NC)"
-	@echo "  make test            Run all tests in cascade (cli → webui → all)"
-	@echo "  make test-cli        Run CLI test suite only"
-	@echo "  make test-webui      Run WebUI test suite only"
-	@echo "  make test-all        Run comprehensive tests only"
+	@echo "  make test                        Run all tests in cascade"
+	@echo "  make test-cli                    Run CLI test suite only"
+	@echo "  make test-webui                  Run WebUI test suite only"
+	@echo "  make test-all                    Run comprehensive tests only"
+	@echo "  make test-docker-compose-params  Run Docker Compose parameters tests"
 	@echo ""
 	@echo "$(GREEN)Quick Commands:$(NC)"
 	@echo "  make cli             Run CLI directly (without installing)"
@@ -54,11 +60,15 @@ help:
 	@echo "  make categories      Show container categories (via CLI)"
 	@echo "  make version         Show CLI version"
 	@echo ""
+	@echo "$(GREEN)Configuration:$(NC)"
+	@echo "  PORT=<port>          Set custom port (default: 8000) via .env file or environment"
+	@echo "  VERSION=<version>    Set version tag for Docker images"
+	@echo ""
 	@echo "$(GREEN)Usage Examples:$(NC)"
 	@echo "  make cli ARGS='list'"
 	@echo "  make docker-tag VERSION=${VERSION}"
 	@echo "  make docker-push VERSION=${VERSION}"
-	@echo "  make docker-up"
+	@echo "  PORT=9000 make docker-up     # Start on custom port"
 	@echo "  make docker-stop"
 	@echo ""
 
@@ -78,7 +88,7 @@ uninstall:
 # Test Commands
 
 # Test cascade - runs all tests in sequence
-test: test-cli test-webui test-all
+test: test-cli test-webui test-docker-compose-params test-all
 	@echo ""
 	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo "$(GREEN)✓ All tests completed successfully!$(NC)"
@@ -110,16 +120,25 @@ test-all:
 	@./tests/test-all.sh
 	@echo ""
 
+test-docker-compose-params:
+	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo "$(CYAN)Running Docker Compose parameters tests...$(NC)"
+	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@chmod +x tests/test-docker-compose-params.sh
+	@./tests/test-docker-compose-params.sh
+	@echo ""
+
 # Quick Commands
 
 cli:
 	@chmod +x playground
 	@./playground $(ARGS)
 
+#@./start-webui.sh --tail
 web:
 	@echo "$(CYAN)Starting web dashboard...$(NC)"
 	@chmod +x start-webui.sh
-	@./start-webui.sh --tail
+	@./start-webui.sh
 
 clean:
 	@echo "$(CYAN)Cleaning up virtual environments...$(NC)"
@@ -143,7 +162,7 @@ version:
 # Development helpers
 dev-setup:
 	@echo "$(CYAN)Setting up development environment...$(NC)"
-	@chmod +x playground install-cli.sh uninstall-cli.sh tests/test-cli.sh tests/test-webui.sh tests/test-all.sh start-webui.sh
+	@chmod +x playground install-cli.sh uninstall-cli.sh tests/test-cli.sh tests/test-webui.sh tests/test-all.sh tests/test-docker-compose-params.sh start-webui.sh
 	@make clean
 	@echo "$(GREEN)✓ Development environment ready$(NC)"
 	@echo "$(YELLOW)Run 'make cli ARGS=\"list\"' to test$(NC)"
@@ -211,16 +230,16 @@ docker-start:
 	@mkdir -p ${PWD}/custom.d ${PWD}/shared-volumes
 	@docker compose -f docker-compose-standalone.yml up -d
 	@echo "$(CYAN)Waiting for service to be ready...$(NC)"
-	# Health check logic (copied from original docker-up)
+	# Health check
 	@for i in 1 2 3 4 5 6 7 8 9; do \
-		if curl -sf http://localhost:8000 > /dev/null 2>&1; then \
-			echo "$(GREEN)✓ Container started and service is responding on port 8000$(NC)"; \
+		if curl -sf http://localhost:$(PORT) > /dev/null 2>&1; then \
+			echo "$(GREEN)✓ Container started and service is responding on http://localhost:$(PORT)$(NC)"; \
 			exit 0; \
 		fi; \
 		echo "$(YELLOW)Attempt $$i/9: Service not ready yet, waiting...$(NC)"; \
 		sleep 5; \
 	done; \
-	echo "$(RED)✗ Service failed to respond on port 8000 after 10 seconds$(NC)"; \
+	echo "$(RED)✗ Service failed to respond on port $(PORT) after 10 seconds$(NC)"; \
 	exit 1
 
 docker-restart: docker-down docker-start
@@ -243,5 +262,5 @@ setup: dev-setup install docker-build docker-up test
 	@echo "  playground list"
 	@echo "  make docker-logs"
 	@echo "  make test"
-	@echo "  Access Web UI at http://localhost:8000"
+	@echo "  Access Web UI at http://localhost:$(PORT)"
 	@echo ""
