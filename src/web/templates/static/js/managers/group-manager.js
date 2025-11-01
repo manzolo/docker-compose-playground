@@ -93,10 +93,17 @@ const GroupPersistenceManager = {
 // =========================================================
 
 const GroupOperations = {
+    currentButton: null,
+    currentButtonOriginalHTML: null,
+
     /**
      * Start a group
      */
     async startGroup(groupName) {
+        // Find the group card and start button
+        const groupCard = DOM.query(`[data-group="${groupName}"]`);
+        const startBtn = groupCard?.querySelector('.group-start-btn');
+
         try {
             const confirmed = await showConfirmModal(
                 'Start Application Stack',
@@ -104,6 +111,14 @@ const GroupOperations = {
                 'success'
             );
             if (!confirmed) return;
+
+            // Show loading spinner on button
+            if (startBtn) {
+                this.currentButton = startBtn;
+                this.currentButtonOriginalHTML = startBtn.innerHTML;
+                startBtn.disabled = true;
+                startBtn.innerHTML = '<span>⏳</span>';
+            }
 
             const response = await ApiService.startGroup(groupName);
 
@@ -115,6 +130,7 @@ const GroupOperations = {
 
         } catch (error) {
             hideLoader();
+            this.restoreButton();
             this.handleGroupOperationError(error, 'start');
         }
     },
@@ -123,6 +139,10 @@ const GroupOperations = {
      * Stop a group
      */
     async stopGroup(groupName) {
+        // Find the group card and stop button
+        const groupCard = DOM.query(`[data-group="${groupName}"]`);
+        const stopBtn = groupCard?.querySelector('.group-stop-btn');
+
         try {
             const confirmed = await showConfirmModal(
                 'Stop Application Stack',
@@ -130,6 +150,14 @@ const GroupOperations = {
                 'warning'
             );
             if (!confirmed) return;
+
+            // Show loading spinner on button
+            if (stopBtn) {
+                this.currentButton = stopBtn;
+                this.currentButtonOriginalHTML = stopBtn.innerHTML;
+                stopBtn.disabled = true;
+                stopBtn.innerHTML = '<span>⏳</span>';
+            }
 
             const response = await ApiService.stopGroup(groupName);
 
@@ -141,6 +169,7 @@ const GroupOperations = {
 
         } catch (error) {
             hideLoader();
+            this.restoreButton();
             this.handleGroupOperationError(error, 'stop');
         }
     },
@@ -149,6 +178,9 @@ const GroupOperations = {
      * Handle group operation completion
      */
     async handleGroupOperationComplete(statusData, groupName, operationType) {
+        // Restore button state
+        this.restoreButton();
+
         const isStart = operationType === 'start';
         const started = statusData.started || 0;
         const stopped = statusData.stopped || 0;
@@ -204,6 +236,18 @@ const GroupOperations = {
             // console.log(`Refreshed ${containers.length} container cards after group operation`);
         } catch (error) {
             console.error('Error refreshing group containers:', error);
+        }
+    },
+
+    /**
+     * Restore button to original state
+     */
+    restoreButton() {
+        if (this.currentButton && this.currentButtonOriginalHTML) {
+            this.currentButton.disabled = false;
+            this.currentButton.innerHTML = this.currentButtonOriginalHTML;
+            this.currentButton = null;
+            this.currentButtonOriginalHTML = null;
         }
     },
 
