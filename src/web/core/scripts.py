@@ -31,8 +31,8 @@ class ScriptConfig:
     RETRY_DELAY_SECONDS = 2
 
     # Logging
-    ENABLE_SCRIPT_OUTPUT_LOGGING = True
-    MAX_OUTPUT_LENGTH = 5000  # Max chars to log
+    ENABLE_SCRIPT_OUTPUT_LOGGING = os.getenv('PLAYGROUND_SCRIPT_OUTPUT_LOGGING', 'true').lower() == 'true'
+    MAX_OUTPUT_LINES = int(os.getenv('PLAYGROUND_SCRIPT_MAX_OUTPUT_LINES', '100'))  # Max lines to log
 
     # Environment
     PRESERVE_ENV = True  # Preserve parent environment variables
@@ -65,6 +65,9 @@ class ScriptConfig:
                    "ENABLED" if cls.ENABLE_SCRIPT_RETRY else "DISABLED",
                    cls.MAX_SCRIPT_RETRIES,
                    cls.RETRY_DELAY_SECONDS)
+        logger.info("  Output logging: %s (max %d lines per script)",
+                   "ENABLED" if cls.ENABLE_SCRIPT_OUTPUT_LOGGING else "DISABLED",
+                   cls.MAX_OUTPUT_LINES)
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 SCRIPTS_DIR = BASE_DIR / "scripts"
@@ -149,23 +152,41 @@ def _execute_script_internal(
         # Log results
         if result.returncode == 0:
             logger.info("✓ %s script succeeded (exit code: 0, elapsed: %.2fs)", script_type, elapsed)
-            
-            # Log output if configured
-            if ScriptConfig.ENABLE_SCRIPT_OUTPUT_LOGGING:
-                if result.stdout:
-                    output_preview = result.stdout[:ScriptConfig.MAX_OUTPUT_LENGTH]
-                    logger.debug("  Output: %s%s",
-                               output_preview,
-                               "..." if len(result.stdout) > ScriptConfig.MAX_OUTPUT_LENGTH else "")
+
+            # Log output if configured - now at INFO level for visibility
+            if ScriptConfig.ENABLE_SCRIPT_OUTPUT_LOGGING and result.stdout:
+                logger.info("=" * 60)
+                logger.info("%s SCRIPT OUTPUT:", script_type.upper())
+                logger.info("=" * 60)
+
+                # Split output into lines and log each line
+                output_lines = result.stdout.strip().split('\n')
+                for line in output_lines[:ScriptConfig.MAX_OUTPUT_LINES]:
+                    if line.strip():
+                        logger.info("  %s", line)
+
+                if len(output_lines) > ScriptConfig.MAX_OUTPUT_LINES:
+                    logger.info("  ... (%d more lines omitted)", len(output_lines) - ScriptConfig.MAX_OUTPUT_LINES)
+
+                logger.info("=" * 60)
         else:
             logger.error("✗ %s script failed (exit code: %d, elapsed: %.2fs)",
                         script_type, result.returncode, elapsed)
-            
+
             if result.stderr:
-                error_preview = result.stderr[:ScriptConfig.MAX_OUTPUT_LENGTH]
-                logger.error("  Error: %s%s",
-                           error_preview,
-                           "..." if len(result.stderr) > ScriptConfig.MAX_OUTPUT_LENGTH else "")
+                logger.error("=" * 60)
+                logger.error("%s SCRIPT ERROR OUTPUT:", script_type.upper())
+                logger.error("=" * 60)
+
+                error_lines = result.stderr.strip().split('\n')
+                for line in error_lines[:ScriptConfig.MAX_OUTPUT_LINES]:
+                    if line.strip():
+                        logger.error("  %s", line)
+
+                if len(error_lines) > ScriptConfig.MAX_OUTPUT_LINES:
+                    logger.error("  ... (%d more lines omitted)", len(error_lines) - ScriptConfig.MAX_OUTPUT_LINES)
+
+                logger.error("=" * 60)
         
         return {
             "status": "success" if result.returncode == 0 else "failed",
@@ -255,7 +276,12 @@ def execute_script(
         return
     
     logger.info("=" * 80)
-    logger.info("SCRIPT EXECUTION START - Container: %s, Type: %s", full_container_name, script_type)
+    logger.info("SCRIPT EXECUTION START")
+    logger.info("  Container: %s", full_container_name)
+    logger.info("  Type: %s (%s)", script_type, "post_start" if script_type == "init" else "pre_stop")
+    logger.info("  Scripts to execute: %d", len(scripts_to_execute))
+    for idx, script in enumerate(scripts_to_execute, 1):
+        logger.info("    %d. %s (%s)", idx, script['label'], script['config'] if isinstance(script['config'], str) else 'inline')
     logger.info("=" * 80)
     
     # Execute all scripts in order
@@ -378,6 +404,9 @@ def execute_script(
         
         logger.info("=" * 80)
         logger.info("SCRIPT EXECUTION COMPLETED - All scripts succeeded")
+        logger.info("  Container: %s", full_container_name)
+        logger.info("  Type: %s", script_type)
+        logger.info("  Total scripts executed: %d", len(script_results))
         logger.info("=" * 80)
     
     except Exception as e:

@@ -30,10 +30,10 @@ else
   # Install Xdebug
   echo "Installing Xdebug..."
   docker exec "${CONTAINER_NAME}" bash -c '
-    apt-get update -qq 2>/dev/null
-    apt-get install -y git unzip -qq 2>/dev/null
-    pecl install xdebug 2>/dev/null
-    docker-php-ext-enable xdebug
+    apt-get update -qq >/dev/null 2>&1
+    apt-get install -y git unzip -qq >/dev/null 2>&1
+    pecl install xdebug >/dev/null 2>&1
+    docker-php-ext-enable xdebug >/dev/null 2>&1
     echo "✓ Xdebug installed"
   '
 fi
