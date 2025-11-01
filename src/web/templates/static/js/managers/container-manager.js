@@ -10,13 +10,11 @@ const ContainerManager = {
     async refreshCardState(containerName) {
         try {
             // Ensure container name has the playground- prefix for API call
-            const fullContainerName = containerName.startsWith('playground-')
-                ? containerName
-                : `playground-${containerName}`;
+            const fullContainerName = ContainerNameUtils.toFullName(containerName);
 
-            // Extract image name (without playground- prefix) for finding the card
-            const imageName = fullContainerName.replace('playground-', '');
-            const card = DOM.query(`[data-name="${imageName}"]`);
+            // Extract display name (without playground- prefix) for finding the card
+            const displayName = ContainerNameUtils.toDisplayName(containerName);
+            const card = DOM.query(`[data-name="${displayName}"]`);
             if (!card) return;
 
             // Get container info from API (always returns 200, even if container doesn't exist)
@@ -32,7 +30,7 @@ const ContainerManager = {
 
             // Use updateCardUI to rebuild the buttons with correct state
             // This ensures all buttons are created/removed appropriately
-            this.updateCardUI(imageName, isRunning, fullContainerName);
+            this.updateCardUI(displayName, isRunning, fullContainerName);
 
             // Update filter counts
             if (window.FilterManager) {

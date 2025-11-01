@@ -10,6 +10,7 @@ from src.web.core.docker import (
     docker_client
 )
 from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, get_operation
+from src.web.utils import to_full_name, to_display_name
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -107,8 +108,8 @@ async def get_group_details(group_name: str):
         
         for container_name in containers:
             # Convert to full container name with prefix
-            full_name = f"playground-{container_name}"
-            
+            full_name = to_full_name(container_name)
+
             is_running = full_name in running_names
             if is_running:
                 running_count += 1
@@ -292,8 +293,8 @@ async def stop_group_background(operation_id: str, group_name: str, containers: 
         tasks = []
         for container_name in containers:
             img_data = images.get(container_name, {})
-            full_container_name = f"playground-{container_name}"
-            
+            full_container_name = to_full_name(container_name)
+
             task = loop.run_in_executor(
                 None,
                 stop_single_container_sync,
@@ -352,7 +353,7 @@ async def get_group_status(group_name: str):
         running_count = 0
         
         for container_name in containers:
-            full_name = f"playground-{container_name}"
+            full_name = to_full_name(container_name)
             try:
                 cont = docker_client.containers.get(full_name)
                 status = cont.status

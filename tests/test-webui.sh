@@ -796,7 +796,8 @@ main() {
     print_header "DOCKER PLAYGROUND - TEST SUITE (CORRECTED ENDPOINTS)"
     
     log_info "Starting WebUI server..."
-    bash "${SERVER_SCRIPT}" --tail &
+    #bash "${SERVER_SCRIPT}" --tail &
+    bash "${SERVER_SCRIPT}" &
     SERVER_PID=$!
     
     sleep "$INITIAL_WAIT"

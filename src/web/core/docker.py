@@ -10,6 +10,7 @@ import time
 
 from .docker_compose_params import extract_docker_params
 from .logging_config import get_module_logger
+from src.web.utils import to_full_name, to_display_name
 
 # Use centralized logger
 logger = get_module_logger("docker")
@@ -262,8 +263,8 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     """
     from src.web.core.scripts import execute_script
     from src.web.core.state import add_script_tracking, complete_script_tracking
-    
-    full_container_name = f"playground-{container_name}"
+
+    full_container_name = to_full_name(container_name)
     logger.info("Starting container: %s (timeout: %ds)", container_name, TimeoutConfig.CONTAINER_START_TIMEOUT)
     
     try:
@@ -435,15 +436,11 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
     """
     from src.web.core.scripts import execute_script
     from src.web.core.state import add_script_tracking, complete_script_tracking
-    
-    if container_name.startswith("playground-"):
-        base_container_name = container_name.replace("playground-", "")
-        full_container_name = container_name
-    else:
-        base_container_name = container_name
-        full_container_name = f"playground-{container_name}"
-    
-    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)", 
+
+    base_container_name = to_display_name(container_name)
+    full_container_name = to_full_name(container_name)
+
+    logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)",
                 base_container_name, full_container_name)
     
     try:
@@ -514,7 +511,7 @@ def has_default_script(container_name: str, script_type: str) -> bool:
     Returns:
         bool: True if default script exists
     """
-    full_container_name = f"playground-{container_name}" if not container_name.startswith("playground-") else container_name
+    full_container_name = to_full_name(container_name)
     script_name = f"{container_name}/{full_container_name}-{script_type}.sh"
     script_path = SCRIPTS_DIR / script_name
     return script_path.exists()
@@ -545,9 +542,8 @@ def get_container_features(image_name: str, config: Dict[str, Any]) -> Dict[str,
 
 def get_container_volumes(container_name: str) -> Dict[str, str]:
     """Get volumes mounted in a container"""
-    if not container_name.startswith("playground-"):
-        container_name = f"playground-{container_name}"
-    
+    container_name = to_full_name(container_name)
+
     try:
         cont = docker_client.containers.get(container_name)
         mounts = cont.attrs.get('Mounts', [])

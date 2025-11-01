@@ -4,6 +4,9 @@
 
 const ExecuteCommandManager = {
     currentContainer: null,
+    autoRefreshInterval: null,
+    autoRefreshEnabled: false,
+    isFullscreen: false,
 
     /**
      * Open command executor modal
@@ -172,9 +175,36 @@ const ExecuteCommandManager = {
 
         const nameEl = DOM.get('diagnosticsContainerName');
         const imageEl = DOM.get('diagnosticsImageName');
-        
+
         if (nameEl) nameEl.textContent = container;
         if (imageEl) imageEl.textContent = imageName;
+
+        // Reset auto-refresh to off
+        const autoRefreshCheckbox = DOM.get('diagnosticsAutoRefresh');
+        if (autoRefreshCheckbox) {
+            autoRefreshCheckbox.checked = false;
+
+            // Remove old listener if exists
+            if (this.autoRefreshChangeListener) {
+                autoRefreshCheckbox.removeEventListener('change', this.autoRefreshChangeListener);
+            }
+
+            // Add change listener
+            this.autoRefreshChangeListener = (e) => {
+                // console.log('Auto-refresh toggled:', e.target.checked);
+                this.toggleAutoRefresh(e.target.checked);
+            };
+            autoRefreshCheckbox.addEventListener('change', this.autoRefreshChangeListener);
+        }
+        this.stopAutoRefresh();
+
+        // Reset fullscreen state
+        this.isFullscreen = false;
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            DOM.removeClass(modalContent, 'fullscreen');
+        }
+        this.updateFullscreenButton();
 
         // Clear all tabs
         DOM.get('diagnosticsProcesses').innerHTML = '';
@@ -194,7 +224,7 @@ const ExecuteCommandManager = {
                 DOM.removeClass(btn, 'active');
             }
         });
-        
+
         DOM.queryAll('.diagnostics-tab').forEach((tab, index) => {
             tab.style.display = index === 0 ? 'block' : 'none';
         });
@@ -220,8 +250,11 @@ const ExecuteCommandManager = {
     /**
      * Fetch and display diagnostics
      */
-    async fetchDiagnostics(container) {
-        showLoader('Running diagnostics...');
+    async fetchDiagnostics(container, silent = false) {
+        // Only show loader if not auto-refreshing
+        if (!silent) {
+            showLoader('Running diagnostics...');
+        }
 
         try {
             const response = await fetch(`/api/execute-diagnostic/${container}`, {
@@ -229,10 +262,15 @@ const ExecuteCommandManager = {
                 headers: { 'Content-Type': 'application/json' }
             });
             const data = await response.json();
-            hideLoader();
+
+            if (!silent) {
+                hideLoader();
+            }
 
             if (!response.ok) {
-                ToastManager.show('Failed to get diagnostics', 'error');
+                if (!silent) {
+                    ToastManager.show('Failed to get diagnostics', 'error');
+                }
                 return;
             }
 
@@ -244,18 +282,50 @@ const ExecuteCommandManager = {
             const uptimeEl = DOM.get('diagnosticsUptime');
             const logsEl = DOM.get('diagnosticsLogs');
 
-            if (processesEl) processesEl.innerHTML = DiagnosticsParser.parseProcesses(data.diagnostics?.processes || 'N/A');
-            if (diskEl) diskEl.innerHTML = DiagnosticsParser.parseDiskUsage(data.diagnostics?.disk_usage || 'N/A');
-            if (networkEl) networkEl.innerHTML = DiagnosticsParser.parseNetwork(data.diagnostics?.network || 'N/A');
-            if (envEl) envEl.innerHTML = DiagnosticsParser.parseEnvironment(data.diagnostics?.environment || 'N/A');
-            if (uptimeEl) uptimeEl.innerHTML = DiagnosticsParser.parseUptime(data.diagnostics?.uptime || 'N/A');
-            if (logsEl) logsEl.innerHTML = DiagnosticsParser.parseLogs(data.diagnostics?.recent_logs || 'N/A');
+            // Force invalidate cache to ensure fresh DOM elements
+            if (silent) {
+                DOM.invalidateCache('diagnosticsProcesses');
+                DOM.invalidateCache('diagnosticsDisk');
+                DOM.invalidateCache('diagnosticsNetwork');
+                DOM.invalidateCache('diagnosticsEnvironment');
+                DOM.invalidateCache('diagnosticsUptime');
+                DOM.invalidateCache('diagnosticsLogs');
+            }
 
-            ToastManager.show('Diagnostics completed', 'success');
+            // Update content
+            if (processesEl) {
+                processesEl.innerHTML = DiagnosticsParser.parseProcesses(data.diagnostics?.processes || 'N/A');
+            }
+            if (diskEl) {
+                diskEl.innerHTML = DiagnosticsParser.parseDiskUsage(data.diagnostics?.disk_usage || 'N/A');
+            }
+            if (networkEl) {
+                networkEl.innerHTML = DiagnosticsParser.parseNetwork(data.diagnostics?.network || 'N/A');
+            }
+            if (envEl) {
+                envEl.innerHTML = DiagnosticsParser.parseEnvironment(data.diagnostics?.environment || 'N/A');
+            }
+            if (uptimeEl) {
+                uptimeEl.innerHTML = DiagnosticsParser.parseUptime(data.diagnostics?.uptime || 'N/A');
+            }
+            if (logsEl) {
+                logsEl.innerHTML = DiagnosticsParser.parseLogs(data.diagnostics?.recent_logs || 'N/A');
+            }
+
+            // Show refresh indicator for silent updates
+            if (silent) {
+                this.showRefreshIndicator();
+            }
+
+            if (!silent) {
+                ToastManager.show('Diagnostics completed', 'success');
+            }
 
         } catch (error) {
-            hideLoader();
-            ToastManager.show(`Error: ${error.message}`, 'error');
+            if (!silent) {
+                hideLoader();
+                ToastManager.show(`Error: ${error.message}`, 'error');
+            }
         }
     },
 
@@ -300,14 +370,160 @@ const ExecuteCommandManager = {
      */
     closeDiagnostics() {
         this.currentContainer = null;
-        
+
+        // Stop auto-refresh
+        this.stopAutoRefresh();
+
+        // Exit fullscreen if active
+        if (this.isFullscreen) {
+            this.isFullscreen = false;
+            const modal = DOM.get('diagnosticsModal');
+            const modalContent = modal?.querySelector('.modal-content');
+            if (modalContent) {
+                DOM.removeClass(modalContent, 'fullscreen');
+            }
+        }
+
         // Rimuovi listener Escape
         if (this.diagnosticsEscapeListener) {
             document.removeEventListener('keydown', this.diagnosticsEscapeListener);
             this.diagnosticsEscapeListener = null;
         }
-        
+
         ModalManager.close('diagnosticsModal');
+    },
+
+    /**
+     * Toggle auto-refresh
+     */
+    toggleAutoRefresh(enabled) {
+        // console.log('toggleAutoRefresh called with:', enabled);
+        // console.log('Current container:', this.currentContainer);
+
+        this.autoRefreshEnabled = enabled;
+
+        if (enabled) {
+            this.startAutoRefresh();
+            ToastManager.show('Auto-refresh enabled (2s)', 'success');
+        } else {
+            this.stopAutoRefresh();
+            ToastManager.show('Auto-refresh disabled', 'info');
+        }
+
+        this.updateAutoRefreshLabel();
+    },
+
+    /**
+     * Start auto-refresh
+     */
+    startAutoRefresh() {
+        // console.log('startAutoRefresh called');
+
+        // Clear existing interval if any (but don't change enabled state)
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+            // console.log('Cleared existing interval');
+        }
+
+        // Set enabled to true
+        this.autoRefreshEnabled = true;
+
+        // Set up new interval (2 seconds)
+        this.autoRefreshInterval = setInterval(() => {
+            // console.log('Auto-refresh tick - enabled:', this.autoRefreshEnabled, 'container:', this.currentContainer);
+            if (this.currentContainer && this.autoRefreshEnabled) {
+                // console.log('Fetching diagnostics silently...');
+                // Silent refresh - don't show loader or toasts
+                this.fetchDiagnostics(this.currentContainer, true);
+            }
+        }, 2000);
+
+        // console.log('Auto-refresh interval started:', this.autoRefreshInterval);
+    },
+
+    /**
+     * Stop auto-refresh
+     */
+    stopAutoRefresh() {
+        // console.log('stopAutoRefresh called');
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+            // console.log('Auto-refresh interval cleared');
+        }
+        this.autoRefreshEnabled = false;
+    },
+
+    /**
+     * Update auto-refresh label
+     */
+    updateAutoRefreshLabel() {
+        const labelText = DOM.get('diagnosticsAutoRefreshLabel');
+        if (labelText) {
+            // Keep the refresh indicator element
+            const indicator = document.getElementById('diagnosticsRefreshIndicator');
+            const indicatorHTML = indicator ? indicator.outerHTML : '<span class="refresh-indicator" id="diagnosticsRefreshIndicator"></span>';
+
+            const baseText = this.autoRefreshEnabled
+                ? 'Auto-refresh (2s) - ON '
+                : 'Auto-refresh (2s) ';
+
+            labelText.innerHTML = baseText + indicatorHTML;
+        }
+    },
+
+    /**
+     * Toggle fullscreen mode
+     */
+    toggleFullscreen() {
+        this.isFullscreen = !this.isFullscreen;
+
+        const modal = DOM.get('diagnosticsModal');
+        const modalContent = modal?.querySelector('.modal-content');
+
+        if (!modalContent) return;
+
+        if (this.isFullscreen) {
+            DOM.addClass(modalContent, 'fullscreen');
+            ToastManager.show('Fullscreen mode enabled', 'success');
+        } else {
+            DOM.removeClass(modalContent, 'fullscreen');
+            ToastManager.show('Fullscreen mode disabled', 'info');
+        }
+
+        this.updateFullscreenButton();
+    },
+
+    /**
+     * Update fullscreen button icon
+     */
+    updateFullscreenButton() {
+        const btn = DOM.get('diagnosticsFullscreenBtn');
+        if (btn) {
+            btn.textContent = this.isFullscreen ? '⛶' : '⛶';
+            btn.title = this.isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen';
+        }
+    },
+
+    /**
+     * Show visual indicator when auto-refresh updates
+     */
+    showRefreshIndicator() {
+        const indicator = DOM.get('diagnosticsRefreshIndicator');
+        if (!indicator) return;
+
+        // Add pulse animation
+        indicator.textContent = '●';
+        indicator.classList.add('pulse');
+
+        // Remove after animation
+        setTimeout(() => {
+            indicator.classList.remove('pulse');
+            setTimeout(() => {
+                indicator.textContent = '';
+            }, 200);
+        }, 500);
     },
 
     /**
