@@ -510,7 +510,13 @@ start_server() {
 
     (
         source "$VENV_PATH/bin/activate"
-        uvicorn "${uvicorn_args[@]}" 2>&1 | tee -a "$LOG_FILE"
+        if [[ "$ENABLE_TAIL" == true ]]; then
+            # If tail is enabled, only write to log file (tail will display it)
+            uvicorn "${uvicorn_args[@]}" >> "$LOG_FILE" 2>&1
+        else
+            # If tail is disabled, show logs in console and write to file
+            uvicorn "${uvicorn_args[@]}" 2>&1 | tee -a "$LOG_FILE"
+        fi
     ) &
     
     WEB_PID=$!

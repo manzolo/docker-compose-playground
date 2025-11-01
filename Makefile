@@ -125,10 +125,11 @@ cli:
 	@chmod +x playground
 	@./playground $(ARGS)
 
+#@./start-webui.sh --tail
 web:
 	@echo "$(CYAN)Starting web dashboard...$(NC)"
 	@chmod +x start-webui.sh
-	@./start-webui.sh --tail
+	@./start-webui.sh
 
 clean:
 	@echo "$(CYAN)Cleaning up virtual environments...$(NC)"
