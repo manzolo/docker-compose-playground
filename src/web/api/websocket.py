@@ -12,6 +12,7 @@ import time
 from src.web.core.config import load_config, get_motd
 from src.web.core.docker import docker_client
 from src.web.utils.motd_processor import format_motd_for_terminal
+from src.web.utils import to_full_name, to_display_name
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -175,8 +176,8 @@ async def websocket_console(websocket: WebSocket, container: str):
         # Load configuration and get shell type
         config_data = load_config()
         config = config_data["images"]
-        image_name = container.replace("playground-", "", 1)
-        
+        image_name = to_display_name(container)
+
         if image_name not in config:
             logger.warning("Image '%s' not found in config for container %s", image_name, container)
             shell = "/bin/sh"

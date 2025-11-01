@@ -10,6 +10,7 @@ from src.web.core.config import load_config
 from src.web.core.docker import docker_client, get_container_features
 from src.web.utils.helpers import natural_sort_key
 from src.web.utils.motd_processor import parse_motd_commands, clean_motd_text, motd_to_html
+from src.web.utils import to_full_name, to_display_name
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -59,7 +60,7 @@ async def dashboard(request: Request):
         
         for c in running:
             if c.name.startswith("playground-"):
-                image_name = c.name.replace("playground-", "", 1)
+                image_name = to_display_name(c.name)
                 running_dict[image_name] = {"name": c.name, "status": c.status}
         
         for img_name in sorted_config.keys():

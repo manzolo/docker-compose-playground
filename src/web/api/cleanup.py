@@ -12,6 +12,7 @@ from src.web.core.config import load_config
 from src.web.core.docker import docker_client, get_stop_timeout
 from src.web.core.scripts import execute_script
 from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, active_operations
+from src.web.utils import to_full_name, to_display_name
 
 logger = get_logger(__name__)
 
@@ -238,7 +239,7 @@ async def cleanup_single_container(container_name: str):
             if labels.get("playground.managed") != "true":
                 raise HTTPException(400, f"Container '{container_name}' is not managed by playground")
         except docker.errors.NotFound:
-            image_name = container_name.replace("playground-", "")
+            image_name = to_display_name(container_name)
             if image_name not in config_data.get("images", {}):
                 raise HTTPException(404, f"Container '{container_name}' not found and not in config")
             logger.info(f"Container {container_name} not found, will use config data for cleanup")
@@ -280,7 +281,7 @@ async def cleanup_single_background(operation_id: str, container, container_name
     def cleanup_cont(c, name):
         try:
             config_data = load_config()
-            image_name = name.replace("playground-", "")
+            image_name = to_display_name(name)
             img_config = config_data.get("images", {}).get(image_name, {})
             
             removed_items = []

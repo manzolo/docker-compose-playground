@@ -19,6 +19,7 @@ from src.web.core.docker import (
 )
 from src.web.core.scripts import execute_script
 from src.web.core.state import create_operation, update_operation, complete_operation, fail_operation, get_operation
+from src.web.utils import to_full_name, to_display_name
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -33,10 +34,10 @@ async def start_container(image_name: str):
         
         if image_name not in config:
             raise HTTPException(404, f"Image '{image_name}' not found in configuration")
-        
+
         img_data = config[image_name]
-        container_name = f"playground-{image_name}"
-        
+        container_name = to_full_name(image_name)
+
         # Check if already running
         try:
             existing = docker_client.containers.get(container_name)
@@ -162,9 +163,9 @@ async def stop_container_background(operation_id: str, container_name: str):
     """Background task to stop a single container"""
     try:
         loop = asyncio.get_event_loop()
-        
+
         config_data = load_config()
-        image_name = container_name.replace("playground-", "")
+        image_name = to_display_name(container_name)
         img_data = config_data["images"].get(image_name, {})
         
         result = await loop.run_in_executor(
@@ -194,10 +195,10 @@ async def restart_container(image_name: str):
         
         if image_name not in config:
             raise HTTPException(404, f"Image '{image_name}' not found in configuration")
-        
+
         img_data = config[image_name]
-        container_name = f"playground-{image_name}"
-        
+        container_name = to_full_name(image_name)
+
         # Check if container exists
         try:
             existing = docker_client.containers.get(container_name)
@@ -308,8 +309,8 @@ async def start_category(category: str):
         
         for img_name, img_data in config.items():
             if img_data.get('category') == category:
-                container_name = f"playground-{img_name}"
-                
+                container_name = to_full_name(img_name)
+
                 try:
                     existing = docker_client.containers.get(container_name)
                     if existing.status == "running":
@@ -404,7 +405,7 @@ async def stop_category_background(operation_id: str, containers, category: str)
         try:
             try:
                 config_data = load_config()
-                image_name = c.name.replace("playground-", "")
+                image_name = to_display_name(c.name)
                 img_data = config_data["images"].get(image_name, {})
                 scripts = img_data.get("scripts", {})
                 
@@ -493,7 +494,7 @@ async def restart_category_background(operation_id: str, containers, category: s
     def restart_cont(c):
         try:
             config_data = load_config()
-            image_name = c.name.replace("playground-", "")
+            image_name = to_display_name(c.name)
             img_data = config_data["images"].get(image_name, {})
             scripts = img_data.get("scripts", {})
             
@@ -596,7 +597,7 @@ async def stop_all_background(operation_id: str, containers: List[Any]):
             # Step 1: Execute pre-stop script if defined
             try:
                 config_data = load_config()
-                image_name = container_name.replace("playground-", "")
+                image_name = to_display_name(container_name)
                 img_data = config_data.get("images", {}).get(image_name, {})
                 scripts = img_data.get("scripts", {})
                 
@@ -875,7 +876,7 @@ async def restart_all_background(operation_id: str, containers: List[Any]):
             # Step 2: Load configuration
             try:
                 config_data = load_config()
-                image_name = container_name.replace("playground-", "")
+                image_name = to_display_name(container_name)
                 img_data = config_data.get("images", {}).get(image_name, {})
                 scripts = img_data.get("scripts", {})
                 post_start_wait = img_data.get("post_start_wait", 2)  # Default 2s
@@ -1132,7 +1133,7 @@ async def cleanup_all_background(operation_id: str, containers):
             if c.status == "running":
                 try:
                     config_data = load_config()
-                    image_name = c.name.replace("playground-", "")
+                    image_name = to_display_name(c.name)
                     img_data = config_data["images"].get(image_name, {})
                     scripts = img_data.get("scripts", {})
                     

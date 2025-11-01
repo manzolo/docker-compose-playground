@@ -34,11 +34,11 @@ const ScriptIndicatorManager = {
      * Show script indicator in container card
      */
     showIndicator(containerName, scriptType) {
-        // Extract image name from container name (remove playground- prefix)
-        const imageName = containerName.replace('playground-', '');
+        // Convert to display name (remove playground- prefix)
+        const displayName = ContainerNameUtils.toDisplayName(containerName);
 
         // 1. Update single container card indicator (if exists)
-        const card = DOM.query(`[data-name="${imageName}"]`);
+        const card = DOM.query(`[data-name="${displayName}"]`);
         if (card) {
             const indicator = card.querySelector('.script-running-indicator');
             if (indicator) {
@@ -61,8 +61,8 @@ const ScriptIndicatorManager = {
         }
 
         // 2. Update container tags in groups (change dot to yellow)
-        // Use imageName (without 'playground-' prefix) to match data-container attribute
-        const containerTag = DOM.query(`.container-tag[data-container="${imageName}"]`);
+        // Use display name (without 'playground-' prefix) to match data-container attribute
+        const containerTag = DOM.query(`.container-tag[data-container="${displayName}"]`);
         if (containerTag) {
             containerTag.setAttribute('data-script-running', 'true');
             // Update inline style to override container-tag-manager styles
@@ -75,7 +75,7 @@ const ScriptIndicatorManager = {
 
         // Track active indicator
         this.activeIndicators.set(containerName, {
-            imageName,
+            displayName,
             scriptType,
             startedAt: new Date()
         });
@@ -85,10 +85,11 @@ const ScriptIndicatorManager = {
      * Hide script indicator in container card
      */
     hideIndicator(containerName) {
-        const imageName = containerName.replace('playground-', '');
+        // Convert to display name (remove playground- prefix)
+        const displayName = ContainerNameUtils.toDisplayName(containerName);
 
         // 1. Hide single container card indicator (if exists)
-        const card = DOM.query(`[data-name="${imageName}"]`);
+        const card = DOM.query(`[data-name="${displayName}"]`);
         if (card) {
             const indicator = card.querySelector('.script-running-indicator');
             if (indicator) {
@@ -102,8 +103,8 @@ const ScriptIndicatorManager = {
         }
 
         // 2. Remove yellow dot from container tags in groups
-        // Use imageName (without 'playground-' prefix) to match data-container attribute
-        const containerTag = DOM.query(`.container-tag[data-container="${imageName}"]`);
+        // Use display name (without 'playground-' prefix) to match data-container attribute
+        const containerTag = DOM.query(`.container-tag[data-container="${displayName}"]`);
         if (containerTag) {
             containerTag.removeAttribute('data-script-running');
             // Restore color based on running state
