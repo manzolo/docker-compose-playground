@@ -8,37 +8,42 @@ import logging
 import time
 from typing import Optional
 
+from .logging_config import get_module_logger
+
+# Use centralized logger
+logger = get_module_logger("scripts")
+
 # ============================================================
 # SCRIPT EXECUTION CONFIGURATION
 # ============================================================
 
 class ScriptConfig:
     """Script execution configuration"""
-    
+
     # Timeout settings (in seconds)
     SCRIPT_EXECUTION_TIMEOUT = int(os.getenv('PLAYGROUND_SCRIPT_TIMEOUT', '300'))  # 5 min default
     SCRIPT_INIT_TIMEOUT = int(os.getenv('PLAYGROUND_SCRIPT_INIT_TIMEOUT', '300'))   # post-start
     SCRIPT_HALT_TIMEOUT = int(os.getenv('PLAYGROUND_SCRIPT_HALT_TIMEOUT', '300'))   # pre-stop
-    
+
     # Retry settings
     ENABLE_SCRIPT_RETRY = True
     MAX_SCRIPT_RETRIES = 2
     RETRY_DELAY_SECONDS = 2
-    
+
     # Logging
     ENABLE_SCRIPT_OUTPUT_LOGGING = True
     MAX_OUTPUT_LENGTH = 5000  # Max chars to log
-    
+
     # Environment
     PRESERVE_ENV = True  # Preserve parent environment variables
-    
+
     @classmethod
     def get_timeout(cls, script_type: str) -> int:
         """Get appropriate timeout based on script type
-        
+
         Args:
             script_type: 'init', 'halt', or generic script type
-        
+
         Returns:
             int: Timeout in seconds
         """
@@ -48,7 +53,7 @@ class ScriptConfig:
             return cls.SCRIPT_HALT_TIMEOUT
         else:
             return cls.SCRIPT_EXECUTION_TIMEOUT
-    
+
     @classmethod
     def log_config(cls):
         """Log configuration on startup"""
@@ -60,20 +65,6 @@ class ScriptConfig:
                    "ENABLED" if cls.ENABLE_SCRIPT_RETRY else "DISABLED",
                    cls.MAX_SCRIPT_RETRIES,
                    cls.RETRY_DELAY_SECONDS)
-
-
-# Logger che scrive direttamente su file (non dipende da uvicorn)
-logger = logging.getLogger("scripts")
-logger.setLevel(logging.DEBUG)
-
-# Configura il file handler per scrivere su venv/web.log
-LOG_FILE = Path(__file__).parent.parent.parent.parent / "venv" / "web.log"
-if not logger.handlers:
-    file_handler = logging.FileHandler(str(LOG_FILE), mode='a', encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [SCRIPTS] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 SCRIPTS_DIR = BASE_DIR / "scripts"

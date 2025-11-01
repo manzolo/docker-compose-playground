@@ -8,6 +8,7 @@ import tempfile
 import os
 import glob
 import logging
+from src.web.core.logging_config import get_logger
 import docker
 import re
 from typing import Tuple
@@ -16,7 +17,7 @@ from src.web.core.config import load_config, CUSTOM_CONFIG_DIR, BASE_DIR
 from src.web.core.docker import docker_client, SHARED_DIR
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 # Ensure custom.d exists
 CUSTOM_CONFIG_DIR.mkdir(exist_ok=True)

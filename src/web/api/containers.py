@@ -3,9 +3,10 @@ import logging
 import docker
 
 from src.web.core.docker import docker_client
+from src.web.core.logging_config import get_logger
 
 router = APIRouter()
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 
 @router.get("/api/containers/{container}/info")

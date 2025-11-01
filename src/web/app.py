@@ -48,25 +48,21 @@ from pathlib import Path
 import logging
 from pydantic import BaseModel
 
-# Import routers
+# Setup centralized logging FIRST (before any other imports that use logging)
+from src.web.core.logging_config import setup_logging, get_logger
+
+# Initialize logging system
+setup_logging(
+    console_level=logging.INFO,
+    file_level=logging.DEBUG,
+    format_style="standard"
+)
+
+logger = get_logger(__name__)
+
+# Import routers (after logging setup)
 from src.web.api import web, containers, groups, system, config_mgmt, websocket
 from src.web.api import cleanup, monitoring, execute_command, health_check
-
-# Configure logging with better formatting
-logging.basicConfig(
-    filename="venv/web.log",
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger(__name__)
-
-# Also log to console
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-console_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
-console_handler.setFormatter(console_formatter)
-logging.getLogger().addHandler(console_handler)
 
 logger.info("=" * 80)
 logger.info("Starting Docker Playground Web Dashboard...")

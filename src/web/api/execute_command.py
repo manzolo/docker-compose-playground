@@ -3,9 +3,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import docker
 import logging
+from src.web.core.logging_config import get_logger
 import threading
 
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 docker_client = docker.from_env()
 
 router = APIRouter()

@@ -12,7 +12,9 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 
-logger = logging.getLogger("uvicorn")
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Base paths
 BASE_DIR = Path(__file__).parent.parent.parent.parent

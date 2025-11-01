@@ -9,19 +9,10 @@ from pathlib import Path
 import time
 
 from .docker_compose_params import extract_docker_params
+from .logging_config import get_module_logger
 
-# Logger che scrive direttamente su file
-logger = logging.getLogger("docker_ops")
-logger.setLevel(logging.DEBUG)
-
-# Configura il file handler per scrivere su venv/web.log
-LOG_FILE = Path(__file__).parent.parent.parent.parent / "venv" / "web.log"
-if not logger.handlers:
-    file_handler = logging.FileHandler(str(LOG_FILE), mode='a', encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [DOCKER] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+# Use centralized logger
+logger = get_module_logger("docker")
 
 docker_client = docker.from_env()
 

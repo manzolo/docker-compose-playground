@@ -2,9 +2,10 @@
 from fastapi import APIRouter, HTTPException
 import docker
 import logging
+from src.web.core.logging_config import get_logger
 from datetime import datetime
 
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 docker_client = docker.from_env()
 
 router = APIRouter()

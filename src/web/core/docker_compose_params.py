@@ -7,8 +7,9 @@ configuration files and validates them against the Docker SDK specification.
 
 from typing import Dict, Any, List, Tuple, Set
 import logging
+from src.web.core.logging_config import get_logger
 
-logger = logging.getLogger("uvicorn")
+logger = get_logger(__name__)
 
 # =============================================================================
 # DOCKER COMPOSE PARAMETER DEFINITIONS
