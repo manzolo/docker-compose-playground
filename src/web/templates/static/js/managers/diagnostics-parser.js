@@ -16,9 +16,11 @@ const DiagnosticsParser = {
         const headers = lines[0].split(/\s+/);
         const rows = lines.slice(1);
 
-        let html = '<table class="diagnostics-table"><thead><tr>';
-        headers.forEach(header => {
-            html += `<th>${this.escapeHtml(header)}</th>`;
+        let html = '<table class="diagnostics-table processes-table"><thead><tr>';
+        headers.forEach((header, i) => {
+            // Add class to COMMAND column header
+            const isCommandCol = i === headers.length - 1 || header === 'COMMAND';
+            html += `<th ${isCommandCol ? 'class="command-col"' : ''}>${this.escapeHtml(header)}</th>`;
         });
         html += '</tr></thead><tbody>';
 
@@ -27,7 +29,9 @@ const DiagnosticsParser = {
             html += '<tr>';
             headers.forEach((_, i) => {
                 const cellValue = cells[i] || '';
-                html += `<td>${this.escapeHtml(cellValue)}</td>`;
+                // Add class to COMMAND column cells
+                const isCommandCol = i === headers.length - 1;
+                html += `<td ${isCommandCol ? 'class="command-col"' : ''}>${this.escapeHtml(cellValue)}</td>`;
             });
             html += '</tr>';
         });

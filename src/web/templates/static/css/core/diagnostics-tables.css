@@ -44,7 +44,7 @@
     padding: 12px 16px;
     color: #2d3748;
     word-break: break-word;
-    max-width: 400px;
+    max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -53,6 +53,25 @@
 .diagnostics-table td:hover {
     white-space: normal;
     overflow: visible;
+}
+
+/* Wider space for COMMAND column in processes table */
+.processes-table .command-col {
+    max-width: none;
+    width: 40%;
+    min-width: 300px;
+    white-space: normal;
+    word-break: break-all;
+}
+
+/* Constrain other columns to give more space to COMMAND */
+.processes-table td:not(.command-col) {
+    max-width: 120px;
+    white-space: nowrap;
+}
+
+.processes-table th:not(.command-col) {
+    white-space: nowrap;
 }
 
 /* Celle speciali */
@@ -227,6 +246,184 @@
 }
 
 /* ============================================
+   DIAGNOSTICS MODAL CONTROLS
+   ============================================ */
+
+.modal-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Toggle switch for auto-refresh - COPIED FROM WORKING LOGS MODAL */
+.diagnostics-toggle-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Hide the native checkbox */
+.diagnostics-toggle-checkbox {
+    display: none;
+}
+
+/* Label and switch styling */
+.diagnostics-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* The switch container */
+.diagnostics-toggle-switch {
+    position: relative;
+    display: inline-flex;
+    width: 44px;
+    height: 24px;
+    background-color: #cbd5e1;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+    padding: 2px;
+    box-sizing: border-box;
+}
+
+/* The switch circle/button */
+.diagnostics-toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 10px;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* When checked - active state */
+.diagnostics-toggle-checkbox:checked + .diagnostics-toggle-label .diagnostics-toggle-switch {
+    background-color: #48bb78;
+}
+
+.diagnostics-toggle-checkbox:checked + .diagnostics-toggle-label .diagnostics-toggle-switch::after {
+    transform: translateX(20px);
+}
+
+/* Hover effect */
+.diagnostics-toggle-label:hover .diagnostics-toggle-switch {
+    box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1);
+}
+
+/* Text styling */
+.diagnostics-toggle-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Focus state for accessibility */
+.diagnostics-toggle-checkbox:focus + .diagnostics-toggle-label {
+    outline: 2px solid #48bb78;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.refresh-indicator {
+    display: inline-block;
+    color: #48bb78;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.refresh-indicator.pulse {
+    opacity: 1;
+    animation: pulseIndicator 0.5s ease-in-out;
+}
+
+@keyframes pulseIndicator {
+    0% {
+        transform: scale(1);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.3);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Fullscreen button */
+.btn-icon-only {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+}
+
+.btn-icon-only:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    transform: scale(1.05);
+}
+
+/* Fullscreen mode */
+.modal-content.fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    z-index: 10001 !important;
+    animation: expandFullscreen 0.3s ease-out;
+}
+
+.modal-content.fullscreen .modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.modal-content.fullscreen .diagnostics-tab {
+    max-height: calc(100vh - 300px);
+}
+
+@keyframes expandFullscreen {
+    from {
+        transform: scale(0.95);
+        opacity: 0.9;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ============================================
    DARK MODE
    ============================================ */
 
@@ -248,6 +445,10 @@ html.dark-mode .diagnostics-table tbody tr:hover {
 }
 
 html.dark-mode .diagnostics-table td {
+    color: #e2e8f0;
+}
+
+html.dark-mode .processes-table .command-col {
     color: #e2e8f0;
 }
 
@@ -300,6 +501,34 @@ html.dark-mode .diagnostics-tab-btn.active {
     border-bottom-color: #667eea;
 }
 
+html.dark-mode .diagnostics-toggle-text {
+    color: #cbd5e1;
+}
+
+html.dark-mode .refresh-indicator {
+    color: #48bb78;
+}
+
+html.dark-mode .diagnostics-toggle-switch {
+    background-color: #4a5568;
+}
+
+html.dark-mode .diagnostics-toggle-checkbox:checked + .diagnostics-toggle-label .diagnostics-toggle-switch {
+    background-color: #48bb78;
+}
+
+html.dark-mode .btn-icon-only {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #cbd5e1;
+}
+
+html.dark-mode .btn-icon-only:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */
@@ -312,6 +541,15 @@ html.dark-mode .diagnostics-tab-btn.active {
     .diagnostics-table th,
     .diagnostics-table td {
         padding: 10px 12px;
+    }
+
+    .processes-table .command-col {
+        min-width: 200px;
+        width: 50%;
+    }
+
+    .processes-table td:not(.command-col) {
+        max-width: 100px;
     }
 
     .diagnostics-tabs {
@@ -332,5 +570,46 @@ html.dark-mode .diagnostics-tab-btn.active {
         padding: 12px;
         font-size: 11px;
         max-height: 400px;
+    }
+
+    .modal-header-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .diagnostics-toggle-control {
+        gap: 6px;
+    }
+
+    .diagnostics-toggle-text {
+        font-size: 11px;
+        flex-wrap: wrap;
+    }
+
+    .refresh-indicator {
+        font-size: 8px;
+    }
+
+    .diagnostics-toggle-switch {
+        width: 40px;
+        height: 20px;
+    }
+
+    .diagnostics-toggle-switch::after {
+        width: 16px;
+        height: 16px;
+        left: 2px;
+        top: 2px;
+    }
+
+    .diagnostics-toggle-checkbox:checked + .diagnostics-toggle-label .diagnostics-toggle-switch::after {
+        transform: translateX(18px);
+    }
+
+    .btn-icon-only {
+        min-width: 36px;
+        height: 36px;
+        font-size: 16px;
+        padding: 6px 10px;
     }
 }

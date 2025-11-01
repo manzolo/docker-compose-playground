@@ -428,14 +428,34 @@
         <div class="modal-overlay" onclick="ExecuteCommandManager.closeDiagnostics()"></div>
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h2>🔍 Container Diagnostics</h2>
                 <div class="modal-header-left">
+                    <h2>🔍 Container Diagnostics</h2>
                     <div class="log-info">
                         Container: <strong id="diagnosticsContainerName"></strong> | Image: <strong
                             id="diagnosticsImageName"></strong>
                     </div>
                 </div>
-                <button class="modal-close" onclick="ExecuteCommandManager.closeDiagnostics()">&times;</button>
+                <div class="modal-header-controls">
+                    <!-- Auto-refresh toggle -->
+                    <div class="diagnostics-toggle-control">
+                        <input type="checkbox" id="diagnosticsAutoRefresh" class="diagnostics-toggle-checkbox">
+                        <label for="diagnosticsAutoRefresh" class="diagnostics-toggle-label">
+                            <span class="diagnostics-toggle-switch"></span>
+                            <span class="diagnostics-toggle-text" id="diagnosticsAutoRefreshLabel">
+                                Auto-refresh (2s)
+                                <span class="refresh-indicator" id="diagnosticsRefreshIndicator"></span>
+                            </span>
+                        </label>
+                    </div>
+                    <!-- Fullscreen toggle -->
+                    <button class="btn-icon-only" id="diagnosticsFullscreenBtn"
+                            onclick="ExecuteCommandManager.toggleFullscreen()"
+                            title="Toggle fullscreen">
+                        ⛶
+                    </button>
+                    <!-- Close button -->
+                    <button class="modal-close" onclick="ExecuteCommandManager.closeDiagnostics()">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <!-- diagnostics tab navigation -->
