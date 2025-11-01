@@ -3,12 +3,17 @@
 
 .PHONY: help install uninstall test test-cli test-webui test-all test-docker-compose-params clean cli web list ps categories version dev-setup docs setup docker-build docker-tag docker-push docker-up docker-down docker-stop docker-start docker-restart docker-logs
 
+# Load .env file if it exists
+-include .env
+export
+
 # Variables
 DOCKER_IMAGE_NAME := manzolo/docker-compose-playground
 # Use environment variable VERSION or default to 'latest'
 GIT_TAG_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
 
 VERSION ?= $(if $(GIT_TAG_VERSION),$(GIT_TAG_VERSION),latest)
+PORT ?= 8000
 
 # Colors
 CYAN := \033[0;36m
@@ -55,11 +60,15 @@ help:
 	@echo "  make categories      Show container categories (via CLI)"
 	@echo "  make version         Show CLI version"
 	@echo ""
+	@echo "$(GREEN)Configuration:$(NC)"
+	@echo "  PORT=<port>          Set custom port (default: 8000) via .env file or environment"
+	@echo "  VERSION=<version>    Set version tag for Docker images"
+	@echo ""
 	@echo "$(GREEN)Usage Examples:$(NC)"
 	@echo "  make cli ARGS='list'"
 	@echo "  make docker-tag VERSION=${VERSION}"
 	@echo "  make docker-push VERSION=${VERSION}"
-	@echo "  make docker-up"
+	@echo "  PORT=9000 make docker-up     # Start on custom port"
 	@echo "  make docker-stop"
 	@echo ""
 
@@ -221,16 +230,16 @@ docker-start:
 	@mkdir -p ${PWD}/custom.d ${PWD}/shared-volumes
 	@docker compose -f docker-compose-standalone.yml up -d
 	@echo "$(CYAN)Waiting for service to be ready...$(NC)"
-	# Health check logic (copied from original docker-up)
+	# Health check
 	@for i in 1 2 3 4 5 6 7 8 9; do \
-		if curl -sf http://localhost:8000 > /dev/null 2>&1; then \
-			echo "$(GREEN)✓ Container started and service is responding on port 8000$(NC)"; \
+		if curl -sf http://localhost:$(PORT) > /dev/null 2>&1; then \
+			echo "$(GREEN)✓ Container started and service is responding on http://localhost:$(PORT)$(NC)"; \
 			exit 0; \
 		fi; \
 		echo "$(YELLOW)Attempt $$i/9: Service not ready yet, waiting...$(NC)"; \
 		sleep 5; \
 	done; \
-	echo "$(RED)✗ Service failed to respond on port 8000 after 10 seconds$(NC)"; \
+	echo "$(RED)✗ Service failed to respond on port $(PORT) after 10 seconds$(NC)"; \
 	exit 1
 
 docker-restart: docker-down docker-start
@@ -253,5 +262,5 @@ setup: dev-setup install docker-build docker-up test
 	@echo "  playground list"
 	@echo "  make docker-logs"
 	@echo "  make test"
-	@echo "  Access Web UI at http://localhost:8000"
+	@echo "  Access Web UI at http://localhost:$(PORT)"
 	@echo ""

@@ -23,7 +23,8 @@ COPY . /app
 RUN chmod +x /app/start-webui.sh /app/playground.sh /app/playground
 
 # Espone la porta per la Web UI (default 8000 dal repo)
-EXPOSE 8000
+ARG PORT=8000
+EXPOSE ${PORT}
 
 # Comando di default: avvia la Web UI (puoi override per TUI o CLI)
 #CMD ["/app/start-webui.sh", "--tail"]

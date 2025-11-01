@@ -47,6 +47,10 @@ def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
 from pathlib import Path
 import logging
 from pydantic import BaseModel
+import os
+
+# Get PORT from environment variable (default: 8000)
+PORT = int(os.getenv("PORT", "8000"))
 
 # Setup centralized logging FIRST (before any other imports that use logging)
 from src.web.core.logging_config import setup_logging, get_logger
@@ -120,7 +124,7 @@ app = FastAPI(
     version="2.0.0",
     contact={
         "name": "Support",
-        "url": "http://localhost:8000",
+        "url": f"http://localhost:{PORT}",
         "email": "support@manzolo.it"
     },
     license_info={
@@ -246,7 +250,7 @@ def custom_openapi():
     
     openapi_schema["servers"] = [
         {
-            "url": "http://localhost:8000",
+            "url": f"http://localhost:{PORT}",
             "description": "Development Server"
         },
         {
@@ -254,7 +258,7 @@ def custom_openapi():
             "description": "Custom Server",
             "variables": {
                 "host": {"default": "localhost"},
-                "port": {"default": "8000"}
+                "port": {"default": str(PORT)}
             }
         }
     ]
@@ -440,7 +444,7 @@ async def startup_event():
     
     logger.info("=" * 80)
     logger.info("STARTUP COMPLETE - API Ready")
-    logger.info("Swagger UI: http://localhost:8000/docs")
+    logger.info("Swagger UI: http://localhost:%d/docs", PORT)
     logger.info("=" * 80)
 
 

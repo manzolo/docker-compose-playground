@@ -365,7 +365,7 @@ async def validate_image(request: ValidateImageRequest):
     
     **Example:**
     ```bash
-    curl -X POST http://localhost:8000/api/validate-image \\
+    curl -X POST http://localhost:${PORT:-8000}/api/validate-image \\
       -H "Content-Type: application/json" \\
       -d '{"image": "ubuntu:22.04"}'
     ```
@@ -437,7 +437,7 @@ async def detect_shell(request: DetectShellRequest):
     
     **Example:**
     ```bash
-    curl -X POST http://localhost:8000/api/detect-shell \\
+    curl -X POST http://localhost:${PORT:-8000}/api/detect-shell \\
       -H "Content-Type: application/json" \\
       -d '{"image": "playground-ubuntu-24"}'
     ```

@@ -3,10 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - PORT=${PORT:-8000}
     image: manzolo/docker-compose-playground:${IMAGE_TAG:-latest}
     container_name: docker-compose-playground
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:${PORT:-8000}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./custom.d:/app/custom.d
@@ -18,9 +20,10 @@ services:
       - PYTHONUNBUFFERED=1
       - HOST_SHARED_VOLUMES_PATH=${PWD}/shared-volumes
       - RUNNING_IN_DOCKER=true
+      - PORT=${PORT:-8000}
     #command: ["/app/start-webui.sh", "--log-level", "DEBUG"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      test: ["CMD-SHELL", "curl -f http://localhost:$${PORT:-8000} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

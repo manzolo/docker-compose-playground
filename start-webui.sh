@@ -12,14 +12,14 @@
 
 set -o pipefail
 
+readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Load configuration from .env file if present
 if [[ -f "${PROJECT_DIR}/.env" ]]; then
     set -a
     source "${PROJECT_DIR}/.env"
     set +a
 fi
-
-readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_BASE_DIR="${PROJECT_DIR}/venv/environments"
 readonly REQ_FILE="${PROJECT_DIR}/venv/requirements.txt"
 readonly REQ_CHECKSUM_FILE="${PROJECT_DIR}/venv/.requirements.checksum"
