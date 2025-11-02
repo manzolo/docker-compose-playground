@@ -158,6 +158,44 @@ get_containers_from_yaml() {
     ' "$yaml_file" | sort -u
 }
 
+# Function to get image name for a specific container from YAML files
+get_container_image() {
+    local container_name=$1
+    local image_name=""
+
+    # Search in config.yml and config.d/*.yml and custom.d/*.yml
+    for file in config.yml config.d/*.yml config.d/*.yaml custom.d/*.yml custom.d/*.yaml; do
+        if [ -f "$file" ]; then
+            # Use awk to find the container and extract its image
+            image_name=$(awk -v container="$container_name" '
+                /^images:/ { in_images=1; next }
+                in_images && /^[^ ]/ { in_images=0 }
+                in_images && $0 ~ "^  " container ":" { in_container=1; next }
+                in_container && /^  [a-zA-Z]/ { in_container=0 }
+                in_container && /^    image:/ {
+                    gsub(/^    image: *"?/, "")
+                    gsub(/".*/, "")
+                    print
+                    exit
+                }
+            ' "$file")
+
+            if [ -n "$image_name" ]; then
+                echo "$image_name"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+# Function to check if docker image exists locally
+image_exists_locally() {
+    local image_name=$1
+    docker image inspect "$image_name" >/dev/null 2>&1
+}
+
 # Function to get container list
 get_containers_list() {
     log "Retrieving container list from YAML files..."
@@ -308,6 +346,20 @@ test_container() {
 
     local container_name="playground-$container"
 
+    # Get the image name for this container
+    local image_name
+    image_name=$(get_container_image "$container")
+    local image_was_present=false
+
+    if [ -n "$image_name" ]; then
+        if image_exists_locally "$image_name"; then
+            image_was_present=true
+            log "Image already present locally: $image_name"
+        else
+            log "Image not present locally, will be pulled: $image_name"
+        fi
+    fi
+
     docker rm -f "$container_name" >/dev/null 2>&1 || true
     sleep 1
 
@@ -350,6 +402,19 @@ test_container() {
             echo -e "  ✅ ${GREEN}STOP SUCCESS${NC}"
             log "STOP SUCCESS: $container"
             ((STOP_SUCCESS++))
+
+            # Clean up image if it wasn't present before the test
+            if [ "$image_was_present" = false ] && [ -n "$image_name" ]; then
+                echo -e "  🧹 ${YELLOW}Removing newly pulled image...${NC}"
+                log "Removing image that was pulled for test: $image_name"
+                if docker image rm "$image_name" >/dev/null 2>&1; then
+                    echo -e "  ✅ ${GREEN}IMAGE REMOVED: $image_name${NC}"
+                    log "IMAGE REMOVED: $image_name"
+                else
+                    echo -e "  ⚠️  ${YELLOW}Could not remove image: $image_name${NC}"
+                    log "WARNING: Could not remove image: $image_name"
+                fi
+            fi
         else
             echo -e "  ❌ ${RED}STOP FAILED${NC}"
             log "STOP FAILED: $container"
