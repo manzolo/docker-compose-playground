@@ -1,0 +1,61 @@
+images:
+  redis-6:
+    category: database
+    description: Redis 6
+    image: redis:6
+    keep_alive_cmd: redis-server
+    ports:
+    - 6381:6379
+    shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Redis 6 Quick Reference                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         Port: 6381
+
+      📊 Quick Connect:
+         redis-cli                                 # Connect to Redis
+
+      🔍 Quick Commands:
+         redis-cli INFO server                     # Server info
+         redis-cli SET mykey "Hello"               # Set value
+         redis-cli GET mykey                       # Get value
+         redis-cli KEYS "*"                        # List all keys
+         redis-cli PING                            # Test connection
+         redis-cli DBSIZE                          # Number of keys
+
+      📝 Data Types Examples:
+         # Strings
+         SET key "value"
+         GET key
+
+         # Lists
+         LPUSH mylist "item1"
+         LRANGE mylist 0 -1
+
+         # Sets
+         SADD myset "member1"
+         SMEMBERS myset
+
+         # Hashes
+         HSET user:1 name "Alice"
+         HGET user:1 name
+
+      💾 Persistence:
+         # Save snapshot
+         SAVE                                      # Synchronous save
+         BGSAVE                                    # Background save
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+         /data                                     # Redis data directory
+
+      💡 Tips:
+         • In-memory data structure store
+         • Supports multiple data types
+         • Use /shared for RDB/AOF backups
+         • Redis 6 includes ACL support
+
+      📚 Documentation: https://redis.io/docs/

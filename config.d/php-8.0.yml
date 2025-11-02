@@ -1,0 +1,46 @@
+images:
+  php-8.0:
+    category: programming
+    description: PHP 8.0
+    image: php:8.0
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  PHP 8.0 Development Environment              ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         php -v                                    # Check PHP version
+         php -i | head -20                         # Full PHP info
+         php -m                                    # List loaded modules
+         php -a                                    # Interactive shell (REPL)
+         php -r "echo 'Hello World!';"             # Run PHP code directly
+
+      📝 Quick Script Test:
+         # Create and run a test script
+         echo '<?php echo "PHP " . phpversion() . " is working!\n"; ?>' > /shared/test.php
+         php /shared/test.php
+
+      🔧 Development Server:
+         # Start built-in web server
+         php -S 0.0.0.0:8000 -t /shared
+         # Access at http://localhost:8000
+
+      🆕 PHP 8.0 Features:
+         • JIT Compiler for better performance
+         • Named arguments
+         • Union types
+         • Match expressions
+         • Nullsafe operator
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+         /shared/projects                          # Your PHP projects
+
+      💡 Tips:
+         • PHP 8.0 is a major release with breaking changes
+         • JIT improves performance for compute-intensive tasks
+         • Keep projects in /shared for persistence
+
+      📚 Documentation: https://www.php.net/releases/8.0/

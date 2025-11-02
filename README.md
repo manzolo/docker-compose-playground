@@ -42,8 +42,9 @@ docker compose -f docker-compose-standalone.yml up -d
 
 That's it! The Web UI will be available at [http://localhost:8000](http://localhost:8000). You can now:
 - Browse 100+ pre-configured containers
-- Start containers with one click
+- Start containers with one click (PHP 5.6-8.4, Node.js 14-22, Python 2.7-3.13, Go 1.18-1.23, and more!)
 - Access container terminals via WebSocket
+- Use utilities like Adminer, MailHog, Gitea, Uptime Kuma
 - Manage container groups and stacks
 
 To stop:
@@ -93,23 +94,29 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Kali** (rolling)
 
 ### Databases
-- **PostgreSQL** (15, 16, 17, alpine, latest)
-- **MySQL** (5.7, 8)
+- **PostgreSQL** (14, 15, 16, 17, alpine, latest)
+- **MySQL** (5.7, 8.0)
 - **MariaDB** (10, 11)
 - **MongoDB** (6, 7)
-- **Redis** (7, alpine, latest)
+- **Redis** (6, 7, alpine, latest)
+- **SQLite** (lightweight, serverless)
 - **Cassandra**
 - **CockroachDB**
 - **Neo4j**
 - **InfluxDB**
+- **Meilisearch** (fast, typo-tolerant search engine)
+- **CouchDB**
+- **Elasticsearch**
 
 ### Programming Languages
 - **Python** (2.7, 3.9, 3.10, 3.11, 3.12, 3.13, alpine)
-- **Node.js** (16, 18, 20, 22, alpine)
+- **Node.js** (14, 16, 18, 20, 22, alpine)
+- **TypeScript** (latest with compiler and ts-node)
 - **Bun**
-- **Golang** (1.18, 1.19, 1.20, 1.21, 1.22, alpine)
+- **Deno**
+- **Golang** (1.18, 1.19, 1.20, 1.21, 1.22, 1.23, alpine)
 - **Ruby** (3.3, alpine)
-- **PHP** (5.6, 7.2, 7.4, 8.2, 8.3, fpm)
+- **PHP** (5.6, 7.2, 7.3, 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, fpm)
 - **Java (OpenJDK)** (8, 11, 17, 21)
 - **Rust** (1.75, alpine)
 - **Elixir**
@@ -121,6 +128,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Lua**
 - **Clang**
 - **GCC**
+- **Dotnet** (8)
 
 ### Web Servers
 - **Nginx** (latest, alpine)
@@ -130,6 +138,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 
 ### Development Tools
 - **Code Server** (browser-based VS Code) - powered by [LinuxServer.io](https://www.linuxserver.io/)
+- **Gitea** (lightweight self-hosted Git service)
 - **Jupyter** (notebooks for Python, etc.)
 - **Jenkins** (CI/CD)
 - **Anaconda**
@@ -140,15 +149,25 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Maven**
 - **Packer**
 - **Ansible**
-- **Deno**
-- **Dotnet** (8)
 - **Curl**
 - **Busybox**
 - **Docker DinD** (Docker in Docker)
 
+### Utilities & Management
+- **Adminer** (lightweight database management - all databases in one tool)
+- **MailHog** (email testing tool for developers)
+- **File Browser** (web-based file manager)
+- **Uptime Kuma** (beautiful uptime monitoring dashboard)
+- **Strapi** (open-source headless CMS)
+- **Portainer** (Docker container management)
+- **Prometheus** (monitoring and alerting)
+- **Grafana** (visualization and analytics)
+- **Netshoot** (network troubleshooting toolkit)
+
 ### Stacks
 - **PHP-MySQL** (PHP + MySQL + phpMyAdmin)
-- **Wordpress** (WordPress + MySQL)
+- **Wordpress** (WordPress + MySQL + phpMyAdmin with automatic backup/restore)
+- **Joomla** (Joomla CMS + MySQL + phpMyAdmin with automatic backup/restore)
 - **ELK** (Elasticsearch, Logstash, Kibana)
 - **MinIO** (Object storage)
 - **PostgreSQL-pgAdmin** (PostgreSQL + pgAdmin)

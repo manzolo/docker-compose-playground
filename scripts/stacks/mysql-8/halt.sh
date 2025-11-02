@@ -37,7 +37,7 @@ if docker exec "$CONTAINER_NAME" mysqladmin ping -u root -pplayground --silent 2
     
     if [ $MYSQLDUMP_EXIT -eq 0 ] && [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
     SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    echo "✓ Database backup saved: data/backups/mysql-8/mysql_playground_${TIMESTAMP}.sql ($SIZE)"
+    echo "✓ Database backup saved: data/backups/mysql-8.0/mysql_playground_${TIMESTAMP}.sql ($SIZE)"
     SUCCESS=true
     
     # Backup list of databases

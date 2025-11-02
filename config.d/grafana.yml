@@ -9,3 +9,16 @@ images:
     ports:
     - 3000:3000
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Grafana Quick Reference                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Web UI:
+         Access: http://localhost:3000
+         Default: admin / admin
+
+      💡 Tips:
+         • Visualization and analytics platform
+         • Create dashboards for metrics
+         • Supports multiple data sources

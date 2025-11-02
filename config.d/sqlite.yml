@@ -1,0 +1,84 @@
+images:
+  sqlite:
+    category: database
+    description: SQLite - Serverless SQL database
+    image: nouchka/sqlite3:latest
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                SQLite - Serverless Database                   ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Start:
+         # Create/Open database
+         sqlite3 /shared/mydb.db
+
+         # Create database and execute SQL
+         sqlite3 /shared/test.db "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+
+      📊 SQLite Shell Commands:
+         # Open interactive shell
+         sqlite3 /shared/mydb.db
+
+         # Inside sqlite3 shell:
+         .databases                                # List databases
+         .tables                                   # List tables
+         .schema users                             # Show table schema
+         .mode column                              # Format output
+         .headers on                               # Show column headers
+         .quit                                     # Exit
+
+      📝 Quick Example:
+         # Create database with sample data
+         sqlite3 /shared/example.db <<'EOF'
+         CREATE TABLE users (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           name TEXT NOT NULL,
+           email TEXT UNIQUE
+         );
+
+         INSERT INTO users (name, email) VALUES
+           ('Alice', 'alice@example.com'),
+           ('Bob', 'bob@example.com');
+
+         SELECT * FROM users;
+         EOF
+
+      💾 Backup & Restore:
+         # Backup (dump to SQL)
+         sqlite3 /shared/mydb.db .dump > /shared/backup.sql
+
+         # Restore
+         sqlite3 /shared/newdb.db < /shared/backup.sql
+
+         # Copy database file
+         cp /shared/mydb.db /shared/mydb.backup
+
+      🔧 Useful .commands:
+         .backup FILE                              # Backup to file
+         .import FILE TABLE                        # Import CSV
+         .output FILE                              # Redirect output
+         .read FILE                                # Execute SQL from file
+         .timer on                                 # Show query timing
+
+      ⚡ Features:
+         • Zero configuration
+         • Serverless (file-based)
+         • ACID compliant
+         • Portable database file
+         • Perfect for small to medium apps
+         • Great for prototyping
+         • Used in mobile apps, browsers
+
+      📁 Database Files:
+         /shared/*.db                              # Store databases here
+
+      💡 Tips:
+         • Database is just a file
+         • Perfect for development/testing
+         • No server process needed
+         • Store .db files in /shared
+         • Can be used by multiple languages
+
+      📚 Documentation: https://www.sqlite.org/docs.html

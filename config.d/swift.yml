@@ -5,3 +5,22 @@ images:
     image: swift:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Swift Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         swift --version                           # Check Swift version
+         swift                                     # Interactive REPL
+         swift script.swift                        # Run Swift file
+         swift build                               # Build project
+
+      📝 Quick Test:
+         echo 'print("Hello from Swift!")' > /shared/test.swift
+         swift /shared/test.swift
+
+      💡 Tips:
+         • Modern programming language by Apple
+         • Safe, fast, and expressive
+         • Keep projects in /shared

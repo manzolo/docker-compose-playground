@@ -7,3 +7,23 @@ images:
     ports:
     - 8084:80
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Caddy Web Server                             ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Server Info:
+         Port: 80 (default)
+         Automatic HTTPS with Let's Encrypt
+
+      🔧 Quick Commands:
+         caddy version                             # Check Caddy version
+         caddy reload --config /etc/caddy/Caddyfile  # Reload config
+         caddy fmt /etc/caddy/Caddyfile            # Format Caddyfile
+
+      📁 Configuration:
+         /etc/caddy/Caddyfile                      # Main config file
+
+      💡 Tips:
+         • Automatic HTTPS
+         • Modern, easy-to-configure web server

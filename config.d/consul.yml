@@ -7,3 +7,20 @@ images:
     ports:
     - 8500:8500
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Consul Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         consul --version                          # Check Consul version
+         consul members                            # List cluster members
+         consul catalog services                   # List services
+
+      🌐 Web UI:
+         Access: http://localhost:8500
+
+      💡 Tips:
+         • Service mesh and service discovery
+         • Key/value store
+         • Health checking

@@ -5,3 +5,25 @@ images:
     image: alpine/ansible:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Ansible Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         ansible --version                         # Check Ansible version
+         ansible localhost -m ping                 # Test Ansible
+         ansible-playbook /shared/playbook.yml     # Run playbook
+
+      📝 Create Sample Playbook:
+         cat > /shared/test.yml <<'EOF'
+         - hosts: localhost
+           tasks:
+             - debug: msg="Hello from Ansible"
+         EOF
+         ansible-playbook /shared/test.yml
+
+      💡 Tips:
+         • Agentless automation tool
+         • YAML-based playbooks
+         • Keep playbooks in /shared

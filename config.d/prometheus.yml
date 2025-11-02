@@ -7,3 +7,20 @@ images:
     ports:
     - 9091:9090
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Prometheus Quick Reference                     ║
+      ╚══════════════════════════════════════════════════════════════╗
+
+      🌐 Web UI:
+         Access: http://localhost:9090
+
+      🔍 Quick Queries:
+         up                                        # Check targets
+         rate(metric_name[5m])                     # Rate over 5 minutes
+         sum(metric_name)                          # Sum of metric
+
+      💡 Tips:
+         • Monitoring and alerting toolkit
+         • PromQL query language
+         • Time series database

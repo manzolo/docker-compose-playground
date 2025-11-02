@@ -5,3 +5,27 @@ images:
     image: nicolaka/netshoot:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Netshoot Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔧 Network Troubleshooting Tools:
+         # DNS
+         nslookup google.com
+         dig google.com
+
+         # Connectivity
+         ping google.com
+         curl -I https://google.com
+         wget https://google.com
+
+         # Network info
+         netstat -tuln
+         ss -tuln
+         ip addr
+         ifconfig
+
+      💡 Tips:
+         • Network troubleshooting Swiss Army knife
+         • Contains most network diagnostic tools

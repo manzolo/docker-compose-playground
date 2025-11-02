@@ -5,3 +5,27 @@ images:
     image: denoland/deno:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Deno Quick Reference                        ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         deno --version                            # Check Deno version
+         deno repl                                 # Interactive REPL
+         deno run script.ts                        # Run TypeScript file
+         deno run --allow-net script.ts            # Run with permissions
+
+      📝 Quick Test:
+         echo 'console.log("Hello from Deno!")' > /shared/test.ts
+         deno run /shared/test.ts
+
+      🔧 Useful Commands:
+         deno info                                 # Show environment info
+         deno fmt script.ts                        # Format code
+         deno lint script.ts                       # Lint code
+
+      💡 Tips:
+         • Secure by default (requires explicit permissions)
+         • Built-in TypeScript support
+         • No package.json or node_modules needed

@@ -7,3 +7,18 @@ images:
     ports:
     - 4445:4444
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║             Selenium Firefox Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔧 Selenium Server:
+         Use with Selenium WebDriver for Firefox browser automation
+
+      🌐 VNC Access:
+         Port: 5900 (if VNC enabled)
+
+      💡 Tips:
+         • Browser automation with Firefox
+         • Headless browser testing
+         • Use for automated testing

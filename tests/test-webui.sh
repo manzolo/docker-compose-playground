@@ -306,23 +306,23 @@ run_phase_1() {
 
 run_phase_2() {
     print_section "PHASE 2: Single Container - $TEST_CONTAINER"
-    
+
     print_test "Start container: $TEST_CONTAINER"
     local response=$(curl -s -X POST "$API_URL/start/$TEST_CONTAINER")
     if echo "$response" | grep -q "operation_id\|started"; then
         log_success "Container start initiated"
-        sleep 3
     else
         log_warning "Container start response unclear"
         log_debug "Response: $response"
     fi
-    
-    print_test "Verify container is running"
-    local stats=$(curl -s "$API_URL/container-stats/$TEST_CONTAINER")
-    if echo "$stats" | grep -q "cpu\|memory"; then
-        log_success "Container is running"
+
+    print_test "Wait for container to be running (up to 60s)"
+    if wait_for_container_running "$TEST_CONTAINER" 60; then
+        log_success "Container is running and stable"
     else
-        log_error "Container not running"
+        log_error "Container failed to start or crashed immediately"
+        # Additional debug: check container status via Docker
+        docker ps -a --filter "name=playground-$TEST_CONTAINER" --format "{{.Status}}" | head -1
     fi
     
     print_test "Restart container: $TEST_CONTAINER"

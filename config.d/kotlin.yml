@@ -5,3 +5,21 @@ images:
     image: zenika/kotlin:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Kotlin Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         kotlinc -version                          # Check Kotlin version
+         kotlinc script.kt -include-runtime -d app.jar  # Compile
+         java -jar app.jar                         # Run compiled jar
+         kotlinc-jvm -script script.kts            # Run as script
+
+      📝 Quick Script:
+         echo 'println("Hello from Kotlin!")' > /shared/hello.kts
+         kotlinc-jvm -script /shared/hello.kts
+
+      💡 Tips:
+         • Modern JVM language
+         • Fully interoperable with Java

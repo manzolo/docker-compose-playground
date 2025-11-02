@@ -5,3 +5,18 @@ images:
     image: hashicorp/packer:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Packer Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         packer --version                          # Check Packer version
+         packer init template.pkr.hcl              # Initialize config
+         packer validate template.pkr.hcl          # Validate template
+         packer build template.pkr.hcl             # Build image
+
+      💡 Tips:
+         • Automates machine image creation
+         • Supports multiple platforms
+         • Keep templates in /shared

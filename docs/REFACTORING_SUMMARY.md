@@ -38,7 +38,7 @@ scripts/
     │   └── init.sh
     ├── code-server-python/
     │   └── init.sh
-    ├── mysql-8/
+    ├── mysql-8.0/
     │   ├── init.sh
     │   └── halt.sh
     ├── mysql-8-stack/
@@ -359,7 +359,7 @@ All containers now use the new standardized script structure:
 - ✅ `scripts/generic_backup.sh` - **REMOVED**
 - ✅ `scripts/code-server-php-stack/` - **REMOVED**
 - ✅ `scripts/code-server-python-stack/` - **REMOVED**
-- ✅ `scripts/mysql-8/` - **REMOVED**
+- ✅ `scripts/mysql-8.0/` - **REMOVED**
 - ✅ `scripts/mysql-8-stack/` - **REMOVED**
 - ✅ `scripts/php-8.3/` - **REMOVED**
 - ✅ `scripts/php-8.4-stack/` - **REMOVED**

@@ -5,3 +5,22 @@ images:
     image: mcr.microsoft.com/dotnet/sdk:8.0
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  .NET 8 Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         dotnet --version                          # Check .NET version
+         dotnet --info                             # Detailed info
+         dotnet new console -o /shared/myapp       # Create console app
+         dotnet run                                # Run application
+
+      📦 Package Management:
+         dotnet add package Newtonsoft.Json        # Add NuGet package
+         dotnet restore                            # Restore dependencies
+         dotnet build                              # Build project
+
+      💡 Tips:
+         • .NET 8 LTS with C# 12
+         • Cross-platform development

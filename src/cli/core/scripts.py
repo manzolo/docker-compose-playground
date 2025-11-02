@@ -34,7 +34,7 @@ def execute_script(script_config, full_container_name: str, container_name: str,
     Args:
         script_config: Script configuration (dict, str, or None)
         full_container_name: Full container name (e.g., 'playground-mysql-8')
-        container_name: Container name without prefix (e.g., 'mysql-8')
+        container_name: Container name without prefix (e.g., 'mysql-8.0')
         script_type: Type of script - 'init' (post-start) or 'halt' (pre-stop)
     """
     # Default script lookup paths (in order of preference)

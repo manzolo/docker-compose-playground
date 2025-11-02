@@ -5,3 +5,18 @@ images:
     image: continuumio/miniconda3
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Miniconda Quick Reference                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         conda --version                           # Check Conda version
+         conda create -n myenv python=3.9          # Create environment
+         conda activate myenv                      # Activate environment
+         conda install package_name                # Install package
+
+      💡 Tips:
+         • Minimal Anaconda distribution
+         • Lighter alternative to full Anaconda
+         • Keep environments in /shared

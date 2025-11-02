@@ -7,3 +7,15 @@ images:
     ports:
     - 9411:9411
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Zipkin Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Web UI:
+         Access: http://localhost:9411
+
+      💡 Tips:
+         • Distributed tracing system
+         • Helps troubleshoot latency problems
+         • Collect timing data for microservices

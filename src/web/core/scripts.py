@@ -85,7 +85,7 @@ def build_script_environment(container_name: str) -> dict:
     """Build environment variables for script execution
     
     Args:
-        container_name: Full container name (e.g., 'playground-mysql-8')
+        container_name: Full container name (e.g., 'playground-mysql-8.0')
     
     Returns:
         dict: Environment variables
@@ -237,8 +237,8 @@ def execute_script(
 
     Args:
         script_config: Script configuration (dict, str, or None)
-        full_container_name: Full container name (e.g., 'playground-mysql-8')
-        container_name: Container name without prefix (e.g., 'mysql-8')
+        full_container_name: Full container name (e.g., 'playground-mysql-8.0')
+        container_name: Container name without prefix (e.g., 'mysql-8.0')
         script_type: Type of script - 'init' (post-start) or 'halt' (pre-stop)
 
     Raises:

@@ -7,3 +7,24 @@ images:
     ports:
     - 6380:6379
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Redis Alpine Quick Reference                ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         Port: 6380
+
+      📊 Quick Connect:
+         redis-cli                                 # Connect to Redis
+
+      🔍 Quick Commands:
+         redis-cli INFO server                     # Server info
+         redis-cli SET mykey "Hello"               # Set value
+         redis-cli GET mykey                       # Get value
+         redis-cli KEYS "*"                        # List all keys
+
+      💡 Tips:
+         • Lightweight Alpine variant
+         • In-memory data structure store
+         • Use /shared for RDB/AOF backups

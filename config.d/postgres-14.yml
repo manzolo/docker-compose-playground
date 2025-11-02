@@ -1,0 +1,59 @@
+images:
+  postgres-14:
+    category: database
+    description: PostgreSQL 14
+    environment:
+      POSTGRES_DB: playground
+      POSTGRES_PASSWORD: playground
+      POSTGRES_USER: playground
+    image: postgres:14
+    keep_alive_cmd: postgres
+    ports:
+    - 5432:5432
+    shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   PostgreSQL 14 Quick Reference               ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         Host: localhost
+         Port: 5432
+         Database: playground
+         User: playground
+         Password: playground
+
+      📊 Quick Connect:
+         psql -U playground                        # Connect as playground user
+         psql -U playground -d playground          # Connect to playground DB
+
+      🔍 Quick Commands:
+         psql -U playground -c "SELECT version();" # Check PostgreSQL version
+         psql -U playground -c "\l"                # List all databases
+         psql -U playground -c "\dt"               # List tables in current DB
+         psql -U playground -c "\du"               # List users/roles
+
+      📝 Database Operations:
+         CREATE DATABASE mydb;                     # Create database
+         \c mydb                                   # Connect to database
+         \dt                                       # List tables
+         \d table_name                             # Describe table
+
+      💾 Backup & Restore:
+         # Backup database
+         pg_dump -U playground playground > /shared/backup.sql
+
+         # Restore database
+         psql -U playground playground < /shared/backup.sql
+
+         # Backup all databases
+         pg_dumpall -U playground > /shared/full_backup.sql
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+         /var/lib/postgresql/data                  # Data directory
+
+      💡 Tips:
+         • Use /shared for SQL dumps and backups
+         • PostgreSQL 14 with performance improvements
+         • Default encoding: UTF8

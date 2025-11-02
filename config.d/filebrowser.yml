@@ -1,0 +1,62 @@
+images:
+  filebrowser:
+    category: utility
+    description: File Browser - Web-based file manager
+    image: filebrowser/filebrowser:latest
+    keep_alive_cmd: /filebrowser
+    ports:
+    - 8090:80
+    shell: /bin/sh
+    volumes:
+      - /shared:/srv
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              File Browser - Web File Manager                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Web Interface:
+         Access: http://localhost:8090
+         Default Login: admin / admin
+         ⚠️  Change password after first login!
+
+      📁 File Management:
+         • Browse files and folders
+         • Upload/Download files
+         • Create/Edit text files
+         • Create folders
+         • Rename/Delete files
+         • Search files
+         • Share files via links
+
+      ⚡ Features:
+         • Web-based file manager
+         • Multiple user support
+         • File sharing with expiration
+         • Built-in text editor
+         • Image preview
+         • Video player
+         • Archive support (zip, tar, etc.)
+         • Command runner
+         • Mobile responsive
+
+      🔧 Useful Actions:
+         # Upload files
+         Click "Upload" button or drag & drop
+
+         # Edit text files
+         Click on .txt, .md, .json, etc. to edit
+
+         # Share a file
+         Select file → Share → Set expiration
+
+         # Create new file
+         New → File → Enter name
+
+      💡 Tips:
+         • Access /shared directory via web browser
+         • Great for managing playground files
+         • Change default password immediately
+         • Can run custom commands on files
+         • Perfect for remote file management
+
+      📚 Documentation: https://filebrowser.org/

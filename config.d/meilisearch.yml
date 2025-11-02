@@ -1,0 +1,106 @@
+images:
+  meilisearch:
+    category: database
+    description: Meilisearch - Fast, typo-tolerant search engine
+    image: getmeili/meilisearch:latest
+    keep_alive_cmd: meilisearch
+    ports:
+    - 7700:7700
+    shell: /bin/sh
+    environment:
+      MEILI_ENV: development
+      MEILI_NO_ANALYTICS: "true"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Meilisearch - Lightning Fast Search                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Web Interface:
+         Access: http://localhost:7700
+         API Endpoint: http://localhost:7700
+
+      🚀 Quick Start:
+         # Add documents via API
+         curl -X POST 'http://localhost:7700/indexes/movies/documents' \
+           -H 'Content-Type: application/json' \
+           --data-binary '[
+             {"id": 1, "title": "The Matrix", "year": 1999},
+             {"id": 2, "title": "Inception", "year": 2010}
+           ]'
+
+         # Search
+         curl 'http://localhost:7700/indexes/movies/search?q=matrix'
+
+      📊 Index Operations:
+         # Create index
+         curl -X POST 'http://localhost:7700/indexes' \
+           -H 'Content-Type: application/json' \
+           --data-binary '{"uid": "books", "primaryKey": "id"}'
+
+         # List indexes
+         curl 'http://localhost:7700/indexes'
+
+         # Get index info
+         curl 'http://localhost:7700/indexes/movies'
+
+      🔍 Search Features:
+         • Typo-tolerant (finds "Milanoo" for "Milano")
+         • Instant search (< 50ms)
+         • Highlighting and snippets
+         • Faceted search and filters
+         • Geo-search
+         • Multi-language support
+         • Synonyms
+         • Stop words
+
+      ⚡ Advanced Search:
+         # Search with filters
+         curl 'http://localhost:7700/indexes/movies/search' \
+           --data-binary '{"q": "action", "filter": "year > 2000"}'
+
+         # With facets
+         curl 'http://localhost:7700/indexes/movies/search' \
+           --data-binary '{"q": "", "facets": ["genre"]}'
+
+      📝 Use Cases:
+         • E-commerce product search
+         • Documentation search
+         • Blog/article search
+         • Location-based search
+         • Any application needing search
+
+      💡 Language SDKs:
+         • JavaScript/TypeScript
+         • Python
+         • Go
+         • PHP
+         • Ruby
+         • Java
+         • .NET
+         • Rust
+
+      🔧 Example with JavaScript:
+         const { MeiliSearch } = require('meilisearch')
+         const client = new MeiliSearch({
+           host: 'http://localhost:7700'
+         })
+
+         // Add documents
+         await client.index('movies').addDocuments([
+           { id: 1, title: 'The Matrix' }
+         ])
+
+         // Search
+         const results = await client.index('movies').search('matrix')
+
+      💡 Tips:
+         • Fast alternative to Elasticsearch
+         • Much easier to setup and use
+         • Great for small to medium datasets
+         • Instant search experience
+         • RESTful API
+
+      📁 Data Storage:
+         /meili_data                               # Meilisearch data
+
+      📚 Documentation: https://www.meilisearch.com/docs

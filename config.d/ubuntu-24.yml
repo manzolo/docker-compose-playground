@@ -13,8 +13,9 @@ images:
       📦 Package Management:
          apt update                                # Update package list
          apt upgrade                               # Upgrade packages
-         apt install package_name                  # Install package
-         apt search package_name                   # Search package
+         apt install nano                          # Install package
+         apt search nano                           # Search package
+         apt list --installed                      # List installed packages
 
       🔧 System Info:
          uname -a                                  # Kernel info
