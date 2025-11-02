@@ -88,16 +88,32 @@ def get_container(container_name: str):
 def start_container(
     image_name: str,
     img_data: Dict[str, Any],
-    force: bool = False
+    force: bool = False,
+    progress=None,
+    task_id=None
 ) -> Tuple[bool, str]:
     """
     Start a container with volume support
     Returns: (success: bool, container_name: str)
+
+    Args:
+        image_name: Name of the container
+        img_data: Container configuration
+        force: Force restart if already running
+        progress: Optional Rich Progress object for spinner
+        task_id: Optional task ID for updating spinner
     """
     container_name = f"playground-{image_name}"
-    
+
+    def update_spinner(message: str):
+        """Update spinner message if available"""
+        if progress and task_id is not None:
+            progress.update(task_id, description=message)
+        else:
+            console.print(f"[cyan]{message}[/cyan]")
+
     ensure_network()
-    
+
     try:
         # Check if already exists
         try:
@@ -105,8 +121,8 @@ def start_container(
             if existing.status == "running" and not force:
                 console.print(f"[yellow]⚠ Container already running: {container_name}[/yellow]")
                 return False, container_name
-            
-            console.print("[yellow]Removing existing container...[/yellow]")
+
+            update_spinner(f"🗑️  Removing existing container...")
             existing.stop(timeout=10)
             existing.remove()
         except docker.errors.NotFound:
@@ -120,26 +136,28 @@ def start_container(
                 ports[container_port] = host_port
         
         # Prepare volumes
+        update_spinner("📦 Preparing volumes...")
         volumes_config = img_data.get("volumes", [])
         success, volume_manager, errors = prepare_volumes(volumes_config)
-        
+
         if not success and errors:
             console.print(f"[red]❌ Failed to prepare volumes:[/red]")
             for error in errors:
                 console.print(f"   {error}")
             return False, container_name
-        
+
         # Ensure named volumes exist
         if volume_manager.volumes:
+            update_spinner("🔧 Creating named volumes...")
             ensure_named_volumes(volume_manager)
-        
+
         # Build volumes list
         volumes = [f"{SHARED_DIR}:/shared"]
         volumes.extend(volume_manager.get_compose_volumes())
-        
-        console.print(f"[cyan]Starting container: {container_name}...[/cyan]")
 
-        if volume_manager.volumes:
+        update_spinner(f"🐳 Starting container {container_name}...")
+
+        if volume_manager.volumes and not (progress and task_id is not None):
             console.print("[cyan]Volumes:[/cyan]")
             for vol_str in volume_manager.list_volumes():
                 console.print(f"  • {vol_str}")
@@ -147,8 +165,8 @@ def start_container(
         # Extract Docker Compose parameters
         docker_params = extract_docker_params(img_data)
 
-        # Show additional Docker parameters if any
-        if docker_params:
+        # Show additional Docker parameters if any (only if not using spinner)
+        if docker_params and not (progress and task_id is not None):
             console.print("[cyan]Additional Docker parameters:[/cyan]")
             for key, value in docker_params.items():
                 console.print(f"  • {key}: {value}")
@@ -172,19 +190,37 @@ def start_container(
             base_params["hostname"] = image_name
 
         # Start container with base parameters + Docker Compose parameters
-        container = docker_client.containers.run(
-            img_data["image"],
-            **base_params,
-            **docker_params  # Pass through Docker Compose parameters
-        )
-        
+        update_spinner(f"🚀 Launching container...")
+        try:
+            container = docker_client.containers.run(
+                img_data["image"],
+                **base_params,
+                **docker_params  # Pass through Docker Compose parameters
+            )
+        except docker.errors.ImageNotFound:
+            # Try to pull the image
+            update_spinner(f"📥 Pulling image {img_data['image']}...")
+            try:
+                docker_client.images.pull(img_data['image'])
+                update_spinner(f"🚀 Launching container...")
+                container = docker_client.containers.run(
+                    img_data["image"],
+                    **base_params,
+                    **docker_params
+                )
+            except Exception as pull_error:
+                console.print(f"[red]❌ Failed to pull image: {pull_error}[/red]")
+                return False, container_name
+
         # Wait for container to be running
+        update_spinner(f"⏳ Waiting for container to be ready...")
         max_wait = 30
         elapsed = 0
-        
+
         while elapsed < max_wait:
             container.reload()
             if container.status == "running":
+                update_spinner(f"✅ Container {container_name} is running")
                 return True, container_name
             elif container.status in ["exited", "dead"]:
                 # Get logs for debugging
@@ -194,13 +230,13 @@ def start_container(
                     console.print("[dim]Container logs:[/dim]")
                     console.print(logs[:500])
                 return False, container_name
-            
+
             time.sleep(0.5)
             elapsed += 0.5
-        
+
         console.print("[red]❌ Container did not start in time[/red]")
         return False, container_name
-        
+
     except docker.errors.ImageNotFound:
         console.print(f"[red]❌ Docker image not found: {img_data['image']}[/red]")
         console.print(f"[yellow]Try pulling it first: docker pull {img_data['image']}[/yellow]")
@@ -215,26 +251,42 @@ def start_container(
         return False, container_name
 
 
-def stop_container(container_name: str, remove: bool = True) -> bool:
+def stop_container(container_name: str, remove: bool = True, progress=None, task_id=None) -> bool:
     """
     Stop a container
     Returns: success: bool
+
+    Args:
+        container_name: Name of the container to stop
+        remove: Whether to remove the container after stopping
+        progress: Optional Rich Progress object for spinner
+        task_id: Optional task ID for updating spinner
     """
     if not container_name.startswith("playground-"):
         container_name = f"playground-{container_name}"
-    
+
+    def update_spinner(message: str):
+        """Update spinner message if available"""
+        if progress and task_id is not None:
+            progress.update(task_id, description=message)
+        else:
+            console.print(f"[yellow]{message}[/yellow]")
+
     try:
         cont = docker_client.containers.get(container_name)
-        
-        console.print(f"[yellow]Stopping container: {container_name}...[/yellow]")
+
+        update_spinner(f"🛑 Stopping container {container_name}...")
         cont.stop(timeout=10)  # 10 seconds is reasonable for dev environments
-        
+
         if remove:
-            console.print("[yellow]Removing container...[/yellow]")
+            update_spinner(f"🗑️  Removing container {container_name}...")
             cont.remove()
-        
+            update_spinner(f"✅ Container {container_name} stopped and removed")
+        else:
+            update_spinner(f"✅ Container {container_name} stopped")
+
         return True
-        
+
     except docker.errors.NotFound:
         console.print(f"[red]❌ Container not found: {container_name}[/red]")
         return False

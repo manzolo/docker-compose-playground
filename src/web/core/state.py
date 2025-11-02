@@ -21,6 +21,8 @@ def create_operation(operation_id: str, operation_type: str, **kwargs) -> dict:
         "errors": [],
         "scripts_running": [],  # Track script execution
         "scripts_completed": [],  # Track completed scripts
+        "operation_phase": None,  # NEW: Track Docker operation phases
+        "container_name": kwargs.get("container", ""),  # Container for phase tracking
     }
     
     # Add type-specific fields

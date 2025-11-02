@@ -18,7 +18,7 @@ from ..core.docker_ops import (
 )
 from ..utils.display import (
     console, create_containers_table, format_container_status,
-    show_port_mappings, show_info_table
+    show_port_mappings, show_info_table, create_progress_context
 )
 from ..core.scripts import execute_script
 
@@ -96,33 +96,39 @@ def start(
 ):
     """▶ Start a container"""
     img_data = get_image_config(image)
-    
-    success, container_name = start_container(image, img_data, force)
-    
-    if not success:
-        raise typer.Exit(1)
-    
-    full_container_name = f"playground-{image}" if not image.startswith("playground-") else image
-    
+
+    # Use spinner for better UX
+    with create_progress_context() as progress:
+        task = progress.add_task(f"Starting {image}...", total=None)
+
+        success, container_name = start_container(image, img_data, force, progress=progress, task_id=task)
+
+        if not success:
+            raise typer.Exit(1)
+
+        full_container_name = f"playground-{image}" if not image.startswith("playground-") else image
+
+        # Execute post-start script - SEMPRE, anche se non configurato
+        scripts = img_data.get('scripts', {})
+        post_start_script = scripts.get('post_start') if scripts else None
+
+        try:
+            progress.update(task, description=f"📜 Running post-start script for {image}...")
+            execute_script(post_start_script, full_container_name, image, script_type="init")
+        except Exception as e:
+            pass  # Script execution handles its own logging
+
+        progress.update(task, description=f"[green]✅ Container {container_name} started successfully[/green]")
+
     console.print(f"[green]✓ Container started successfully: {container_name}[/green]")
-    
-    # Execute post-start script - SEMPRE, anche se non configurato
-    scripts = img_data.get('scripts', {})
-    post_start_script = scripts.get('post_start') if scripts else None
-    
-    try:
-        console.print("[cyan]Running post-start script...[/cyan]")
-        execute_script(post_start_script, full_container_name, image, script_type="init")
-    except Exception as e:
-        console.print(f"[yellow]Post-start script completed with status[/yellow]")
-    
+
     # Show connection info
     ports = {}
     for p in img_data.get("ports", []):
         if ':' in p:
             host_port, container_port = p.split(":")
             ports[container_port] = host_port
-    
+
     show_port_mappings(ports)
 
 
@@ -139,26 +145,32 @@ def stop(
     else:
         base_container_name = container
         full_container_name = f"playground-{container}"
-    
-    # Execute pre-stop script - SEMPRE, anche se non configurato
-    config = load_config()
-    if base_container_name in config:
-        img_data = config[base_container_name]
-        scripts = img_data.get('scripts', {})
-        pre_stop_script = scripts.get('pre_stop') if scripts else None
-        
-        try:
-            console.print("[cyan]Running pre-stop script...[/cyan]")
-            execute_script(pre_stop_script, full_container_name, base_container_name, script_type="halt")
-        except Exception as e:
-            console.print(f"[yellow]Pre-stop script completed with status[/yellow]")
-    
-    success = stop_container(full_container_name, remove)
-    
-    if success:
-        console.print(f"[green]✓ Container stopped: {full_container_name}[/green]")
-    else:
-        raise typer.Exit(1)
+
+    # Use spinner for better UX
+    with create_progress_context() as progress:
+        task = progress.add_task(f"Stopping {base_container_name}...", total=None)
+
+        # Execute pre-stop script - SEMPRE, anche se non configurato
+        config = load_config()
+        if base_container_name in config:
+            img_data = config[base_container_name]
+            scripts = img_data.get('scripts', {})
+            pre_stop_script = scripts.get('pre_stop') if scripts else None
+
+            try:
+                progress.update(task, description=f"📜 Running pre-stop script for {base_container_name}...")
+                execute_script(pre_stop_script, full_container_name, base_container_name, script_type="halt")
+            except Exception as e:
+                pass  # Script execution handles its own logging
+
+        success = stop_container(full_container_name, remove, progress=progress, task_id=task)
+
+        if success:
+            progress.update(task, description=f"[green]✅ Container {full_container_name} stopped[/green]")
+        else:
+            raise typer.Exit(1)
+
+    console.print(f"[green]✓ Container stopped: {full_container_name}[/green]")
 
 
 @app.command()
