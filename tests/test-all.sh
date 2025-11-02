@@ -47,6 +47,7 @@ TEST_CONTAINERS=true
 TEST_GROUPS=true
 SPECIFIC_CONTAINER=""
 SPECIFIC_GROUP=""
+KEEP_IMAGES=false
 
 # Start time for duration calculation
 START_TIME=$(date +%s)
@@ -84,6 +85,10 @@ while [[ $# -gt 0 ]]; do
             TEST_GROUPS=false
             shift
             ;;
+        --keep-images)
+            KEEP_IMAGES=true
+            shift
+            ;;
         --help|-h)
             cat << 'HELP'
 Docker Playground Test Suite
@@ -97,6 +102,7 @@ Options:
   --group NAME             Test only the specified group
   --skip-containers        Skip container tests
   --skip-groups            Skip group tests
+  --keep-images            Keep pulled Docker images after tests (default: remove)
   -h, --help               Show this help message
 
 Examples:
@@ -105,6 +111,7 @@ Examples:
   ./tests/test-all.sh --groups-only            # Test only groups
   ./tests/test-all.sh --container mysql-8.0      # Test only mysql-8.0 container
   ./tests/test-all.sh --group MySQL-Stack      # Test only MySQL-Stack group
+  ./tests/test-all.sh --keep-images            # Keep all pulled images after testing
 HELP
             exit 0
             ;;
@@ -403,8 +410,8 @@ test_container() {
             log "STOP SUCCESS: $container"
             ((STOP_SUCCESS++))
 
-            # Clean up image if it wasn't present before the test
-            if [ "$image_was_present" = false ] && [ -n "$image_name" ]; then
+            # Clean up image if it wasn't present before the test (unless --keep-images is set)
+            if [ "$KEEP_IMAGES" = false ] && [ "$image_was_present" = false ] && [ -n "$image_name" ]; then
                 echo -e "  🧹 ${YELLOW}Removing newly pulled image...${NC}"
                 log "Removing image that was pulled for test: $image_name"
                 if docker image rm "$image_name" >/dev/null 2>&1; then
@@ -414,6 +421,9 @@ test_container() {
                     echo -e "  ⚠️  ${YELLOW}Could not remove image: $image_name${NC}"
                     log "WARNING: Could not remove image: $image_name"
                 fi
+            elif [ "$KEEP_IMAGES" = true ] && [ "$image_was_present" = false ] && [ -n "$image_name" ]; then
+                echo -e "  💾 ${CYAN}Keeping pulled image: $image_name${NC}"
+                log "Keeping image as per --keep-images flag: $image_name"
             fi
         else
             echo -e "  ❌ ${RED}STOP FAILED${NC}"
