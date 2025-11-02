@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import docker
 import logging
 from src.web.core.logging_config import get_logger
+from src.web.utils import to_full_name
 import threading
 
 logger = get_logger(__name__)
@@ -46,19 +47,19 @@ class DiagnosticResponse(BaseModel):
 @router.post("/api/execute-command/{container}", response_model=ExecuteCommandResponse)
 async def execute_command(container: str, request_body: ExecuteCommandRequest):
     """Execute a command in a running container (non-interactive)
-    
+
     This endpoint executes a single command in a Docker container with optional timeout.
-    
+
     Args:
-        container: Container name or ID (e.g., 'playground-ubuntu')
+        container: Container name without 'playground-' prefix (e.g., 'alpine-3.22')
         request_body: JSON body containing command and optional timeout
-    
+
     Request Body:
         {
             "command": "ls -la /home",
             "timeout": 30
         }
-    
+
     Returns:
         ExecuteCommandResponse containing:
         - container: The container name
@@ -66,44 +67,47 @@ async def execute_command(container: str, request_body: ExecuteCommandRequest):
         - exit_code: Command exit code (0 = success)
         - output: Combined stdout and stderr
         - success: Boolean flag (True if exit_code == 0)
-    
+
     Status Codes:
         200: Command executed successfully
         400: Invalid command, missing command, or container not running
         404: Container not found
         500: Docker API error or other server error
         504: Command execution timeout exceeded
-    
+
     Examples:
-        curl -X POST "http://localhost:${PORT:-8000}/api/execute-command/my-container" \\
+        curl -X POST "http://localhost:${PORT:-8000}/api/execute-command/alpine-3.22" \\
              -H "Content-Type: application/json" \\
              -d '{"command": "apt list --installed", "timeout": 30}'
     """
+    # Convert to full container name with prefix
+    full_container_name = to_full_name(container)
+
     try:
         command = request_body.command
         timeout = request_body.timeout
-        
+
         if not command or not isinstance(command, str):
             raise HTTPException(400, "Command must be a non-empty string")
-        
+
         # Validate container exists and is running
         try:
-            cont = docker_client.containers.get(container)
+            cont = docker_client.containers.get(full_container_name)
         except docker.errors.NotFound:
-            raise HTTPException(404, f"Container '{container}' not found")
-        
+            raise HTTPException(404, f"Container '{full_container_name}' not found")
+
         if cont.status != "running":
             raise HTTPException(
                 400,
-                f"Container '{container}' is not running (current status: {cont.status})"
+                f"Container '{full_container_name}' is not running (current status: {cont.status})"
             )
         
-        logger.info("Executing command in %s: %s", container, command)
-        
+        logger.info("Executing command in %s: %s", full_container_name, command)
+
         # Execute command with thread-based timeout
         result_holder = {}
         error_holder = {}
-        
+
         def run_command():
             try:
                 exit_code, output = cont.exec_run(
@@ -115,14 +119,14 @@ async def execute_command(container: str, request_body: ExecuteCommandRequest):
                 result_holder['output'] = output
             except Exception as e:
                 error_holder['error'] = e
-        
+
         # Run command in thread with timeout
         thread = threading.Thread(target=run_command, daemon=True)
         thread.start()
         thread.join(timeout=timeout)
-        
+
         if thread.is_alive():
-            logger.error("Command timeout for %s after %d seconds", container, timeout)
+            logger.error("Command timeout for %s after %d seconds", full_container_name, timeout)
             raise HTTPException(
                 504,
                 f"Command execution timeout after {timeout} seconds"
@@ -143,38 +147,38 @@ async def execute_command(container: str, request_body: ExecuteCommandRequest):
         
         logger.info(
             "Command executed in %s with exit code %d",
-            container,
+            full_container_name,
             exit_code
         )
-        
+
         return ExecuteCommandResponse(
-            container=container,
+            container=full_container_name,
             command=command,
             exit_code=exit_code,
             output=output_str,
             success=exit_code == 0
         )
-    
+
     except HTTPException:
         raise
     except docker.errors.APIError as e:
-        logger.error("Docker API error executing command in %s: %s", container, str(e))
+        logger.error("Docker API error executing command in %s: %s", full_container_name, str(e))
         raise HTTPException(500, f"Docker API error: {str(e)}")
     except Exception as e:
-        logger.error("Error executing command in %s: %s", container, str(e))
+        logger.error("Error executing command in %s: %s", full_container_name, str(e))
         raise HTTPException(500, f"Unexpected error: {str(e)}")
 
 
 @router.post("/api/execute-diagnostic/{container}", response_model=DiagnosticResponse)
 async def execute_diagnostic(container: str):
     """Run comprehensive diagnostics on a container
-    
+
     This endpoint gathers detailed information about a container including:
     processes, disk usage, network info, environment variables, uptime, and logs.
-    
+
     Args:
-        container: Container name or ID to diagnose
-    
+        container: Container name without 'playground-' prefix (e.g., 'alpine-3.22')
+
     Returns:
         DiagnosticResponse containing:
         - container: The container name
@@ -187,42 +191,45 @@ async def execute_diagnostic(container: str):
             - uptime: Output of 'uptime'
             - recent_logs: Last 50 lines of container logs
         - message: Status message (e.g., if container not running)
-    
+
     Status Codes:
         200: Diagnostics retrieved successfully
         404: Container not found
         500: Error running diagnostics
-    
+
     Notes:
         - If container is not running, only basic info is returned
         - Each diagnostic has a 10-second timeout
         - Failed diagnostics return error messages instead of data
         - Output is decoded as UTF-8 with error replacement
-    
+
     Examples:
-        curl -X POST "http://localhost:${PORT:-8000}/api/execute-diagnostic/my-container" \\
+        curl -X POST "http://localhost:${PORT:-8000}/api/execute-diagnostic/alpine-3.22" \\
              -H "Accept: application/json"
     """
+    # Convert to full container name with prefix
+    full_container_name = to_full_name(container)
+
     try:
         # Validate container exists
         try:
-            cont = docker_client.containers.get(container)
+            cont = docker_client.containers.get(full_container_name)
         except docker.errors.NotFound:
-            raise HTTPException(404, f"Container '{container}' not found")
-        
+            raise HTTPException(404, f"Container '{full_container_name}' not found")
+
         diagnostics = {
-            "container": container,
+            "container": full_container_name,
             "status": cont.status,
             "diagnostics": {}
         }
-        
+
         # Return early if container not running
         if cont.status != "running":
-            logger.warning("Container %s is not running, skipping diagnostics", container)
+            logger.warning("Container %s is not running, skipping diagnostics", full_container_name)
             diagnostics["message"] = f"Container is {cont.status}"
             return diagnostics
-        
-        logger.info("Running diagnostics for container %s", container)
+
+        logger.info("Running diagnostics for container %s", full_container_name)
         
         # Helper function to run diagnostic command with timeout
         def run_diag_command(cmd: str, cmd_name: str, timeout_secs: int = 10) -> str:
@@ -327,15 +334,15 @@ async def execute_diagnostic(container: str):
             logger.warning("Failed to get logs: %s", str(e))
             diagnostics["diagnostics"]["recent_logs"] = f"Error: {str(e)}"
         
-        logger.info("Diagnostics completed for container %s", container)
-        
+        logger.info("Diagnostics completed for container %s", full_container_name)
+
         return diagnostics
-    
+
     except HTTPException:
         raise
     except docker.errors.APIError as e:
-        logger.error("Docker API error running diagnostics for %s: %s", container, str(e))
+        logger.error("Docker API error running diagnostics for %s: %s", full_container_name, str(e))
         raise HTTPException(500, f"Docker API error: {str(e)}")
     except Exception as e:
-        logger.error("Error running diagnostics for %s: %s", container, str(e))
+        logger.error("Error running diagnostics for %s: %s", full_container_name, str(e))
         raise HTTPException(500, f"Unexpected error: {str(e)}")

@@ -151,10 +151,9 @@ wait_for_container_running() {
     local container_name=$1
     local max_wait=${2:-60}
     local elapsed=0
-    local full_name="playground-${container_name}"
 
     while [ $elapsed -lt "$max_wait" ]; do
-        local stats=$(curl -s "$API_URL/container-stats/$full_name" 2>/dev/null || echo "{}")
+        local stats=$(curl -s "$API_URL/container-stats/$container_name" 2>/dev/null || echo "{}")
 
         if echo "$stats" | grep -q "cpu"; then
             return 0
@@ -217,10 +216,9 @@ wait_for_container_stop() {
     local container_name=$1
     local max_wait=${2:-30}
     local elapsed=0
-    local full_name="playground-${container_name}"
 
     while [ $elapsed -lt "$max_wait" ]; do
-        local stats=$(curl -s "$API_URL/container-stats/$full_name" 2>/dev/null || echo "{}")
+        local stats=$(curl -s "$API_URL/container-stats/$container_name" 2>/dev/null || echo "{}")
 
         if echo "$stats" | grep -q "not found\|error\|detail" || [ -z "$stats" ]; then
             return 0
@@ -320,7 +318,7 @@ run_phase_2() {
     fi
     
     print_test "Verify container is running"
-    local stats=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
+    local stats=$(curl -s "$API_URL/container-stats/$TEST_CONTAINER")
     if echo "$stats" | grep -q "cpu\|memory"; then
         log_success "Container is running"
     else
@@ -339,9 +337,9 @@ run_phase_2() {
         else
             log_error "Restart timeout"
         fi
-        
+
         sleep 2
-        local stats=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
+        local stats=$(curl -s "$API_URL/container-stats/$TEST_CONTAINER")
         if echo "$stats" | grep -q "cpu"; then
             log_success "Container confirmed running after restart"
         else
@@ -352,20 +350,20 @@ run_phase_2() {
     fi
     
     print_test "Stop container: $TEST_CONTAINER"
-    local response=$(curl -s -X POST "$API_URL/stop/playground-$TEST_CONTAINER")
+    local response=$(curl -s -X POST "$API_URL/stop/$TEST_CONTAINER")
     log_debug "Stop response: $response"
-    
+
     if echo "$response" | grep -qi "error\|not found"; then
         log_error "Stop failed: $response"
     elif [ -n "$response" ]; then
         log_success "Container stop initiated"
         sleep 5
-        
+
         print_test "Verify container stopped"
         local max_attempts=15
         local attempt=0
         while [ $attempt -lt $max_attempts ]; do
-            local http_code=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-$TEST_CONTAINER" 2>/dev/null)
+            local http_code=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/$TEST_CONTAINER" 2>/dev/null)
             if [ "$http_code" = "404" ] || [ "$http_code" = "500" ]; then
                 log_success "Container confirmed stopped"
                 break
@@ -466,19 +464,19 @@ run_phase_5() {
     sleep 3
     
     print_test "Execute command: echo hello world (using /api/execute-command)"
-    local response=$(curl -s -X POST "$API_URL/execute-command/playground-$TEST_CONTAINER" \
+    local response=$(curl -s -X POST "$API_URL/execute-command/$TEST_CONTAINER" \
         -H "Content-Type: application/json" \
         -d '{"command": "echo hello world"}')
-    
+
     if echo "$response" | grep -q "hello\|output"; then
         log_success "Execute command worked"
     else
         log_warning "Execute command response unclear"
         log_debug "Response: $response"
     fi
-    
+
     print_test "Execute command: ls -la /root"
-    local response=$(curl -s -X POST "$API_URL/execute-command/playground-$TEST_CONTAINER" \
+    local response=$(curl -s -X POST "$API_URL/execute-command/$TEST_CONTAINER" \
         -H "Content-Type: application/json" \
         -d '{"command": "ls -la /root"}')
     
@@ -495,9 +493,9 @@ run_phase_5() {
 
 run_phase_6() {
     print_section "PHASE 6: Container Statistics"
-    
-    print_test "Get stats for: playground-$TEST_CONTAINER"
-    local response=$(curl -s "$API_URL/container-stats/playground-$TEST_CONTAINER")
+
+    print_test "Get stats for: $TEST_CONTAINER"
+    local response=$(curl -s "$API_URL/container-stats/$TEST_CONTAINER")
     
     if echo "$response" | grep -q "cpu\|memory"; then
         log_success "Stats retrieved successfully"
@@ -524,9 +522,9 @@ run_phase_6() {
 
 run_phase_7() {
     print_section "PHASE 7: Diagnostic Info"
-    
+
     print_test "Execute diagnostic on container (using /api/execute-diagnostic)"
-    local response=$(curl -s -X POST "$API_URL/execute-diagnostic/playground-$TEST_CONTAINER" \
+    local response=$(curl -s -X POST "$API_URL/execute-diagnostic/$TEST_CONTAINER" \
         -H "Content-Type: application/json" \
         -d '{}')
     
@@ -625,9 +623,9 @@ run_phase_9() {
 
 run_phase_10() {
     print_section "PHASE 10: Verify Container State After Operations"
-    
+
     print_test "Verify alpine-3.22 is running after start operation"
-    local stats=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
+    local stats=$(curl -s "$API_URL/container-stats/alpine-3.22")
     
     if echo "$stats" | grep -q "cpu\|memory"; then
         log_success "Container verified running via stats"
@@ -675,8 +673,8 @@ run_phase_11() {
             sleep 10
             
             print_test "Verify containers running after restart"
-            local stats1=$(curl -s "$API_URL/container-stats/playground-alpine-3.22")
-            local stats2=$(curl -s "$API_URL/container-stats/playground-ubuntu-24")
+            local stats1=$(curl -s "$API_URL/container-stats/alpine-3.22")
+            local stats2=$(curl -s "$API_URL/container-stats/ubuntu-24")
             
             if echo "$stats1" | grep -q "cpu\|memory"; then
                 log_success "Alpine running"
@@ -717,8 +715,8 @@ run_phase_12() {
             sleep 3
             
             print_test "Verify containers stopped"
-            local stats1=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-alpine-3.22")
-            local stats2=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/playground-ubuntu-24.04")
+            local stats1=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/alpine-3.22")
+            local stats2=$(curl -s -w "%{http_code}" -o /dev/null "$API_URL/container-stats/ubuntu-24.04")
             
             if [ "$stats1" = "404" ] || [ "$stats1" = "500" ]; then
                 log_success "Alpine stopped"
