@@ -19,7 +19,7 @@ images:
     ports:
       - "3311:3306"
     environment:
-      MYSQL_DATABASE: joomla
+      MYSQL_DATABASE: joomla_db
       MYSQL_ROOT_PASSWORD: joomla
       MYSQL_USER: joomla
       MYSQL_PASSWORD: joomla
@@ -55,9 +55,9 @@ images:
           # Create Joomla database and user (idempotent)
           echo "Setting up Joomla database..."
           docker exec "${CONTAINER_NAME}" mysql -u root -pjoomla -e "
-          CREATE DATABASE IF NOT EXISTS joomla CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+          CREATE DATABASE IF NOT EXISTS joomla_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
           CREATE USER IF NOT EXISTS 'joomla'@'%' IDENTIFIED BY 'joomla';
-          GRANT ALL PRIVILEGES ON joomla.* TO 'joomla'@'%';
+          GRANT ALL PRIVILEGES ON joomla_db.* TO 'joomla'@'%';
           FLUSH PRIVILEGES;
           " 2>/dev/null
 
@@ -79,8 +79,8 @@ images:
 
               # Verify the SQL file is not empty
               if [ -s "${TEMP_SQL}" ]; then
-                echo "Importing backup into joomla database..."
-                docker exec -i "${CONTAINER_NAME}" mysql -u root -pjoomla joomla < "${TEMP_SQL}" 2>/dev/null
+                echo "Importing backup into joomla_db database..."
+                docker exec -i "${CONTAINER_NAME}" mysql -u root -pjoomla joomla_db < "${TEMP_SQL}" 2>/dev/null
                 if [ $? -eq 0 ]; then
                   echo "✓ Database restore completed successfully from ${LATEST_DB_BACKUP}"
                 else
@@ -111,7 +111,7 @@ images:
           # Create database backup
           BACKUP_FILE="${BACKUP_DIR}/joomla_db_${TIMESTAMP}.sql"
           echo "Creating database backup..."
-          docker exec "${CONTAINER_NAME}" mysqldump -u root -pjoomla joomla > "${BACKUP_FILE}" 2>/dev/null
+          docker exec "${CONTAINER_NAME}" mysqldump -u root -pjoomla joomla_db > "${BACKUP_FILE}" 2>/dev/null
           if [ $? -eq 0 ] && [ -s "${BACKUP_FILE}" ]; then
             gzip "${BACKUP_FILE}"
             echo "✓ Joomla database backup created: ${BACKUP_FILE}.gz"
@@ -130,10 +130,10 @@ images:
          Port: 3306 (external: 3311)
          User: root / joomla
          Password: joomla
-         Database: joomla
+         Database: joomla_db
 
       📊 Quick Commands:
-         mysql -u root -pjoomla joomla
+         mysql -u root -pjoomla joomla_db
 
       🌐 phpMyAdmin: http://localhost:8091
       🌐 Joomla: http://localhost:8082
@@ -148,114 +148,235 @@ images:
       - "8082:80"
     environment:
       JOOMLA_DB_HOST: mysql-joomla-stack
-      JOOMLA_DB_NAME: joomla
+      JOOMLA_DB_NAME: joomla_db
       JOOMLA_DB_USER: joomla
       JOOMLA_DB_PASSWORD: joomla
     scripts:
       post_start:
         inline: |
           #!/bin/bash
-          echo "Setting up Joomla environment..."
+          set -e  # Exit immediately if there is an error
 
-          # Wait for MySQL to be fully ready before proceeding
-          echo "Waiting for MySQL to be ready..."
-          MAX_WAIT=90
-          COUNT=0
-          echo -n "Checking MySQL connectivity"
-          while [ $COUNT -lt $MAX_WAIT ]; do
-            if docker exec "playground-mysql-joomla-stack" mysqladmin ping -u root -pjoomla --silent 2>/dev/null; then
-              echo ""
-              echo "✓ MySQL is ready for Joomla!"
-              break
-            fi
+          echo "Starting automatic Joomla setup..."
+
+          # Variables
+          CONTAINER_MYSQL="playground-mysql-joomla-stack"
+          DB_HOST="mysql-joomla-stack"
+          DB_NAME="joomla_db"
+          DB_USER="joomla"
+          DB_PASS="joomla"
+          SITE_URL="http://localhost:8082"
+          ADMIN_EMAIL="admin@example.com"
+          ADMIN_USER="admin"
+          ADMIN_PASS="admin123456!"
+          SITE_NAME="Joomla Auto Install"
+
+          # Wait for MySQL
+          echo -n "Waiting for MySQL..."
+          until docker exec "$CONTAINER_MYSQL" mysqladmin ping -u root -pjoomla --silent 2>/dev/null; do
             echo -n "."
-            sleep 3
-            COUNT=$((COUNT + 3))
-            if [ $COUNT -ge $MAX_WAIT ]; then
-              echo ""
-              echo "✗ MySQL not ready after $MAX_WAIT seconds, continuing anyway..."
-            fi
+            sleep 2
           done
+          echo " MySQL ready!"
 
-          # Wait for Joomla container to be ready
-          sleep 10
-
-          # Install required PHP extensions for Joomla
-          echo "Installing Joomla required extensions..."
-          docker exec "${CONTAINER_NAME}" sh -c '
-          apt-get update && \
-          apt-get install -y libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libxml2-dev && \
-          docker-php-ext-configure gd --with-freetype --with-jpeg && \
-          docker-php-ext-install -j$(nproc) gd zip mysqli pdo_mysql mbstring xml && \
-          docker-php-ext-enable gd zip mysqli pdo_mysql mbstring xml
-          ' 2>/dev/null
-
-          # Set proper permissions for Joomla
-          docker exec "${CONTAINER_NAME}" sh -c '
-          chown -R www-data:www-data /var/www/html && \
-          chmod -R 755 /var/www/html && \
-          find /var/www/html -type d -exec chmod 755 {} \; && \
-          find /var/www/html -type f -exec chmod 644 {} \;
-          ' 2>/dev/null
-
-          # Restore Joomla files from backup if available
-          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
-          if [ -d "${BACKUP_DIR}" ] && [ "$(ls -A "${BACKUP_DIR}"/*.tar.gz 2>/dev/null)" ]; then
-            LATEST_FILES_BACKUP=$(ls -t "${BACKUP_DIR}"/joomla_files_*.tar.gz 2>/dev/null | head -1)
-            if [ -n "${LATEST_FILES_BACKUP}" ]; then
-              echo "✓ Found Joomla files backup: ${LATEST_FILES_BACKUP}. Restoring..."
-
-              # Stop Apache temporarily during restore
-              docker exec "${CONTAINER_NAME}" sh -c 'pkill apache2' 2>/dev/null
-              sleep 2
-
-              # Extract backup directly to container using docker cp
-              TEMP_RESTORE_DIR="${SHARED_DIR}/temp_restore_${TIMESTAMP}"
-              mkdir -p "${TEMP_RESTORE_DIR}"
-              tar -xzf "${LATEST_FILES_BACKUP}" -C "${TEMP_RESTORE_DIR}" 2>/dev/null
-
-              if [ $? -eq 0 ]; then
-                # Check if we have nested temp_joomla_backup directory and handle it
-                if [ -d "${TEMP_RESTORE_DIR}/temp_joomla_backup" ]; then
-                  echo "Found nested backup structure, extracting actual Joomla files..."
-                  docker cp "${TEMP_RESTORE_DIR}/temp_joomla_backup/." "${CONTAINER_NAME}:/var/www/html/" 2>/dev/null
-                else
-                  # Copy files directly to container
-                  docker cp "${TEMP_RESTORE_DIR}/." "${CONTAINER_NAME}:/var/www/html/" 2>/dev/null
-                fi
-
-                echo "✓ Joomla files restore completed successfully"
-              else
-                echo "✗ Joomla files restore failed"
-              fi
-
-              # Clean up and restart Apache
-              rm -rf "${TEMP_RESTORE_DIR}"
-              docker exec "${CONTAINER_NAME}" sh -c 'apache2-foreground &' 2>/dev/null
-              sleep 3
-            fi
-          else
-            echo "ℹ No Joomla files backup found in ${BACKUP_DIR}"
-          fi
-
-          # Restart Apache to apply all changes
-          docker restart "${CONTAINER_NAME}" > /dev/null 2>&1
           sleep 5
 
-          # Set correct permissions for www-data
-          echo "Setting permissions for www-data..."
-          docker exec ${CONTAINER_NAME} sh -c '
-            chown -R www-data:www-data /var/www/html && \
-            chmod -R 755 /var/www/html && \
-            find /var/www/html -type d -exec chmod 755 {} \; && \
-            find /var/www/html -type f -exec chmod 644 {} \; && \
-            chmod -R 775 /var/www/html
-          ' 2>/dev/null
+          # Install PHP extensions
+          echo "Installing PHP extensions..."
+          docker exec "${CONTAINER_NAME}" sh -c '
+          apt-get update && \
+          apt-get install -y libzip-dev libpng-dev libjpeg-dev libfreetype6-dev && \
+          docker-php-ext-configure gd --with-freetype --with-jpeg && \
+          docker-php-ext-install -j$(nproc) gd zip mysqli pdo_mysql && \
+          docker-php-ext-enable gd zip mysqli pdo_mysql
+          ' > /dev/null 2>&1
 
-          echo "✓ Joomla environment setup completed"
-          echo "🌐 Joomla: http://localhost:8082"
-          echo "🔧 Admin: http://localhost:8082/administrator"
-          echo "📊 Database: mysql-joomla-stack:3306"
+          # Permissions
+          docker exec "${CONTAINER_NAME}" sh -c '
+            chown -R www-data:www-data /var/www/html && \
+            find /var/www/html -type d -exec chmod 755 {} \; && \
+            find /var/www/html -type f -exec chmod 644 {} \;
+          '
+
+          # === BACKUP RESTORE (optional) ===
+          BACKUP_DIR="${SHARED_DIR}/data/backups/${CONTAINER_NAME#playground-}"
+          RESTORED_DB=false
+          RESTORED_FILES=false
+
+          # Restore DB if backup exists
+          if [ -d "$BACKUP_DIR" ] && ls "$BACKUP_DIR"/joomla_db_*.sql.gz 1> /dev/null 2>&1; then
+            LATEST_DB=$(ls -t "$BACKUP_DIR"/joomla_db_*.sql.gz | head -1)
+            echo "Restoring database from: $LATEST_DB"
+            gunzip -c "$LATEST_DB" | docker exec -i "$CONTAINER_MYSQL" mysql -u root -pjoomla "$DB_NAME"
+            RESTORED_DB=true
+            echo "Database restored"
+          fi
+
+          # Restore files if backup exists
+          if [ -d "$BACKUP_DIR" ] && ls "$BACKUP_DIR"/joomla_files_*.tar.gz 1> /dev/null 2>&1; then
+            LATEST_FILES=$(ls -t "$BACKUP_DIR"/joomla_files_*.tar.gz | head -1)
+            echo "Restoring files from: $LATEST_FILES"
+            TEMP_DIR="/tmp/joomla_restore_$$"
+            mkdir -p "$TEMP_DIR"
+            tar -xzf "$LATEST_FILES" -C "$TEMP_DIR"
+            docker cp "$TEMP_DIR/." "${CONTAINER_NAME}:/var/www/html/"
+            rm -rf "$TEMP_DIR"
+            RESTORED_FILES=true
+            echo "Files restored"
+          fi
+
+          # === AUTOMATIC INSTALLATION (only if NOT restored) ===
+          if ! $RESTORED_DB && ! $RESTORED_FILES; then
+            echo "No backup found. Starting clean Joomla installation..."
+
+            # Wait for Apache to be ready
+            echo -n "Waiting for Apache"
+            until docker exec "${CONTAINER_NAME}" curl -s -o /dev/null "http://localhost" 2>/dev/null; do
+              echo -n "."
+              sleep 2
+            done
+            echo " Apache ready!"
+
+            # Check if installation directory exists
+            if docker exec "${CONTAINER_NAME}" test -d /var/www/html/installation; then
+              echo "Found Joomla installation directory. Proceeding with CLI installation..."
+
+              # Execute CLI installation (Joomla 4+ supports CLI) with non-interactive stdin
+              echo "" | docker exec -i "${CONTAINER_NAME}" php /var/www/html/installation/joomla.php install \
+                --site-name="$SITE_NAME" \
+                --admin-user="$ADMIN_USER" \
+                --admin-username="$ADMIN_USER" \
+                --admin-email="$ADMIN_EMAIL" \
+                --admin-password="$ADMIN_PASS" \
+                --db-host="$DB_HOST" \
+                --db-user="$DB_USER" \
+                --db-pass="$DB_PASS" \
+                --db-name="$DB_NAME" \
+                --db-type=mysqli \
+                --db-prefix=jos_ \
+                --public-folder= 2>&1 || {
+                  echo "CLI installation failed, creating configuration manually..."
+                }
+
+              # Remove installation folder
+              docker exec "${CONTAINER_NAME}" rm -rf /var/www/html/installation
+              echo "Joomla installation completed!"
+            else
+              echo "Installation directory not found, configuration may already exist"
+            fi
+          fi
+
+          # === CREATE OR UPDATE CONFIGURATION.PHP (if needed) ===
+          if ! docker exec "${CONTAINER_NAME}" test -f /var/www/html/configuration.php || ! $RESTORED_FILES; then
+            echo "Creating Joomla configuration file..."
+
+            # Generate secret key
+            SECRET_KEY=$(openssl rand -hex 16)
+
+            # Create configuration.php with proper variable substitution
+            docker exec "${CONTAINER_NAME}" sh -c "cat > /var/www/html/configuration.php << EOF
+            <?php
+            class JConfig {
+                public \\\$host = '${DB_HOST}';
+                public \\\$user = '${DB_USER}';
+                public \\\$password = '${DB_PASS}';
+                public \\\$db = '${DB_NAME}';
+                public \\\$dbprefix = 'jos_';
+                public \\\$dbtype = 'mysqli';
+                public \\\$live_site = '';
+                public \\\$offline = '0';
+                public \\\$offline_message = 'Site under maintenance';
+                public \\\$display_offline_message = '1';
+                public \\\$offline_image = '';
+                public \\\$sitename = '${SITE_NAME}';
+                public \\\$editor = 'tinymce';
+                public \\\$captcha = '0';
+                public \\\$list_limit = '20';
+                public \\\$access = '1';
+                public \\\$debug = '0';
+                public \\\$debug_lang = '0';
+                public \\\$debug_lang_const = '0';
+                public \\\$dbsslverifyservercert = '0';
+                public \\\$dbsslkey = '';
+                public \\\$dbsslcert = '';
+                public \\\$dbsslca = '';
+                public \\\$dbsslcipher = '';
+                public \\\$dbencryption = '0';
+                public \\\$error_reporting = 'default';
+                public \\\$log_path = '/var/www/html/administrator/logs';
+                public \\\$tmp_path = '/var/www/html/tmp';
+                public \\\$mailfrom = '${ADMIN_EMAIL}';
+                public \\\$fromname = '${SITE_NAME}';
+                public \\\$sendmail = '/usr/sbin/sendmail';
+                public \\\$smtpauth = '0';
+                public \\\$smtpuser = '';
+                public \\\$smtppass = '';
+                public \\\$smtphost = 'localhost';
+                public \\\$smtpsecure = 'none';
+                public \\\$smtpport = '25';
+                public \\\$caching = '0';
+                public \\\$cache_handler = 'file';
+                public \\\$cachetime = '15';
+                public \\\$cache_platformprefix = '0';
+                public \\\$MetaDesc = '';
+                public \\\$MetaKeys = '';
+                public \\\$MetaTitle = '1';
+                public \\\$MetaAuthor = '1';
+                public \\\$MetaVersion = '0';
+                public \\\$robots = '';
+                public \\\$sef = '1';
+                public \\\$sef_rewrite = '1';
+                public \\\$sef_suffix = '0';
+                public \\\$unicodeslugs = '0';
+                public \\\$feed_limit = '10';
+                public \\\$feed_email = 'none';
+                public \\\$secret = '${SECRET_KEY}';
+                public \\\$gzip = '0';
+                public \\\$force_ssl = '0';
+                public \\\$lifetime = '15';
+                public \\\$session_handler = 'database';
+                public \\\$shared_session = '0';
+                public \\\$session_metadata = '1';
+            }
+          EOF
+          "
+
+            # Set proper permissions
+            docker exec "${CONTAINER_NAME}" chown www-data:www-data /var/www/html/configuration.php
+            docker exec "${CONTAINER_NAME}" chmod 644 /var/www/html/configuration.php
+            echo "Configuration file created successfully!"
+          else
+            echo "Configuration file already exists, skipping creation"
+          fi
+
+          # === FINAL OPTIMIZATIONS ===
+          # Hide PHP warnings
+          docker exec "${CONTAINER_NAME}" sh -c '
+            echo "display_errors = Off" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "error_reporting = E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "opcache.revalidate_freq=1" >> /usr/local/etc/php/conf.d/joomla.ini
+            echo "opcache.save_comments=1" >> /usr/local/etc/php/conf.d/joomla.ini
+          '
+
+          # Restart Apache
+          docker restart "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+          docker exec "${CONTAINER_NAME}" rm -rf /var/www/html/installation
+
+          # === FINAL MESSAGE ===
+          echo "Joomla is READY!"
+          echo "URL: $SITE_URL"
+          if ! $RESTORED_DB && ! $RESTORED_FILES; then
+            echo "Admin: $SITE_URL/administrator"
+            echo "User: $ADMIN_USER"
+            echo "Password: $ADMIN_PASS"
+          else
+            echo "Restore completed. Use existing credentials."
+          fi
+          echo "Database: $DB_NAME"
 
       pre_stop:
         inline: |
@@ -306,7 +427,10 @@ images:
 
       🌐 Joomla: http://localhost:8082
       🔧 Admin Panel: http://localhost:8082/administrator
-      📊 Database: mysql-joomla-stack:3306
+      📊 Database: mysql-joomla-stack:3306 (joomla_db)
+
+      admin # 🔑 Joomla Admin User
+      admin123456! # 🔑 Joomla Admin Password
 
       🔧 Features:
          • Joomla latest with PHP 8.2
@@ -322,7 +446,7 @@ images:
          2. Complete Joomla installation wizard:
             - Database Type: MySQLi
             - Database Host: mysql-joomla-stack
-            - Database Name: joomla
+            - Database Name: joomla_db
             - Database Username: joomla
             - Database Password: joomla
          3. Create admin account
@@ -377,7 +501,7 @@ images:
           $cfg["Servers"][$i]["password"] = "joomla";
           $cfg["AllowNoPassword"] = true;
           $cfg["LoginCookieValidity"] = 86400;
-          $cfg["Servers"][$i]["only_db"] = "joomla";
+          $cfg["Servers"][$i]["only_db"] = "joomla_db";
           ?>
           EOF
           ' 2>/dev/null
@@ -392,7 +516,7 @@ images:
 
       🌐 Access: http://localhost:8091
       🔐 Auto-login: Enabled (root/joomla)
-      📁 Default DB: joomla
+      📁 Default DB: joomla_db
 
       💡 Manage Joomla database tables:
          • #__* tables contain Joomla data
