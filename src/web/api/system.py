@@ -124,38 +124,45 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
 
 @router.post("/api/stop/{container_name}")
 async def stop_container(container_name: str):
-    """Stop a single container - returns operation_id for async tracking"""
+    """Stop a single container - returns operation_id for async tracking
+
+    Args:
+        container_name: Container name without 'playground-' prefix (e.g., 'alpine-3.22')
+    """
+    # Convert to full container name with prefix
+    full_container_name = to_full_name(container_name)
+
     try:
-        container = docker_client.containers.get(container_name)
-        
+        container = docker_client.containers.get(full_container_name)
+
         # Check if it's a playground container
         if "playground.managed" not in container.labels:
             raise HTTPException(403, "Cannot stop non-playground containers")
-        
+
         # Create operation
         operation_id = str(uuid.uuid4())
         create_operation(
             operation_id,
             "stop",
             total=1,
-            container=container_name
+            container=full_container_name
         )
-        
+
         # Start background task
-        asyncio.create_task(stop_container_background(operation_id, container_name))
-        
+        asyncio.create_task(stop_container_background(operation_id, full_container_name))
+
         return {
             "operation_id": operation_id,
             "status": "started",
-            "message": f"Stopping container {container_name}..."
+            "message": f"Stopping container {full_container_name}..."
         }
-    
+
     except HTTPException:
         raise
     except docker.errors.NotFound:
-        raise HTTPException(404, f"Container {container_name} not found")
+        raise HTTPException(404, f"Container {full_container_name} not found")
     except Exception as e:
-        logger.error(f"Failed to stop {container_name}: {str(e)}")
+        logger.error(f"Failed to stop {full_container_name}: {str(e)}")
         raise HTTPException(500, f"Failed to stop container: {str(e)}")
 
 

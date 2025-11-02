@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 import docker
 import logging
 from src.web.core.logging_config import get_logger
+from src.web.utils import to_full_name
 from datetime import datetime
 
 logger = get_logger(__name__)
@@ -29,11 +30,20 @@ def _calculate_cpu_percent(stats):
 
 @router.get("/api/container-stats/{container}")
 async def get_container_stats(container: str):
+    """
+    Get container statistics.
+
+    Args:
+        container: Container name without 'playground-' prefix (e.g., 'alpine-3.22')
+    """
+    # Convert to full container name with prefix
+    full_container_name = to_full_name(container)
+
     try:
-        cont = docker_client.containers.get(container)
-        
+        cont = docker_client.containers.get(full_container_name)
+
         if cont.status != "running":
-            raise HTTPException(400, f"Container {container} not running")
+            raise HTTPException(400, f"Container {full_container_name} not running")
         
         try:
             stats = cont.stats(stream=False)
@@ -60,7 +70,7 @@ async def get_container_stats(container: str):
         io_write_bytes = sum(item.get('value', 0) for item in io_service if item.get('op') == 'Write')
         
         return {
-            "container": container,
+            "container": full_container_name,
             "timestamp": datetime.now().isoformat(),
             "cpu": {
                 "percent": round(cpu_percent, 2),
@@ -87,7 +97,7 @@ async def get_container_stats(container: str):
         }
     
     except docker.errors.NotFound:
-        raise HTTPException(404, f"Container {container} not found")
+        raise HTTPException(404, f"Container {full_container_name} not found")
     except HTTPException:
         raise
     except Exception as e:
