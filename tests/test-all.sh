@@ -145,12 +145,17 @@ get_containers_from_yaml() {
         return
     fi
 
-    # Extract all image names using grep and awk
-    grep -E "^[[:space:]]*[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]:[[:space:]]*$" "$yaml_file" | \
-    sed 's/^[[:space:]]*//g' | \
-    sed 's/:.*//g' | \
-    grep -v -E "^(images|groups|group|settings|image|description|category|volumes|environment|ports|shell|keep_alive_cmd|scripts|motd|network)$" | \
-    sort -u
+    # Extract container names that are directly under "images:" section
+    # These are keys with exactly 2 spaces indentation after "images:"
+    awk '
+        /^images:/ { in_images=1; next }
+        in_images && /^[^ ]/ { in_images=0 }
+        in_images && /^  [a-zA-Z0-9][a-zA-Z0-9._-]*:/ {
+            gsub(/^  /, "")
+            gsub(/:.*/, "")
+            print
+        }
+    ' "$yaml_file" | sort -u
 }
 
 # Function to get container list
