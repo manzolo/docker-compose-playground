@@ -273,7 +273,7 @@ check_container_health() {
     while [ $elapsed -lt $timeout ]; do
         local status
         status=$(docker inspect "$container_name" --format='{{.State.Status}}' 2>/dev/null || echo "")
-        
+
         if [ "$status" = "running" ]; then
             log "Container $container_name is running"
             return 0
@@ -308,20 +308,14 @@ test_container() {
 
     echo -e "  ⏳ ${YELLOW}Starting container...${NC}"
     log "Starting: $container"
-    
+
     local start_output
-    start_output=$(docker run \
-        -d \
-        --name "$container_name" \
-        --label "playground.managed=true" \
-        --network playground-network \
-        alpine:3.22 \
-        tail -f /dev/null 2>&1) || true
-    
-    local container_id=$start_output
-    echo "$start_output" | tee -a "$LOG_FILE"
-    
-    if [ -z "$container_id" ] || [[ "$start_output" == "Error response from daemon"* ]]; then
+    start_output=$(./playground start "$container" 2>&1) || true
+
+    # Log the output but suppress "Starting container..." line with container ID
+    echo "$start_output" | grep -v "^Starting container" >> "$LOG_FILE" || true
+
+    if [[ "$start_output" == *"Error"* ]] || [[ "$start_output" == *"Failed"* ]]; then
         echo -e "  ❌ ${RED}START FAILED${NC}"
         log "START FAILED: $container"
         ((START_FAILED++))
@@ -338,22 +332,19 @@ test_container() {
 
         echo -e "  ⏹️  ${YELLOW}Stopping container...${NC}"
         log "Stopping: $container"
-        
-        if docker stop "$container_name" >/dev/null 2>&1 && \
-           docker rm "$container_name" >/dev/null 2>&1; then
-            sleep 1
 
-            if ! is_container_running "$container"; then
-                echo -e "  ✅ ${GREEN}STOP SUCCESS${NC}"
-                log "STOP SUCCESS: $container"
-                ((STOP_SUCCESS++))
-            else
-                echo -e "  ❌ ${RED}STOP FAILED${NC}"
-                log "STOP FAILED: $container"
-                ((STOP_FAILED++))
-                STOP_FAILED_CONTAINERS+=("$container")
-                docker rm -f "$container_name" >/dev/null 2>&1 || true
-            fi
+        local stop_output
+        stop_output=$(./playground stop "$container" 2>&1) || true
+
+        # Log the output but suppress "Starting container..." line
+        echo "$stop_output" | grep -v "^Starting container" >> "$LOG_FILE" || true
+
+        sleep 1
+
+        if ! is_container_running "$container"; then
+            echo -e "  ✅ ${GREEN}STOP SUCCESS${NC}"
+            log "STOP SUCCESS: $container"
+            ((STOP_SUCCESS++))
         else
             echo -e "  ❌ ${RED}STOP FAILED${NC}"
             log "STOP FAILED: $container"
