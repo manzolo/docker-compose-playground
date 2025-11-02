@@ -8,3 +8,18 @@ images:
     - 8085:80
     - 8086:8080
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                 Traefik Reverse Proxy                         ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Dashboard:
+         Access: http://localhost:8080
+
+      🔧 Quick Commands:
+         traefik version                           # Check Traefik version
+
+      💡 Tips:
+         • Modern reverse proxy and load balancer
+         • Automatic service discovery
+         • Built for microservices and containers

@@ -1,0 +1,83 @@
+images:
+  typescript:
+    category: programming
+    description: TypeScript - Typed superset of JavaScript
+    image: node:22-alpine
+    keep_alive_cmd: sleep infinity
+    shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║            TypeScript Development Environment                ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Start:
+         # Install TypeScript globally
+         npm install -g typescript
+
+         # Check version
+         tsc --version
+
+         # Compile TypeScript file
+         tsc script.ts
+
+         # Watch mode
+         tsc --watch script.ts
+
+      📝 Quick Example:
+         # Create a TypeScript file
+         cat > /shared/hello.ts <<'EOF'
+         function greet(name: string): string {
+           return `Hello, ${name}!`;
+         }
+         console.log(greet("World"));
+         EOF
+
+         # Compile and run
+         cd /shared
+         tsc hello.ts
+         node hello.js
+
+      🔧 Project Setup:
+         # Initialize TypeScript project
+         npm init -y
+         npm install --save-dev typescript @types/node
+         npx tsc --init
+
+         # This creates tsconfig.json
+
+      📦 Useful Commands:
+         tsc                                       # Compile (uses tsconfig.json)
+         tsc --noEmit                              # Type-check only
+         tsc --watch                               # Watch mode
+         tsc --project tsconfig.json               # Specific config
+
+      🏗️  Common tsconfig.json options:
+         {
+           "compilerOptions": {
+             "target": "ES2020",
+             "module": "commonjs",
+             "outDir": "./dist",
+             "rootDir": "./src",
+             "strict": true
+           }
+         }
+
+      ⚡ Type Definitions:
+         npm install --save-dev @types/node        # Node.js types
+         npm install --save-dev @types/express     # Express types
+         npm install --save-dev @types/react       # React types
+
+      💡 Tips:
+         • TypeScript adds static typing to JavaScript
+         • Compiles to JavaScript
+         • Great for large projects
+         • Catches errors before runtime
+         • Keep projects in /shared
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+         /shared/projects                          # Your TS projects
+
+      📚 Documentation: https://www.typescriptlang.org/docs/
+    scripts:
+      post_start: init/typescript.sh

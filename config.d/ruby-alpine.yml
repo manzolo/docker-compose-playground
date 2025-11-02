@@ -5,3 +5,17 @@ images:
     image: ruby:3.3-alpine
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Ruby Alpine Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         ruby --version                            # Check Ruby version
+         irb                                       # Interactive Ruby
+         ruby -e "puts 'Hello!'"                   # Run Ruby code
+         gem install package_name                  # Install gem
+
+      💡 Tips:
+         • Lightweight Alpine variant
+         • Perfect for production deployments

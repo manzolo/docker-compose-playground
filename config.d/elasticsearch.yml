@@ -10,3 +10,30 @@ images:
     ports:
     - 9200:9200
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Elasticsearch Quick Reference                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         HTTP: http://localhost:9200
+
+      🔍 Quick Commands:
+         # Check cluster health
+         curl http://localhost:9200/_cluster/health
+
+         # Check version
+         curl http://localhost:9200
+
+         # List indices
+         curl http://localhost:9200/_cat/indices
+
+         # Create index
+         curl -X PUT http://localhost:9200/myindex
+
+         # Search
+         curl http://localhost:9200/myindex/_search
+
+      💡 Tips:
+         • Full-text search engine
+         • REST API based

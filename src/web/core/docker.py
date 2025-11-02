@@ -539,7 +539,7 @@ def has_default_script(container_name: str, script_type: str) -> bool:
     """Check if a default script exists for a container
     
     Args:
-        container_name: Container name without 'playground-' prefix (e.g., 'mysql-8')
+        container_name: Container name without 'playground-' prefix (e.g., 'mysql-8.0')
         script_type: 'init' or 'halt'
     
     Returns:

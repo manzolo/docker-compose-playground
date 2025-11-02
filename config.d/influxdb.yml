@@ -7,3 +7,29 @@ images:
     ports:
     - 8086:8086
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  InfluxDB Quick Reference                     ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔐 Connection Info:
+         HTTP: http://localhost:8086
+
+      📊 Quick Commands:
+         influx                                    # Connect to CLI
+
+         # Check version
+         influx version
+
+         # Create database
+         CREATE DATABASE mydb
+
+         # Write data
+         INSERT cpu,host=server01 value=0.64
+
+         # Query data
+         SELECT * FROM cpu
+
+      💡 Tips:
+         • Time series database
+         • Perfect for metrics and monitoring

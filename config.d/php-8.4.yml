@@ -1,0 +1,44 @@
+images:
+  php-8.4:
+    category: programming
+    description: PHP 8.4 (Latest)
+    image: php:8.4
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║              PHP 8.4 Development Environment (Latest)         ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         php -v                                    # Check PHP version
+         php -i | head -20                         # Full PHP info
+         php -m                                    # List loaded modules
+         php -a                                    # Interactive shell (REPL)
+         php -r "echo 'Hello World!';"             # Run PHP code directly
+
+      📝 Quick Script Test:
+         echo '<?php echo "PHP " . phpversion() . " is working!\n"; ?>' > /shared/test.php
+         php /shared/test.php
+
+      🔧 Development Server:
+         php -S 0.0.0.0:8000 -t /shared
+         # Access at http://localhost:8000
+
+      🆕 PHP 8.4 Features:
+         • Property hooks
+         • Asymmetric visibility
+         • Lazy objects
+         • New array functions
+         • Performance improvements
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+         /shared/projects                          # Your PHP projects
+
+      💡 Tips:
+         • Latest PHP with cutting-edge features
+         • Best performance of PHP 8.x series
+         • Keep projects in /shared for persistence
+
+      📚 Documentation: https://www.php.net/releases/8.4/

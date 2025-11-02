@@ -5,3 +5,47 @@ images:
     image: oven/bun:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          Bun - Fast JavaScript Runtime & Toolkit             ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Start:
+         bun --version                             # Check Bun version
+         bun init                                  # Initialize new project
+         bun run index.ts                          # Run TypeScript/JavaScript file
+         bun install                               # Install dependencies
+
+      📦 Package Management:
+         bun add package_name                      # Add package
+         bun add -d package_name                   # Add dev dependency
+         bun remove package_name                   # Remove package
+         bun update                                # Update all packages
+
+      🔧 Development:
+         bun dev                                   # Run dev script
+         bun test                                  # Run tests
+         bun build ./index.ts                      # Bundle for production
+
+      📝 Quick HTTP Server:
+         Create server.ts:
+         Bun.serve({
+           port: 3000,
+           fetch() {
+             return new Response("Hello from Bun!");
+           }
+         });
+
+         Then run: bun run server.ts
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+         /shared/projects                          # Your projects
+
+      💡 Tips:
+         • Bun is 3x faster than Node.js
+         • Native TypeScript support
+         • Built-in bundler, test runner, and package manager
+         • Keep projects in /shared for persistence
+
+      📚 Documentation: https://bun.sh/docs

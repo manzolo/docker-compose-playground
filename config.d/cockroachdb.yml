@@ -8,3 +8,17 @@ images:
     ports:
        - "26257:26257"
        - "28080:8080"
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                     CockroachDB - Distributed SQL                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+
+      💡 Tips:
+         • Use /shared directory for persistent data
+         • Check container logs for startup information
+         • Refer to official documentation for detailed usage
+
+      📚 Category: database

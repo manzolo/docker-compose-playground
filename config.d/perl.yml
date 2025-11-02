@@ -5,3 +5,23 @@ images:
     image: perl:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                   Perl Quick Reference                        ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         perl -v                                   # Check Perl version
+         perl -e "print 'Hello World!\\n'"         # Run Perl code
+         perl script.pl                            # Run Perl script
+
+      📦 CPAN (Package Manager):
+         cpan Module::Name                         # Install module
+         cpan -l                                   # List installed modules
+
+      💡 Tips:
+         • Practical Extraction and Report Language
+         • Great for text processing
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host

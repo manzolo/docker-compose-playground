@@ -5,3 +5,23 @@ images:
     image: pytorch/pytorch:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  PyTorch Quick Reference                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Test:
+         python -c "import torch; print(torch.__version__)"
+         python -c "import torch; print(torch.cuda.is_available())"
+
+      📝 Quick Example:
+         python <<EOF
+         import torch
+         x = torch.rand(5, 3)
+         print(x)
+         EOF
+
+      💡 Tips:
+         • Deep learning framework
+         • GPU acceleration support
+         • Keep models in /shared

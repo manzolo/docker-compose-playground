@@ -1,0 +1,49 @@
+images:
+  node-14:
+    category: programming
+    description: Node.js 14 LTS (Legacy)
+    image: node:14
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Node.js 14 LTS Quick Reference                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🟢 Node.js Environment:
+         node --version                                # Check Node version
+         npm --version                                 # Check npm version
+         npm list -g --depth=0                        # List global packages
+
+      📦 Package Management:
+         npm init -y                                   # Initialize package.json
+         npm install express                           # Install package
+         npm install --save-dev jest                   # Install dev dependency
+         npm install                                   # Install from package.json
+
+      🚀 Quick Express Server:
+         cd /shared && npm init -y && npm install express
+         Create server.js and run: node server.js
+
+      🧪 Quick Script Test:
+         node -e "console.log('Hello from Node.js 14!')"
+         node /shared/your_script.js
+
+      🔧 Useful Commands:
+         npm run script_name                           # Run npm script
+         npm outdated                                  # Check outdated packages
+         npm update                                    # Update packages
+         npm audit                                     # Security audit
+
+      📁 Useful Directories:
+         /shared                                       # Shared with host
+         /shared/projects                              # Your Node.js projects
+
+      💡 Tips:
+         • Node.js 14 is legacy but still widely used
+         • Keep projects in /shared for persistence
+         • Use for older projects requiring Node 14
+
+      📚 Documentation: https://nodejs.org/docs/latest-v14.x/api/
+    scripts:
+      post_start: init/node.sh

@@ -5,3 +5,21 @@ images:
     image: php:5.6
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                    PHP 5.6 Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         php -v                                    # Check PHP version
+         php -i | head -20                         # PHP info
+         php -r "echo 'Hello!';"                   # Run code directly
+         php -S 0.0.0.0:8000 -t /shared            # Start dev server
+
+      📝 Quick Test:
+         echo '<?php phpinfo(); ?>' > /shared/info.php
+         php /shared/info.php | head -20
+
+      💡 Tips:
+         • Legacy PHP version for older projects
+         • Keep projects in /shared

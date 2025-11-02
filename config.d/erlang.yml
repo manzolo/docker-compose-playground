@@ -5,3 +5,19 @@ images:
     image: erlang:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                  Erlang Quick Reference                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Commands:
+         erl                                       # Erlang shell
+         erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().' -noshell  # Version
+
+      📝 In Erlang shell:
+         1> io:format("Hello World~n").            # Print Hello World
+         2> q().                                   # Quit shell
+
+      💡 Tips:
+         • Designed for concurrent, distributed systems
+         • Powers many telecom systems

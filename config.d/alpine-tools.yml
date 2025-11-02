@@ -5,3 +5,24 @@ images:
     image: alpine:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                Alpine Tools Quick Reference                   ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      📦 Package Management:
+         apk update                                # Update package list
+         apk add package_name                      # Install package
+         apk search keyword                        # Search packages
+         apk info package_name                     # Package info
+
+      🔧 Common Tools:
+         # Network tools
+         apk add curl wget netcat-openbsd
+
+         # Development tools
+         apk add git vim nano
+
+      💡 Tips:
+         • Minimal Alpine Linux with tools
+         • Perfect for debugging and testing

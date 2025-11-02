@@ -5,3 +5,37 @@ images:
     image: busybox:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║          BusyBox - The Swiss Army Knife of Embedded Linux    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🔧 About BusyBox:
+         BusyBox combines tiny versions of many common UNIX utilities
+         into a single small executable (~2MB).
+
+      📦 Available Commands:
+         busybox --help                            # List all commands
+         busybox --list                            # List applets
+
+      🚀 Common Utilities:
+         ls, cat, grep, find, wget, tar, gzip
+         ps, top, df, du, mount, umount
+         vi, sed, awk, cut, tr, sort, uniq
+
+      📝 Examples:
+         busybox ls -la                            # List files
+         busybox grep "pattern" file.txt           # Search in file
+         busybox wget http://example.com           # Download file
+         busybox tar -czf archive.tar.gz /data     # Create archive
+
+      📁 Useful Directories:
+         /shared                                   # Shared with host
+
+      💡 Tips:
+         • Extremely lightweight (~2MB)
+         • Perfect for debugging and testing
+         • All commands are busybox applets
+         • Use /shared for file operations
+
+      📚 More info: https://busybox.net/

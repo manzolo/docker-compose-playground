@@ -5,3 +5,16 @@ images:
     image: tensorflow/tensorflow:latest
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                TensorFlow Quick Reference                    ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🚀 Quick Test:
+         python -c "import tensorflow as tf; print(tf.__version__)"
+         python -c "import tensorflow as tf; print(tf.config.list_physical_devices())"
+
+      💡 Tips:
+         • Machine learning framework
+         • Created by Google Brain team
+         • Keep models in /shared

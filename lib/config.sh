@@ -122,7 +122,7 @@ debug_config() {
   echo ""
   
   echo "Sample images:"
-  for img in ubuntu-24 mysql-8 python-3.13; do
+  for img in ubuntu-24 mysql-8.0 python-3.13; do
     if image_exists "$img" 2>/dev/null; then
       echo ""
       echo "  $img:"

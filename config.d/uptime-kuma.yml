@@ -1,0 +1,78 @@
+images:
+  uptime-kuma:
+    category: monitoring
+    description: Uptime Kuma - Self-hosted monitoring tool
+    image: louislam/uptime-kuma:latest
+    keep_alive_cmd: node server/server.js
+    ports:
+    - 3001:3001
+    shell: /bin/sh
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║           Uptime Kuma - Monitoring Dashboard                 ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      🌐 Web Interface:
+         Access: http://localhost:3001
+         First-time setup required on first access
+
+      🔧 Initial Setup:
+         1. Open http://localhost:3001
+         2. Create admin account
+         3. Start adding monitors!
+
+      📊 Monitor Types:
+         • HTTP(s) - Web endpoints
+         • TCP Port - Port availability
+         • Ping - ICMP ping
+         • DNS - DNS resolution
+         • Docker Container - Monitor containers
+         • Keywords - Check for text on page
+         • JSON Query - API response validation
+
+      ⚡ Features:
+         • Beautiful web UI
+         • Multi-language support
+         • Status pages (public/private)
+         • Notifications (20+ channels)
+         • 2FA authentication
+         • Certificate monitoring
+         • Response time tracking
+         • Uptime percentage
+         • Incident timeline
+
+      🔔 Notification Channels:
+         • Telegram, Discord, Slack
+         • Email, Webhook
+         • Pushover, Gotify
+         • And 15+ more!
+
+      📈 Monitoring Examples:
+         # Monitor a website
+         Type: HTTP(s)
+         URL: https://example.com
+         Interval: 60 seconds
+
+         # Monitor a service
+         Type: TCP Port
+         Host: localhost
+         Port: 3306 (MySQL)
+
+         # Check API response
+         Type: JSON Query
+         URL: https://api.example.com/health
+         JSON Path: $.status
+         Expected: "ok"
+
+      💡 Tips:
+         • Perfect for monitoring your services
+         • Create public status pages
+         • Set up notifications for downtime
+         • Beautiful alternative to Uptime Robot
+         • All data stored locally
+         • Great for portfolio projects
+
+      📁 Data Storage:
+         /app/data                                 # Uptime Kuma data
+
+      📚 Documentation: https://github.com/louislam/uptime-kuma

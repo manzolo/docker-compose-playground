@@ -103,7 +103,7 @@ Examples:
   ./tests/test-all.sh                          # Test everything
   ./tests/test-all.sh --containers-only        # Test only containers
   ./tests/test-all.sh --groups-only            # Test only groups
-  ./tests/test-all.sh --container mysql-8      # Test only mysql-8 container
+  ./tests/test-all.sh --container mysql-8.0      # Test only mysql-8.0 container
   ./tests/test-all.sh --group MySQL-Stack      # Test only MySQL-Stack group
 HELP
             exit 0
