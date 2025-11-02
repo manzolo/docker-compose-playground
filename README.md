@@ -52,7 +52,8 @@ A professional tool for managing multiple Docker development environments. Choos
 The Docker Playground Manager includes over 100 pre-configured containers and stacks, organized by category. Below is a curated list of the most commonly used ones:
 
 ### Linux Distributions
-- **Ubuntu** (12, 14, 16, 18, 20, 22, 24, 24-fishell, 24-nushell, 24-tmux, 24-zsh, icewm, kde, mate, openbox, xfce)
+- **Ubuntu** (12, 14, 16, 18, 20, 22, 24, 24-fishell, 24-nushell, 24-tmux, 24-zsh)
+- **Ubuntu Desktop** (icewm, kde, mate, openbox, xfce) - RDP-enabled desktop environments powered by [LinuxServer.io](https://www.linuxserver.io/)
 - **Alpine** (3.19, 3.22, edge, tools)
 - **Debian** (7, 8, 9, 10, 11, 12, 13)
 - **Fedora** (39)
@@ -77,7 +78,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Python** (2.7, 3.9, 3.10, 3.11, 3.12, 3.13, alpine)
 - **Node.js** (16, 18, 20, 22, alpine)
 - **Bun**
-- **Golang** (1.22, alpine)
+- **Golang** (1.18, 1.19, 1.20, 1.21, 1.22, alpine)
 - **Ruby** (3.3, alpine)
 - **PHP** (5.6, 7.2, 7.4, 8.2, 8.3, fpm)
 - **Java (OpenJDK)** (8, 11, 17, 21)
@@ -99,7 +100,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Traefik**
 
 ### Development Tools
-- **Code Server** (browser-based VS Code)
+- **Code Server** (browser-based VS Code) - powered by [LinuxServer.io](https://www.linuxserver.io/)
 - **Jupyter** (notebooks for Python, etc.)
 - **Jenkins** (CI/CD)
 - **Anaconda**
@@ -128,6 +129,19 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **RabbitMQ Stack**
 - **Redis Stack**
 - **Selenium Stack**
+- **PHP-Dev-Stack** (VS Code Server + PHP 8.4 with debugging)
+- **Python-Dev-Stack** (VS Code Server + Python 3.12 with debugging)
+
+### Windows
+- **Windows 11** (Pro with RDP + Web UI)
+- **Windows 10** (Pro with RDP + Web UI)
+- **Windows XP** (Classic with RDP + Web UI)
+- **Windows 8.1** (with RDP + Web UI)
+- **Windows 7** (with RDP + Web UI)
+- **Windows Vista** (with RDP + Web UI)
+- **Windows 2000** (Legacy with RDP + Web UI)
+
+All Windows containers are powered by [dockur/windows](https://github.com/dockur/windows) - Run Windows in a Docker container with KVM acceleration, RDP, and Web UI (noVNC).
 
 ### Other Services
 - **RabbitMQ** (message broker)

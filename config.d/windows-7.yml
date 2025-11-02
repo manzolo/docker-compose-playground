@@ -1,0 +1,52 @@
+images:
+  dockurr-windows-7:
+    category: windows
+    description: Windows 7 Ultimate SP1 + RDP + Web UI | Image -> dockurr/windows
+    image: dockurr/windows
+    container_name: windows-7u
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8012:8006
+      - 3312:3389/tcp
+      - 3312:3389/udp
+    environment:
+      - VERSION=7
+      - RAM=4G
+      - CPU=2
+      #- DISK=32G
+      #- DISPLAY=1440x900x32
+      - AUDIO=1
+      - PULSE_SERVER=unix:/run/pulse/native
+    volumes:
+      - host: shared-volumes/data/windows-7u-data
+        path: /storage
+        type: bind
+      - host: /run/user/1000/pulse
+        path: /run/pulse
+        type: bind
+        readonly: true
+    restart: always
+    stop_grace_period: 2m
+    shm_size: 2g
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ WINDOWS 7 ULTIMATE SP1 - Aero Glass                         ║
+      ║ Image: dockurr/windows                                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      CONNECTION
+      RDP: localhost:3312 | Web: http://localhost:8012
+      User: docker | Pass: admin
+
+      TIPS
+      • Enable Aero: Personalization
+      • Install Gadgets manually
+
+      READY!
+      ╚══════════════════════════════════════════════════════════════╝

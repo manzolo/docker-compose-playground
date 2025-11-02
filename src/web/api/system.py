@@ -176,7 +176,7 @@ async def stop_container_background(operation_id: str, container_name: str):
             operation_id
         )
         
-        if result["status"] == "stopped":
+        if result["status"] in ["stopped", "not_running"]:
             complete_operation(operation_id, stopped=1, failed=0)
         else:
             fail_operation(operation_id, result.get("error", "Unknown error"))
@@ -433,7 +433,7 @@ async def stop_category_background(operation_id: str, containers, category: str)
             try:
                 result = await future
                 
-                if result["status"] == "stopped":
+                if result["status"] in ["stopped", "not_running"]:
                     stopped.append(result["name"])
                 elif result["status"] == "failed":
                     failed.append(result["name"])
