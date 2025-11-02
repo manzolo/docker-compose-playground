@@ -6,7 +6,7 @@ images:
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
     scripts:
-      post_start: python_init.sh
+      post_start: init/python.sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║          Python 3.12 Development Environment                 ║

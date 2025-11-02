@@ -262,11 +262,18 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
         - "failed": Container failed to start
     """
     from src.web.core.scripts import execute_script
-    from src.web.core.state import add_script_tracking, complete_script_tracking
+    from src.web.core.state import add_script_tracking, complete_script_tracking, update_operation
 
     full_container_name = to_full_name(container_name)
     logger.info("Starting container: %s (timeout: %ds)", container_name, TimeoutConfig.CONTAINER_START_TIMEOUT)
-    
+
+    def update_phase(phase: str):
+        """Helper to update operation phase"""
+        if operation_id:
+            update_operation(operation_id, operation_phase=phase, container_name=full_container_name)
+
+    update_phase("starting_container")
+
     try:
         # Check if container already exists
         existing = docker_client.containers.get(full_container_name)
@@ -274,11 +281,12 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
             logger.info("Container %s already running", container_name)
             return {"status": "already_running", "name": container_name}
         else:
+            update_phase("removing_existing")
             logger.info("Removing stopped container %s", container_name)
             existing.remove(force=True)
     except docker.errors.NotFound:
         pass
-    
+
     # Validate ports
     ports_available, conflicts = validate_ports_available(img_data, container_name)
     if not ports_available:
@@ -286,8 +294,9 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
         error_msg = f"Port conflicts: {', '.join(conflict_list)}"
         logger.error("%s: %s", container_name, error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
-    
+
     # Prepare volumes
+    update_phase("preparing_volumes")
     volumes_config = img_data.get("volumes", [])
     ensure_named_volumes(volumes_config)
 
@@ -326,6 +335,7 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
 
     # Create and run container
     try:
+        update_phase("launching")
         logger.info("Running Docker image: %s as %s", img_data["image"], full_container_name)
         container = docker_client.containers.run(
             img_data["image"],
@@ -333,20 +343,32 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
             **docker_params  # Pass through Docker Compose parameters
         )
     except docker.errors.ImageNotFound:
-        error_msg = f"Docker image not found: {img_data.get('image', 'unknown')}"
-        logger.error("%s: %s", container_name, error_msg)
-        return {"status": "failed", "name": container_name, "error": error_msg}
+        update_phase("pulling_image")
+        logger.info("Image not found locally, attempting to pull: %s", img_data["image"])
+        try:
+            docker_client.images.pull(img_data["image"])
+            update_phase("launching")
+            container = docker_client.containers.run(
+                img_data["image"],
+                **base_params,
+                **docker_params
+            )
+        except Exception as pull_error:
+            error_msg = f"Failed to pull/start image: {str(pull_error)}"
+            logger.error("%s: %s", container_name, error_msg)
+            return {"status": "failed", "name": container_name, "error": error_msg}
     except docker.errors.APIError as e:
         error_msg = f"Docker API error: {str(e)}"
         logger.error("%s: %s", container_name, error_msg)
         return {"status": "failed", "name": container_name, "error": error_msg}
-    
+
     # Wait for container to be running
+    update_phase("waiting_ready")
     max_wait = TimeoutConfig.CONTAINER_START_TIMEOUT
     elapsed = 0
     wait_interval = TimeoutConfig.CONTAINER_START_POLL_INTERVAL
     start_time = time.time()
-    
+
     logger.debug("Polling container status (max %ds, interval %.2fs)", max_wait, wait_interval)
     
     while elapsed < max_wait:
@@ -360,24 +382,26 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
                 # Execute post-start script
                 scripts = img_data.get('scripts', {})
                 post_start_script = scripts.get('post_start') if scripts else None
-                
+
                 try:
+                    update_phase("running_post_start")
                     logger.info(">>> CALLING post_start script for %s", full_container_name)
-                    
+
                     if operation_id:
                         add_script_tracking(operation_id, full_container_name, "post_start")
-                    
+
                     execute_script(post_start_script, full_container_name, container_name, script_type="init")
                     logger.info(">>> post_start script COMPLETED successfully for %s", full_container_name)
-                    
+
                     if operation_id:
                         complete_script_tracking(operation_id, full_container_name)
                 except Exception as script_error:
                     logger.error(">>> post_start script FAILED for %s: %s", full_container_name, str(script_error))
-                    
+
                     if operation_id:
                         complete_script_tracking(operation_id, full_container_name)
-                
+
+                update_phase("completed")
                 return {"status": "started", "name": container_name}
             
             elif container.status in ["exited", "dead"]:
@@ -435,51 +459,60 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
         - "failed": Container failed to stop
     """
     from src.web.core.scripts import execute_script
-    from src.web.core.state import add_script_tracking, complete_script_tracking
+    from src.web.core.state import add_script_tracking, complete_script_tracking, update_operation
 
     base_container_name = to_display_name(container_name)
     full_container_name = to_full_name(container_name)
 
+    def update_phase(phase: str):
+        """Helper to update operation phase"""
+        if operation_id:
+            update_operation(operation_id, operation_phase=phase, container_name=full_container_name)
+
     logger.info(">>> START stop_single_container_sync for: %s (full_name: %s)",
                 base_container_name, full_container_name)
-    
+
     try:
         cont = docker_client.containers.get(full_container_name)
         logger.info(">>> Container found, status: %s", cont.status)
-        
+
         if cont.status != "running":
             logger.info(">>> Container not running, returning not_running")
             return {"status": "not_running", "name": base_container_name}
-        
+
         # Execute pre-stop script
+        update_phase("running_pre_stop")
         scripts = img_data.get('scripts', {})
         pre_stop_script = scripts.get('pre_stop') if scripts else None
-        
+
         try:
             logger.info(">>> CALLING pre_stop script for %s", full_container_name)
-            
+
             if operation_id:
                 add_script_tracking(operation_id, full_container_name, "pre_stop")
-            
+
             execute_script(pre_stop_script, full_container_name, base_container_name, script_type="halt")
             logger.info(">>> pre_stop script COMPLETED successfully for %s", full_container_name)
-            
+
             if operation_id:
                 complete_script_tracking(operation_id, full_container_name)
         except Exception as script_error:
             logger.error(">>> pre_stop script FAILED for %s: %s", full_container_name, str(script_error))
-            
+
             if operation_id:
                 complete_script_tracking(operation_id, full_container_name)
-        
+
         # Stop container with configured timeout
+        update_phase("stopping")
         timeout = get_stop_timeout(img_data)
         logger.info("Stopping container %s with timeout %ds", full_container_name, timeout)
-        
+
         try:
             cont.stop(timeout=timeout)
+            update_phase("removing")
             cont.remove()
             logger.info("Container %s stopped and removed", base_container_name)
+            update_phase("completed")
             return {"status": "stopped", "name": base_container_name}
         except Exception as e:
             logger.error("Error stopping container %s: %s", full_container_name, str(e))
@@ -487,6 +520,7 @@ def stop_single_container_sync(container_name: str, img_data: Dict[str, Any], op
             try:
                 cont.remove(force=True)
                 logger.warning("Container force removed after stop failure")
+                update_phase("completed")
                 return {"status": "stopped", "name": base_container_name}
             except Exception as force_error:
                 raise Exception(f"Failed to stop and remove: {str(e)}, force failed: {str(force_error)}")

@@ -122,18 +122,19 @@ def start_group(
                 
                 # Start container
                 img_data = config[container_name]
-                success, _ = start_container(container_name, img_data, force=force)
-                
+                success, _ = start_container(container_name, img_data, force=force, progress=progress, task_id=task)
+
                 if success:
-                    progress.update(task, description=f"[green]Started {container_name}[/green]")
-                    success_count += 1
-                    
                     # Execute post-start script
                     scripts = img_data.get('scripts', {})
                     if 'post_start' in scripts:
+                        progress.update(task, description=f"📜 Running post-start script for {container_name}...")
                         execute_script(scripts['post_start'], full_container_name, container_name)
+
+                    progress.update(task, description=f"[green]✅ Started {container_name}[/green]")
+                    success_count += 1
                 else:
-                    progress.update(task, description=f"[red]Failed to start {container_name}[/red]")
+                    progress.update(task, description=f"[red]❌ Failed to start {container_name}[/red]")
                     failed_count += 1
                     
             except Exception as e:
@@ -192,16 +193,18 @@ def stop_group(
                 if container_name in config:
                     scripts = config[container_name].get('scripts', {})
                     if 'pre_stop' in scripts:
+                        progress.update(task, description=f"📜 Running pre-stop script for {container_name}...")
                         execute_script(scripts['pre_stop'], full_container_name, container_name)
-                
+
                 # Stop container
-                cont.stop(timeout=10)  # 10 seconds for dev environments
-                
-                if remove:
-                    cont.remove(force=True)
-                
-                progress.update(task, description=f"[green]Stopped {container_name}[/green]")
-                success_count += 1
+                success = stop_container(container_name, remove=remove, progress=progress, task_id=task)
+
+                if success:
+                    progress.update(task, description=f"[green]✅ Stopped {container_name}[/green]")
+                    success_count += 1
+                else:
+                    progress.update(task, description=f"[red]❌ Failed to stop {container_name}[/red]")
+                    failed_count += 1
                 
             except docker.errors.NotFound:
                 progress.update(task, description=f"[yellow]Skipping {container_name} (not found)[/yellow]")

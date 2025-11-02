@@ -357,6 +357,57 @@ html.dark-mode .terminal-wrapper {
 }
 
 /* ============================================
+   CONTAINER TAGS - DARK MODE
+   ============================================ */
+
+/* Blue pulsing dot for Docker operations - dark mode */
+html.dark-mode .container-tag[data-operation-running="true"] {
+    border-color: #1e3a8a !important;
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode .container-tag[data-operation-running="true"] .container-status-dot {
+    background: #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.8) !important;
+}
+
+/* Yellow script running - dark mode */
+html.dark-mode .container-tag[data-script-running="true"] {
+    border-color: #92400e !important;
+    background: #1e1b14 !important;
+    color: #fde68a !important;
+}
+
+html.dark-mode .container-tag[data-script-running="true"] .container-status-dot {
+    background: #f59e0b !important;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.8) !important;
+}
+
+/* Running containers - dark mode */
+html.dark-mode .container-tag[data-running="true"] {
+    border-color: #065f46;
+    background: #1a2e26;
+    color: #d1fae5;
+}
+
+html.dark-mode .container-tag[data-running="true"] .container-status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* Stopped containers - dark mode */
+html.dark-mode .container-tag[data-running="false"] {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #94a3b8;
+}
+
+html.dark-mode .container-tag[data-running="false"] .container-status-dot {
+    background: #64748b;
+}
+
+/* ============================================
    RESPONSIVE - DARK MODE
    ============================================ */
 

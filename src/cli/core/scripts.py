@@ -24,33 +24,47 @@ SHARED_DIR = BASE_DIR / "shared-volumes"
 
 def execute_script(script_config, full_container_name: str, container_name: str, script_type: str = "init") -> None:
     """Execute post-start or pre-stop script
-    
+
     Executes scripts in the following order:
-    1. Default script if exists: ./scripts/${CONTAINER_NAME}/playground-${CONTAINER_NAME}-${script_type}.sh
+    1. Default script if exists (using standardized structure)
     2. Custom script from YAML config if provided
-    
+
     Both scripts are executed if they exist.
-    
+
     Args:
         script_config: Script configuration (dict, str, or None)
         full_container_name: Full container name (e.g., 'playground-mysql-8')
         container_name: Container name without prefix (e.g., 'mysql-8')
         script_type: Type of script - 'init' (post-start) or 'halt' (pre-stop)
     """
-    # Build default script path based on script type
-    default_script_name = f"{container_name}/{full_container_name}-{script_type}.sh"
-    default_script_path = SCRIPTS_DIR / default_script_name
-    
+    # Default script lookup paths (in order of preference)
+    default_script_paths = [
+        # 1. Stack-specific scripts: stacks/{container_name}/init.sh or halt.sh
+        SCRIPTS_DIR / "stacks" / container_name / f"{script_type}.sh",
+        # 2. Simple init/halt scripts: init/{container_name}.sh or halt/{container_name}.sh
+        SCRIPTS_DIR / script_type / f"{container_name}.sh",
+    ]
+
+    # Find the first existing default script
+    default_script_path = None
+    default_script_name = None
+
+    for script_path in default_script_paths:
+        if script_path.exists():
+            default_script_path = script_path
+            default_script_name = str(script_path.relative_to(SCRIPTS_DIR))
+            logger.info("Found default %s script: %s", script_type, default_script_name)
+            break
+
     # List to hold scripts to execute in order
     scripts_to_execute = []
-    
+
     # 1. Add default script if it exists
-    if default_script_path.exists():
+    if default_script_path:
         scripts_to_execute.append({
             'config': default_script_name,
             'label': 'default'
         })
-        logger.info("Found default %s script: %s", script_type, default_script_name)
     
     # 2. Add custom script if provided
     if script_config:

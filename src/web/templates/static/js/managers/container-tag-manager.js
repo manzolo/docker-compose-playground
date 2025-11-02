@@ -76,6 +76,19 @@ const ContainerTagManager = {
      * update container tag status indicator
      */
     updateContainerTagStatus(tag, containerName) {
+        // Don't update if tag is currently showing operation/script status
+        // ScriptIndicatorManager will manage the state during operations
+        if (tag.hasAttribute('data-operation-running') || tag.hasAttribute('data-script-running')) {
+            return;
+        }
+
+        // Don't update if ScriptIndicatorManager just set the final state
+        // Remove the flag after reading it to allow future updates
+        if (tag.hasAttribute('data-final-state-set')) {
+            tag.removeAttribute('data-final-state-set');
+            return;
+        }
+
         const statusDot = tag.querySelector('.container-status-dot');
         const matchingCard = DOM.query(`.container-card[data-name="${containerName}"]`);
         if (statusDot && matchingCard) {

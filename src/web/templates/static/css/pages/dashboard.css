@@ -332,14 +332,40 @@
 }
 
 @keyframes pulse-dot {
-    0%, 100% { 
-        opacity: 1; 
+    0%, 100% {
+        opacity: 1;
         transform: scale(1);
     }
-    50% { 
-        opacity: 0.6; 
+    50% {
+        opacity: 0.6;
         transform: scale(0.9);
     }
+}
+
+/* Fast pulse for Docker operations (pulling, starting, etc.) */
+@keyframes pulse-fast {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.85);
+        box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+    }
+}
+
+/* Blue pulsing dot for Docker operations */
+.container-tag[data-operation-running="true"] .container-status-dot {
+    background: #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6) !important;
+    animation: pulse-fast 1s ease-in-out infinite !important;
+}
+
+.container-tag[data-operation-running="true"] {
+    border-color: #dbeafe !important;
+    background: #eff6ff !important;
 }
 
 /* ============================================

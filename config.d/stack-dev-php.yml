@@ -36,7 +36,7 @@ images:
         path: /config
         type: bind
     scripts:
-      post_start: playground-code-server-php-stack-init.sh
+      post_start: stacks/code-server-php/init.sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║        VS Code Server - PHP Development Edition              ║
@@ -98,8 +98,8 @@ images:
         path: /workspace
         type: bind
     scripts:
-      post_start: playground-php-8.4-stack-init.sh
-      pre_stop: playground-php-8.4-stack-halt.sh
+      post_start: stacks/php-8.4-stack/init.sh
+      pre_stop: stacks/php-8.4-stack/halt.sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║              PHP 8.4 - Development Container                 ║

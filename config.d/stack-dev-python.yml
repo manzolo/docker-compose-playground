@@ -36,7 +36,7 @@ images:
         path: /config
         type: bind
     scripts:
-      post_start: playground-code-server-python-stack-init.sh
+      post_start: stacks/code-server-python/init.sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║        VS Code Server - Python Development Edition          ║
@@ -99,8 +99,8 @@ images:
         path: /workspace
         type: bind
     scripts:
-      post_start: playground-python-3.12-stack-init.sh
-      pre_stop: playground-python-3.12-stack-halt.sh
+      post_start: stacks/python-3.12/init.sh
+      pre_stop: stacks/python-3.12/halt.sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
       ║           Python 3.12 - Development Container               ║
