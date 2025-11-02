@@ -7,14 +7,14 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║           Ubuntu 22 Quick Reference                            ║
+      ║           Ubuntu 22 Quick Reference                          ║
       ╚══════════════════════════════════════════════════════════════╝
 
       📦 Package Manager (apt):
          apt update                               # Update package index
          apt install package_name                 # Install package
-         apt remove package_name                  # Remove package
-         apt search package_name                  # Search for package
+         apt install nano                         # Install package
+         apt search nano                          # Search package
          apt list --installed                     # List installed packages
 
       🔧 System Information:
