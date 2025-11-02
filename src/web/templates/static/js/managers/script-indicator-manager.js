@@ -5,6 +5,7 @@
 const ScriptIndicatorManager = {
     activeIndicators: new Map(),
     currentPhases: new Map(),  // Track current phase per container to prevent flashing
+    hidingContainers: new Set(),  // Track containers being hidden to prevent race conditions
 
     /**
      * Update script indicators based on operation status
@@ -30,14 +31,28 @@ const ScriptIndicatorManager = {
             }
         });
 
-        // NEW: Show Docker operation progress (only if phase changed)
+        // NEW: Show Docker operation progress (only if phase changed AND not hiding)
         if (statusData.operation_phase && statusData.container_name) {
+            // Ignore updates if we're in the process of hiding this container
+            if (this.hidingContainers.has(statusData.container_name)) {
+                return;
+            }
+
             const currentPhase = this.currentPhases.get(statusData.container_name);
 
             // Only update if phase actually changed
             if (currentPhase !== statusData.operation_phase) {
+                // For "completed" phase, mark as hiding FIRST to prevent any subsequent updates
+                if (statusData.operation_phase === 'completed') {
+                    this.hidingContainers.add(statusData.container_name);
+                }
+
                 this.currentPhases.set(statusData.container_name, statusData.operation_phase);
-                this.showOperationPhase(statusData.container_name, statusData.operation_phase);
+                this.showOperationPhase(
+                    statusData.container_name,
+                    statusData.operation_phase,
+                    statusData.operation  // Pass operation type (start, stop, etc.)
+                );
             }
         }
     },
@@ -45,7 +60,12 @@ const ScriptIndicatorManager = {
     /**
      * Show Docker operation phase (pulling, starting, stopping, etc.)
      */
-    showOperationPhase(containerName, phase) {
+    showOperationPhase(containerName, phase, operationType = null) {
+        // Defensive check: refuse to show if container is being hidden
+        if (this.hidingContainers.has(containerName)) {
+            return;
+        }
+
         const displayName = ContainerNameUtils.toDisplayName(containerName);
         const card = DOM.query(`[data-name="${displayName}"]`);
 
@@ -71,21 +91,27 @@ const ScriptIndicatorManager = {
         if (card) {
             const indicator = card.querySelector('.script-running-indicator');
             if (indicator) {
-                const iconEl = indicator.querySelector('.script-icon');
-                const textEl = indicator.querySelector('.script-text');
-
-                // Update content
-                if (iconEl) iconEl.textContent = phaseInfo.icon;
-                if (textEl) textEl.textContent = phaseInfo.text;
-
-                // Only set display/opacity if indicator is currently hidden
-                const currentDisplay = window.getComputedStyle(indicator).display;
-                //Manzolo
-                /*if (currentDisplay === 'none') {
+                // Don't show "completed" message on single cards - hide immediately
+                if (phase === 'completed') {
+                    indicator.style.display = 'none';
                     indicator.style.opacity = '1';
-                    indicator.style.display = 'flex';
-                }*/
-                // Otherwise, just leave it visible and don't touch the styles
+                } else {
+                    const iconEl = indicator.querySelector('.script-icon');
+                    const textEl = indicator.querySelector('.script-text');
+
+                    // Update content
+                    if (iconEl) iconEl.textContent = phaseInfo.icon;
+                    if (textEl) textEl.textContent = phaseInfo.text;
+
+                    // Only set display/opacity on FIRST show (when currently hidden)
+                    // After that, leave it alone to prevent flickering
+                    const currentDisplay = window.getComputedStyle(indicator).display;
+                    if (currentDisplay === 'none') {
+                        indicator.style.opacity = '1';
+                        indicator.style.display = 'flex';
+                    }
+                    // Otherwise indicator is already visible - just content was updated above
+                }
             }
         }
 
@@ -95,24 +121,54 @@ const ScriptIndicatorManager = {
             const statusDot = containerTag.querySelector('.container-status-dot');
 
             if (phase === 'completed') {
-                // Restore to normal state (green if running, gray if stopped)
+                // Restore to normal state - infer from operation type
                 containerTag.removeAttribute('data-operation-running');
-                const isRunning = containerTag.getAttribute('data-running') === 'true';
                 const isScriptRunning = containerTag.getAttribute('data-script-running') === 'true';
+
+                // Determine if container should be running based on operation type
+                const isStartOperation = operationType && (
+                    operationType === 'start' ||
+                    operationType === 'start_group'
+                );
+                const isStopOperation = operationType && (
+                    operationType === 'stop' ||
+                    operationType === 'stop_group'
+                );
+
+                // DEBUG: Log operation type to see what we're getting
+                console.log('[ScriptIndicator] Completed phase for', displayName, '- operationType:', operationType, 'isStart:', isStartOperation, 'isStop:', isStopOperation);
 
                 if (statusDot) {
                     if (isScriptRunning) {
                         // Keep yellow if script is still running
                         statusDot.style.background = '#f59e0b';
                         statusDot.style.animation = 'pulse-dot 1.5s ease-in-out infinite';
-                    } else if (isRunning) {
-                        // Green for running
+                    } else if (isStartOperation) {
+                        // Green for start operations (container is now running)
+                        containerTag.setAttribute('data-running', 'true');
                         statusDot.style.background = '#10b981';
                         statusDot.style.animation = 'pulse 2s ease-in-out infinite';
-                    } else {
-                        // Gray for stopped
+
+                        // Also update single container card status to prevent ContainerTagManager from reverting
+                        this.updateSingleCardStatus(displayName, true);
+                    } else if (isStopOperation) {
+                        // Gray for stop operations (container is now stopped)
+                        containerTag.setAttribute('data-running', 'false');
                         statusDot.style.background = '#94a3b8';
                         statusDot.style.animation = 'none';
+
+                        // Also update single container card status
+                        this.updateSingleCardStatus(displayName, false);
+                    } else {
+                        // Fallback: check current state attribute
+                        const isRunning = containerTag.getAttribute('data-running') === 'true';
+                        if (isRunning) {
+                            statusDot.style.background = '#10b981';
+                            statusDot.style.animation = 'pulse 2s ease-in-out infinite';
+                        } else {
+                            statusDot.style.background = '#94a3b8';
+                            statusDot.style.animation = 'none';
+                        }
                     }
                 }
             } else {
@@ -129,9 +185,12 @@ const ScriptIndicatorManager = {
             }
         }
 
-        // Auto-hide "completed" message after 2 seconds
+        // Cleanup tracking after completion
         if (phase === 'completed') {
-            setTimeout(() => this.hideIndicator(containerName), 2000);
+            // hidingContainers already set in updateIndicators() before this call
+            // Single container card already hidden immediately above
+            // Clean up tracking after a short delay to ensure no race conditions
+            setTimeout(() => this.hideIndicator(containerName), 500);
         }
     },
 
@@ -201,15 +260,9 @@ const ScriptIndicatorManager = {
         if (card) {
             const indicator = card.querySelector('.script-running-indicator');
             if (indicator) {
-                //Manzolo
+                // Hide immediately without animation to prevent race conditions
                 indicator.style.display = 'none';
                 indicator.style.opacity = '1';
-                // Hide indicator with fade out animation
-                /*indicator.style.opacity = '0';
-                setTimeout(() => {
-                    indicator.style.display = 'none';
-                    indicator.style.opacity = '1';
-                }, 300);*/
             }
         }
 
@@ -217,27 +270,37 @@ const ScriptIndicatorManager = {
         // Use display name (without 'playground-' prefix) to match data-container attribute
         const containerTag = DOM.query(`.container-tag[data-container="${displayName}"]`);
         if (containerTag) {
+            // Only remove operation/script flags - DON'T touch the final state colors
+            // The final state was already set in showOperationPhase() on 'completed' phase
+            const wasScriptRunning = containerTag.getAttribute('data-script-running') === 'true';
+
             containerTag.removeAttribute('data-script-running');
             containerTag.removeAttribute('data-operation-running');
-            // Restore color based on running state
-            const statusDot = containerTag.querySelector('.container-status-dot');
-            const isRunning = containerTag.getAttribute('data-running') === 'true';
-            if (statusDot) {
-                if (isRunning) {
-                    // Restore green if container is running
-                    statusDot.style.background = '#10b981';
-                    statusDot.style.animation = 'pulse 2s ease-in-out infinite';
-                } else {
-                    // Restore gray if container is stopped
-                    statusDot.style.background = '#94a3b8';
-                    statusDot.style.animation = 'none';
+
+            // Only restore colors if this was a SCRIPT operation (not Docker operation)
+            // Docker operations already set the final state in showOperationPhase()
+            if (wasScriptRunning) {
+                const statusDot = containerTag.querySelector('.container-status-dot');
+                const isRunning = containerTag.getAttribute('data-running') === 'true';
+                if (statusDot) {
+                    if (isRunning) {
+                        // Restore green if container is running
+                        statusDot.style.background = '#10b981';
+                        statusDot.style.animation = 'pulse 2s ease-in-out infinite';
+                    } else {
+                        // Restore gray if container is stopped
+                        statusDot.style.background = '#94a3b8';
+                        statusDot.style.animation = 'none';
+                    }
                 }
             }
+            // If it was a Docker operation, leave the colors as-is (already set correctly)
         }
 
-        // Remove from tracking
+        // Remove from all tracking maps/sets
         this.activeIndicators.delete(containerName);
         this.currentPhases.delete(containerName);  // Clear phase tracking
+        this.hidingContainers.delete(containerName);  // Clear hiding flag
     },
 
     /**
@@ -249,6 +312,7 @@ const ScriptIndicatorManager = {
         });
         this.activeIndicators.clear();
         this.currentPhases.clear();  // Clear all phase tracking
+        this.hidingContainers.clear();  // Clear all hiding flags
     },
 
     /**
@@ -263,6 +327,26 @@ const ScriptIndicatorManager = {
      */
     getIndicatorInfo(containerName) {
         return this.activeIndicators.get(containerName);
+    },
+
+    /**
+     * Update single container card status dot
+     * This prevents ContainerTagManager from reverting our changes
+     */
+    updateSingleCardStatus(displayName, isRunning) {
+        const card = DOM.query(`.container-card[data-name="${displayName}"]`);
+        if (card) {
+            const statusDot = card.querySelector('.status-dot');
+            if (statusDot) {
+                if (isRunning) {
+                    statusDot.classList.add('running');
+                    statusDot.classList.remove('stopped');
+                } else {
+                    statusDot.classList.add('stopped');
+                    statusDot.classList.remove('running');
+                }
+            }
+        }
     },
 
     /**
