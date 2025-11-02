@@ -24,6 +24,35 @@ A professional tool for managing multiple Docker development environments. Choos
 - 🧹 **Bulk Operations** - Stop all, cleanup, category management
 - 🚀 **Container Groups** - Organize and manage related containers together (e.g., start/stop entire groups like a development stack)
 
+## ⚡ Quick Start (Docker Only)
+
+Want to try it right now? Just need Docker installed:
+
+```bash
+# Clone the repository
+git clone https://github.com/manzolo/docker-compose-playground.git
+cd docker-compose-playground
+
+# Start with Docker Compose (standalone mode)
+docker compose -f docker-compose-standalone.yml up -d
+
+# Open your browser
+# 🌐 http://localhost:8000
+```
+
+That's it! The Web UI will be available at [http://localhost:8000](http://localhost:8000). You can now:
+- Browse 100+ pre-configured containers
+- Start containers with one click
+- Access container terminals via WebSocket
+- Manage container groups and stacks
+
+To stop:
+```bash
+docker compose -f docker-compose-standalone.yml down
+```
+
+> **Note**: This runs the entire playground manager as a Docker container. No Python or other dependencies needed on your host machine!
+
 ## 📸 Screenshots
 
 <details>
