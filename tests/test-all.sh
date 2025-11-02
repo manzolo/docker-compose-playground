@@ -47,6 +47,7 @@ TEST_CONTAINERS=true
 TEST_GROUPS=true
 SPECIFIC_CONTAINER=""
 SPECIFIC_GROUP=""
+KEEP_IMAGES=false
 
 # Start time for duration calculation
 START_TIME=$(date +%s)
@@ -84,6 +85,10 @@ while [[ $# -gt 0 ]]; do
             TEST_GROUPS=false
             shift
             ;;
+        --keep-images)
+            KEEP_IMAGES=true
+            shift
+            ;;
         --help|-h)
             cat << 'HELP'
 Docker Playground Test Suite
@@ -97,6 +102,7 @@ Options:
   --group NAME             Test only the specified group
   --skip-containers        Skip container tests
   --skip-groups            Skip group tests
+  --keep-images            Keep pulled Docker images after tests (default: remove)
   -h, --help               Show this help message
 
 Examples:
@@ -105,6 +111,7 @@ Examples:
   ./tests/test-all.sh --groups-only            # Test only groups
   ./tests/test-all.sh --container mysql-8.0      # Test only mysql-8.0 container
   ./tests/test-all.sh --group MySQL-Stack      # Test only MySQL-Stack group
+  ./tests/test-all.sh --keep-images            # Keep all pulled images after testing
 HELP
             exit 0
             ;;
@@ -156,6 +163,44 @@ get_containers_from_yaml() {
             print
         }
     ' "$yaml_file" | sort -u
+}
+
+# Function to get image name for a specific container from YAML files
+get_container_image() {
+    local container_name=$1
+    local image_name=""
+
+    # Search in config.yml and config.d/*.yml and custom.d/*.yml
+    for file in config.yml config.d/*.yml config.d/*.yaml custom.d/*.yml custom.d/*.yaml; do
+        if [ -f "$file" ]; then
+            # Use awk to find the container and extract its image
+            image_name=$(awk -v container="$container_name" '
+                /^images:/ { in_images=1; next }
+                in_images && /^[^ ]/ { in_images=0 }
+                in_images && $0 ~ "^  " container ":" { in_container=1; next }
+                in_container && /^  [a-zA-Z]/ { in_container=0 }
+                in_container && /^    image:/ {
+                    gsub(/^    image: *"?/, "")
+                    gsub(/".*/, "")
+                    print
+                    exit
+                }
+            ' "$file")
+
+            if [ -n "$image_name" ]; then
+                echo "$image_name"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+# Function to check if docker image exists locally
+image_exists_locally() {
+    local image_name=$1
+    docker image inspect "$image_name" >/dev/null 2>&1
 }
 
 # Function to get container list
@@ -308,6 +353,20 @@ test_container() {
 
     local container_name="playground-$container"
 
+    # Get the image name for this container
+    local image_name
+    image_name=$(get_container_image "$container")
+    local image_was_present=false
+
+    if [ -n "$image_name" ]; then
+        if image_exists_locally "$image_name"; then
+            image_was_present=true
+            log "Image already present locally: $image_name"
+        else
+            log "Image not present locally, will be pulled: $image_name"
+        fi
+    fi
+
     docker rm -f "$container_name" >/dev/null 2>&1 || true
     sleep 1
 
@@ -350,6 +409,22 @@ test_container() {
             echo -e "  ✅ ${GREEN}STOP SUCCESS${NC}"
             log "STOP SUCCESS: $container"
             ((STOP_SUCCESS++))
+
+            # Clean up image if it wasn't present before the test (unless --keep-images is set)
+            if [ "$KEEP_IMAGES" = false ] && [ "$image_was_present" = false ] && [ -n "$image_name" ]; then
+                echo -e "  🧹 ${YELLOW}Removing newly pulled image...${NC}"
+                log "Removing image that was pulled for test: $image_name"
+                if docker image rm "$image_name" >/dev/null 2>&1; then
+                    echo -e "  ✅ ${GREEN}IMAGE REMOVED: $image_name${NC}"
+                    log "IMAGE REMOVED: $image_name"
+                else
+                    echo -e "  ⚠️  ${YELLOW}Could not remove image: $image_name${NC}"
+                    log "WARNING: Could not remove image: $image_name"
+                fi
+            elif [ "$KEEP_IMAGES" = true ] && [ "$image_was_present" = false ] && [ -n "$image_name" ]; then
+                echo -e "  💾 ${CYAN}Keeping pulled image: $image_name${NC}"
+                log "Keeping image as per --keep-images flag: $image_name"
+            fi
         else
             echo -e "  ❌ ${RED}STOP FAILED${NC}"
             log "STOP FAILED: $container"
