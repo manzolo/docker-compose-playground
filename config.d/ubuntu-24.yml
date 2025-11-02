@@ -28,5 +28,5 @@ images:
       🚀 Quick Setup:
          apt update && apt install -y vim curl git wget build-essential
     scripts:
-      post_start: ubuntu_init.sh
-      pre_stop: ubuntu_halt.sh
+      post_start: init/ubuntu.sh
+      pre_stop: halt/ubuntu.sh

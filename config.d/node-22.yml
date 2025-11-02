@@ -37,5 +37,5 @@ images:
       📝 Common Packages (auto-installed):
          express, axios
     scripts:
-      post_start: node_init.sh
+      post_start: init/node.sh
     shell: /bin/bash

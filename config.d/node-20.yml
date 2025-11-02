@@ -5,7 +5,7 @@ images:
     image: node:20
     keep_alive_cmd: sleep infinity
     scripts:
-      post_start: node_init.sh
+      post_start: init/node.sh
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗

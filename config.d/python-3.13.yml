@@ -40,5 +40,5 @@ images:
       🔧 Common Packages (auto-installed):
          requests, beautifulsoup4, pandas, numpy
     scripts:
-      post_start: python_init.sh
+      post_start: init/python.sh
     shell: /bin/bash

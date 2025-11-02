@@ -51,6 +51,6 @@ images:
     ports:
       - 5432:5432
     scripts:
-      post_start: postgres_init.sh
-      pre_stop: postgres_halt.sh
+      post_start: init/postgres.sh
+      pre_stop: halt/postgres.sh
     shell: /bin/bash
