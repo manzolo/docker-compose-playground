@@ -1,0 +1,79 @@
+images:
+  dockurr-windows-11:
+    category: windows
+    description: Windows 11 Pro + RDP + Web UI | Image -> dockurr/windows
+    image: dockurr/windows
+    container_name: windows-11
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    devices:
+      - /dev/kvm        # KVM acceleration (required for performance)
+      - /dev/net/tun    # TUN/TAP for networking
+    cap_add:
+      - NET_ADMIN       # Required for virtual network
+    ports:
+      - 8015:8006       # Web UI (noVNC) → http://localhost:8015
+      - 3315:3389/tcp   # RDP → localhost:3315
+      - 3315:3389/udp
+    environment:
+      - VERSION=11      # Windows 11 Pro (default if omitted)
+      - RAM=8G          # 8 GB RAM (adjust for your host)
+      - CPU=4           # 4 CPU cores
+      #- DISK=80G        # Max disk size (grows automatically)
+      #- DISPLAY=1920x1080x32  # Full HD, 32-bit color (change for 4K: 3840x2160x32)
+      - AUDIO=1         # Enable audio (via RDP client)
+      - PULSE_SERVER=unix:/run/pulse/native  # Host PulseAudio socket
+    volumes:
+      - host: shared-volumes/data/windows-11-data
+        path: /storage
+        type: bind      # Persistent qcow2 disk
+      - host: /run/user/1000/pulse   # Replace 1000 with $(id -u)
+        path: /run/pulse
+        type: bind
+        readonly: true
+    restart: always
+    stop_grace_period: 2m
+    shm_size: 4g        # Shared memory for graphics
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ WINDOWS 11 PRO - RDP + Web UI                               ║
+      ║ Image: dockurr/windows | KVM + QEMU                         ║
+      ║ Persistent: shared-volumes/data/windows-11-data             ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      CONNECTION
+      ─────────────────────────────────────────────────────────────
+      RDP (Best): localhost:3315
+      Web: http://localhost:8015 (noVNC - use for setup only)
+      User: docker | Pass: admin
+
+      From Host:
+        • Windows: mstsc → localhost:3315
+        • Remmina/FreeRDP: RDP → localhost:3315 /u:docker /p:admin
+        • Browser: http://localhost:8015
+
+      FEATURES
+      ─────────────────────────────────────────────────────────────
+      Windows 11 Pro (24H2 or latest)<grok-card data-id="ca2e80" data-type="citation_card"></grok-card><grok-card data-id="f4f751" data-type="citation_card"></grok-card>
+      8 GB RAM | 4 CPU | 80 GB Disk
+      Hardware acceleration (KVM)
+      Audio via RDP (enable in client)
+      Auto-login + Microsoft Store
+
+      IMPORTANT
+      ─────────────────────────────────────────────────────────────
+      • First boot: 5–10 min (downloads ISO ~7.2 GB)<grok-card data-id="df97d0" data-type="citation_card"></grok-card>
+      • Web UI: Low quality, no audio → Switch to RDP
+      • Disk: Grows in /storage (qcow2)
+      • Reset: Delete windows-11-data folder
+
+      TIPS
+      ─────────────────────────────────────────────────────────────
+      • Audio: In RDP client → Local Resources → Play on this computer
+      • Resolution: Change DISPLAY= or in Windows Settings
+      • Activate: Settings → System → Activation
+      • Variants: 11l (LTSC), 11e (Enterprise)<grok-card data-id="03b794" data-type="citation_card"></grok-card>
+      • PulseAudio: Run `pulseaudio --start` on host
+
+      READY - Connect via RDP for full experience!
+      ╚══════════════════════════════════════════════════════════════╝

@@ -1,0 +1,84 @@
+images:
+  windows-xp:
+    category: windows
+    description: Windows XP + RDP + Web UI | Image -> dockurr/windows
+    image: dockurr/windows
+    container_name: playground-windows-xp
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    # privileged: true  # Uncomment only if needed for advanced hardware passthrough
+    devices:
+      - /dev/kvm      # KVM acceleration (required for good performance)
+      - /dev/net/tun  # Virtual network interface (TUN/TAP)
+    cap_add:
+      - NET_ADMIN     # Required for TUN/TAP networking
+    ports:
+      - 8009:8006     # Web UI (noVNC fallback) → http://localhost:8009
+      - 3309:3389/tcp # RDP (TCP) → connect via localhost:3309
+      - 3309:3389/udp # RDP (UDP) → improves performance in some clients
+    environment:
+      - VERSION=XP    # Windows XP (case-insensitive: xp, XP)
+      - RAM=8G        # Allocate 8 GB of RAM to the VM
+      - CPU=4         # Allocate 4 CPU cores
+      # - DISK=80G    # Optional: set max disk size (default: auto-grow)
+      # - DISPLAY=1920x1080x32  # See detailed explanation below
+      - AUDIO=1       # Enable audio output via PulseAudio
+      - PULSE_SERVER=unix:/run/pulse/native  # Connect to host's PulseAudio socket
+    volumes:
+      - host: shared-volumes/data/windows-xp-data
+        path: /storage
+        type: bind      # Persistent disk storage (qcow2 file)
+      # PulseAudio socket from host (replace 1000 with your user ID)
+      - host: /run/user/1000/pulse
+        path: /run/pulse
+        type: bind
+        readonly: true
+    restart: always
+    stop_grace_period: 2m
+    shm_size: 4g      # Shared memory for graphics acceleration
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ WINDOWS XP PLAYGROUND - RDP + Web UI                         ║
+      ║ Image: dockurr/windows | KVM + QEMU                          ║
+      ║ Persistent Disk: shared-volumes/data/windows-xp-data ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      CONNECTION INFO
+      ─────────────────────────────────────────────────────────────
+      RDP (Recommended): localhost:3309
+      Web UI (noVNC): http://localhost:8009
+      Username: docker
+      Password: admin
+
+      From Host:
+        • Windows: mstsc → localhost:3309
+        • Remmina: RDP → localhost:3309
+        • FreeRDP: xfreerdp /v:localhost:3309 /u:docker /p:admin
+        • Browser: http://localhost:8009
+
+      FEATURES
+      ─────────────────────────────────────────────────────────────
+      Windows XP Professional SP3
+      8GB RAM, 4 CPU cores
+      Hardware acceleration via KVM
+      Audio passthrough (PulseAudio)
+      Auto-login + preconfigured RDP
+      Install apps (IE, Notepad++, etc.)
+
+      IMPORTANT
+      ─────────────────────────────────────────────────────────────
+      • First boot: 3–7 minutes (OOBE setup)
+      • Disk grows in shared-volumes/data/windows-xp-data
+      • To reset: delete the folder above
+      • Audio works in RDP — enable in client settings
+
+      TIPS
+      ─────────────────────────────────────────────────────────────
+      • Increase RAM: RAM=16G
+      • Change resolution: DISPLAY=2560x1440x32
+      • Enable clipboard & drive sharing in RDP client
+      • Install apps via .exe or Add/Remove Programs
+      • Use Win+R → cmd → net user to change password
+
+                       READY TO USE - Connect via RDP!
+      ╚══════════════════════════════════════════════════════════════╝

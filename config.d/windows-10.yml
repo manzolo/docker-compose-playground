@@ -1,0 +1,55 @@
+images:
+  dockurr-windows-10:
+    category: windows
+    description: Windows 10 Pro + RDP + Web UI | Image -> dockurr/windows
+    image: dockurr/windows
+    container_name: windows-10
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8010:8006
+      - 3310:3389/tcp
+      - 3310:3389/udp
+    environment:
+      - VERSION=10
+      - RAM=6G
+      - CPU=4
+      #- DISK=64G
+      #- DISPLAY=1920x1080x32
+      - AUDIO=1
+      - PULSE_SERVER=unix:/run/pulse/native
+    volumes:
+      - host: shared-volumes/data/windows-10-data
+        path: /storage
+        type: bind
+      - host: /run/user/1000/pulse
+        path: /run/pulse
+        type: bind
+        readonly: true
+    restart: always
+    stop_grace_period: 2m
+    shm_size: 4g
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ WINDOWS 10 PRO - RDP + Web UI                               ║
+      ║ Image: dockurr/windows | Modern UI + Store                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      CONNECTION
+      RDP: localhost:3310 | Web: http://localhost:8010
+      User: docker | Pass: admin
+
+      FEATURES
+      6 GB RAM | 4 CPU | 64 GB Disk | Audio
+
+      TIPS
+      • Activate: Settings → Update & Security
+      • Enable Dark Mode: Personalization
+
+      READY!
+      ╚══════════════════════════════════════════════════════════════╝

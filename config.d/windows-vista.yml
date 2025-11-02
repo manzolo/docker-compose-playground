@@ -1,0 +1,52 @@
+images:
+  dockurr-windows-vista:
+    category: windows
+    description: Windows Vista Ultimate SP2 + RDP + Web UI | Image -> dockurr/windows
+    image: dockurr/windows
+    container_name: windows-vu
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8013:8006
+      - 3313:3389/tcp
+      - 3313:3389/udp
+    environment:
+      - VERSION=vista
+      - RAM=3G
+      - CPU=2
+      - DISK=30G
+      #- DISPLAY=1280x800x32
+      - AUDIO=1
+      - PULSE_SERVER=unix:/run/pulse/native
+    volumes:
+      - host: shared-volumes/data/windows-vu-data
+        path: /storage
+        type: bind
+      - host: /run/user/1000/pulse
+        path: /run/pulse
+        type: bind
+        readonly: true
+    restart: always
+    stop_grace_period: 2m
+    shm_size: 2g
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ WINDOWS VISTA ULTIMATE SP2 - Sidebar & Aero                 ║
+      ║ Image: dockurr/windows                                      ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      CONNECTION
+      RDP: localhost:3313 | Web: http://localhost:8013
+      User: docker | Pass: admin
+
+      TIPS
+      • Disable UAC for old apps
+      • Enable DreamScene (if available)
+
+      READY!
+      ╚══════════════════════════════════════════════════════════════╝

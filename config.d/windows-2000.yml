@@ -1,0 +1,52 @@
+images:
+  dockurr-windows-2000:
+    category: windows
+    description: Windows 2000 Pro SP4 + RDP + Web UI | Image -> dockurr/windows
+    image: dockurr/windows
+    container_name: windows-2k
+    keep_alive_cmd: sleep infinity
+    shell: /bin/bash
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8014:8006
+      - 3314:3389/tcp
+      - 3314:3389/udp
+    environment:
+      - VERSION=2000
+      - RAM=1G
+      - CPU=1
+      #- DISK=10G
+      #- DISPLAY=1024x768x16
+      - AUDIO=1
+      - PULSE_SERVER=unix:/run/pulse/native
+    volumes:
+      - host: shared-volumes/data/windows-2k-data
+        path: /storage
+        type: bind
+      - host: /run/user/1000/pulse
+        path: /run/pulse
+        type: bind
+        readonly: true
+    restart: always
+    stop_grace_period: 2m
+    shm_size: 1g
+    motd: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║ WINDOWS 2000 PROFESSIONAL SP4 - Classic NT                  ║
+      ║ Image: dockurr/windows | ~0.4 GB Disk                       ║
+      ╚══════════════════════════════════════════════════════════════╝
+
+      CONNECTION
+      RDP: localhost:3314 | Web: http://localhost:8014
+      User: docker | Pass: admin
+
+      TIPS
+      • Use RDP 5.0 client
+      • Install DirectX 8 for games
+
+      READY!
+      ╚══════════════════════════════════════════════════════════════╝
