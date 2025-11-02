@@ -82,6 +82,13 @@ const ContainerTagManager = {
             return;
         }
 
+        // Don't update if ScriptIndicatorManager just set the final state
+        // Remove the flag after reading it to allow future updates
+        if (tag.hasAttribute('data-final-state-set')) {
+            tag.removeAttribute('data-final-state-set');
+            return;
+        }
+
         const statusDot = tag.querySelector('.container-status-dot');
         const matchingCard = DOM.query(`.container-card[data-name="${containerName}"]`);
         if (statusDot && matchingCard) {

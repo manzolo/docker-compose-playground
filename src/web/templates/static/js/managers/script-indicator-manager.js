@@ -144,21 +144,27 @@ const ScriptIndicatorManager = {
                         statusDot.style.background = '#f59e0b';
                         statusDot.style.animation = 'pulse-dot 1.5s ease-in-out infinite';
                     } else if (isStartOperation) {
-                        // Green for start operations (container is now running)
+                        // Update single container card status FIRST
+                        this.updateSingleCardStatus(displayName, true);
+
+                        // Then update group tag
                         containerTag.setAttribute('data-running', 'true');
                         statusDot.style.background = '#10b981';
                         statusDot.style.animation = 'pulse 2s ease-in-out infinite';
 
-                        // Also update single container card status to prevent ContainerTagManager from reverting
-                        this.updateSingleCardStatus(displayName, true);
+                        // Mark that we've set the final state for this container
+                        containerTag.setAttribute('data-final-state-set', 'true');
                     } else if (isStopOperation) {
-                        // Gray for stop operations (container is now stopped)
+                        // Update single container card status FIRST
+                        this.updateSingleCardStatus(displayName, false);
+
+                        // Then update group tag
                         containerTag.setAttribute('data-running', 'false');
                         statusDot.style.background = '#94a3b8';
                         statusDot.style.animation = 'none';
 
-                        // Also update single container card status
-                        this.updateSingleCardStatus(displayName, false);
+                        // Mark that we've set the final state for this container
+                        containerTag.setAttribute('data-final-state-set', 'true');
                     } else {
                         // Fallback: check current state attribute
                         const isRunning = containerTag.getAttribute('data-running') === 'true';
@@ -273,13 +279,14 @@ const ScriptIndicatorManager = {
             // Only remove operation/script flags - DON'T touch the final state colors
             // The final state was already set in showOperationPhase() on 'completed' phase
             const wasScriptRunning = containerTag.getAttribute('data-script-running') === 'true';
+            const wasDockerOperation = containerTag.getAttribute('data-operation-running') === 'true';
 
             containerTag.removeAttribute('data-script-running');
             containerTag.removeAttribute('data-operation-running');
 
             // Only restore colors if this was a SCRIPT operation (not Docker operation)
             // Docker operations already set the final state in showOperationPhase()
-            if (wasScriptRunning) {
+            if (wasScriptRunning && !wasDockerOperation) {
                 const statusDot = containerTag.querySelector('.container-status-dot');
                 const isRunning = containerTag.getAttribute('data-running') === 'true';
                 if (statusDot) {
@@ -294,7 +301,9 @@ const ScriptIndicatorManager = {
                     }
                 }
             }
-            // If it was a Docker operation, leave the colors as-is (already set correctly)
+
+            // Don't need to call ContainerTagManager - the data-final-state-set flag
+            // will prevent it from overwriting our state on next refresh
         }
 
         // Remove from all tracking maps/sets
