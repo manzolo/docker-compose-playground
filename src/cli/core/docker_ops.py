@@ -13,6 +13,11 @@ from rich.console import Console
 from .volumes import VolumeManager, validate_and_prepare_volumes
 from .docker_compose_params import extract_docker_params
 
+# Import logger utilities
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from src.cli.utils.logger import log_exception, debug_print
+
 console = Console()
 
 # Paths
@@ -129,8 +134,16 @@ def start_container(
             pass
         
         # Parse ports
+        debug_print(f"Parsing ports for {image_name}...")
         ports = {}
-        for p in img_data.get("ports", []):
+        for i, p in enumerate(img_data.get("ports", [])):
+            debug_print(f"  Port {i}: {repr(p)} (type: {type(p).__name__})")
+            if not isinstance(p, str):
+                error_msg = f"Port mapping must be a string, got {type(p).__name__}: {repr(p)}"
+                console.print(f"[red]❌ Invalid port configuration:[/red]")
+                console.print(f"[red]   {error_msg}[/red]")
+                console.print(f"[yellow]💡 Tip: Quote port mappings in YAML (e.g., \"3000:3000\")[/yellow]")
+                return False, container_name
             if ':' in p:
                 host_port, container_port = p.split(":")
                 ports[container_port] = host_port
@@ -242,12 +255,12 @@ def start_container(
         console.print(f"[yellow]Try pulling it first: docker pull {img_data['image']}[/yellow]")
         return False, container_name
     except docker.errors.APIError as e:
-        console.print(f"[red]❌ Docker error: {e}[/red]")
+        log_exception(e, f"Docker API error while starting {container_name}")
         if "port is already allocated" in str(e).lower():
-            console.print("[yellow]The port is already in use by another container[/yellow]")
+            console.print("[yellow]💡 Tip: The port is already in use by another container[/yellow]")
         return False, container_name
     except Exception as e:
-        console.print(f"[red]❌ Unexpected error: {e}[/red]")
+        log_exception(e, f"Unexpected error while starting {container_name}")
         return False, container_name
 
 

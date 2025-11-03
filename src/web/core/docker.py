@@ -205,12 +205,31 @@ def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> T
     """Validate all ports are available for a container"""
     conflicts = []
     ports = img_data.get("ports", [])
-    
-    for port_mapping in ports:
+
+    for i, port_mapping in enumerate(ports):
+        # Validate that port_mapping is a string
+        if not isinstance(port_mapping, str):
+            error_msg = f"Port mapping at index {i} must be a string, got {type(port_mapping).__name__}: {repr(port_mapping)}"
+            logger.error("%s: %s", container_name, error_msg)
+            logger.error("%s: This usually means the port wasn't quoted in YAML config", container_name)
+            logger.error("%s: YAML may have parsed it as a number (e.g., 2222:22 as sexagesimal)", container_name)
+
+            # Return a conflict with helpful error information
+            conflicts.append({
+                "host_port": "invalid",
+                "container_port": "invalid",
+                "used_by": f"Configuration Error: {error_msg}. Tip: Quote port mappings in YAML (e.g., \"3000:3000\")"
+            })
+            continue
+
         try:
-            host_port, container_port = port_mapping.split(":")
+            if ':' not in port_mapping:
+                logger.warning("%s: Invalid port mapping format: %s", container_name, port_mapping)
+                continue
+
+            host_port, container_port = port_mapping.split(":", 1)
             host_port_int = int(host_port)
-            
+
             is_available, used_by = check_port_available(host_port_int)
             if not is_available:
                 conflicts.append({
@@ -218,9 +237,9 @@ def validate_ports_available(img_data: Dict[str, Any], container_name: str) -> T
                     "container_port": container_port,
                     "used_by": used_by
                 })
-        except ValueError:
-            logger.warning("Invalid port mapping: %s", port_mapping)
-    
+        except ValueError as e:
+            logger.warning("%s: Invalid port mapping: %s - %s", container_name, port_mapping, str(e))
+
     return len(conflicts) == 0, conflicts
 
 
@@ -293,6 +312,35 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
         conflict_list = [f"{c['host_port']} (used by {c['used_by']})" for c in conflicts]
         error_msg = f"Port conflicts: {', '.join(conflict_list)}"
         logger.error("%s: %s", container_name, error_msg)
+
+        # Check if this is a configuration error (invalid port type)
+        port_list = img_data.get("ports", [])
+        has_config_error = any(c['host_port'] == 'invalid' for c in conflicts)
+
+        if has_config_error:
+            # Build detailed debug information for configuration errors
+            debug_info = {
+                "error_type": "PortConfigurationError",
+                "all_ports": [{"index": idx, "value": repr(port), "type": type(port).__name__}
+                             for idx, port in enumerate(port_list)],
+                "conflicts": conflicts,
+                "tips": [
+                    "Port mappings must be quoted strings in YAML (e.g., \"3000:3000\")",
+                    "YAML interprets unquoted values like 2222:22 as sexagesimal (base-60) numbers",
+                    "Fix: Add quotes around all port mappings in your YAML config file",
+                ],
+                "fix_example": {
+                    "wrong": "ports:\n  - 3000:3000\n  - 2222:22",
+                    "correct": "ports:\n  - \"3000:3000\"\n  - \"2222:22\""
+                }
+            }
+            return {
+                "status": "failed",
+                "name": container_name,
+                "error": error_msg,
+                "debug_info": debug_info
+            }
+
         return {"status": "failed", "name": container_name, "error": error_msg}
 
     # Prepare volumes
@@ -306,8 +354,53 @@ def start_single_container_sync(container_name: str, img_data: Dict[str, Any], o
     shared_host_path = convert_to_host_path(str(SHARED_DIR))
     all_volumes = [f"{shared_host_path}:/shared"]
     all_volumes.extend(compose_volumes)
-    
-    ports = {cp: hp for hp, cp in (p.split(":") for p in img_data.get("ports", []))}
+
+    # Parse and validate ports
+    ports = {}
+    port_list = img_data.get("ports", [])
+    for i, p in enumerate(port_list):
+        if not isinstance(p, str):
+            error_msg = f"Port mapping must be a string, got {type(p).__name__}: {repr(p)}"
+            logger.error("%s: Invalid port configuration at index %d: %s", container_name, i, error_msg)
+
+            # Add helpful debug information
+            debug_info = {
+                "error_type": "InvalidPortConfiguration",
+                "port_index": i,
+                "port_value": repr(p),
+                "port_type": type(p).__name__,
+                "all_ports": [{"index": idx, "value": repr(port), "type": type(port).__name__}
+                             for idx, port in enumerate(port_list)],
+                "tips": [
+                    "Port mappings must be quoted strings in YAML (e.g., \"3000:3000\")",
+                    f"YAML parsed port at index {i} as {type(p).__name__} instead of string",
+                    "Common issue: YAML interprets unquoted values like 2222:22 as sexagesimal numbers",
+                    "Fix: Add quotes around all port mappings in your YAML config",
+                ],
+                "fix_example": {
+                    "wrong": "ports:\n  - 3000:3000\n  - 2222:22",
+                    "correct": "ports:\n  - \"3000:3000\"\n  - \"2222:22\""
+                }
+            }
+
+            return {
+                "status": "failed",
+                "name": container_name,
+                "error": error_msg,
+                "debug_info": debug_info
+            }
+
+        if ':' not in p:
+            error_msg = f"Port mapping must be in format 'host:container', got: {p}"
+            logger.error("%s: %s", container_name, error_msg)
+            return {
+                "status": "failed",
+                "name": container_name,
+                "error": error_msg
+            }
+
+        hp, cp = p.split(":", 1)
+        ports[cp] = hp
 
     # Extract Docker Compose parameters
     docker_params = extract_docker_params(img_data)

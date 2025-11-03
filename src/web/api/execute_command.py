@@ -162,11 +162,21 @@ async def execute_command(container: str, request_body: ExecuteCommandRequest):
     except HTTPException:
         raise
     except docker.errors.APIError as e:
-        logger.error("Docker API error executing command in %s: %s", full_container_name, str(e))
-        raise HTTPException(500, f"Docker API error: {str(e)}")
+        from src.web.utils.error_handler import create_error_response
+        raise create_error_response(
+            e,
+            context=f"Docker API error executing command in {full_container_name}",
+            status_code=500,
+            logger=logger
+        )
     except Exception as e:
-        logger.error("Error executing command in %s: %s", full_container_name, str(e))
-        raise HTTPException(500, f"Unexpected error: {str(e)}")
+        from src.web.utils.error_handler import create_error_response
+        raise create_error_response(
+            e,
+            context=f"Unexpected error executing command in {full_container_name}",
+            status_code=500,
+            logger=logger
+        )
 
 
 @router.post("/api/execute-diagnostic/{container}", response_model=DiagnosticResponse)
@@ -341,8 +351,18 @@ async def execute_diagnostic(container: str):
     except HTTPException:
         raise
     except docker.errors.APIError as e:
-        logger.error("Docker API error running diagnostics for %s: %s", full_container_name, str(e))
-        raise HTTPException(500, f"Docker API error: {str(e)}")
+        from src.web.utils.error_handler import create_error_response
+        raise create_error_response(
+            e,
+            context=f"Docker API error running diagnostics for {full_container_name}",
+            status_code=500,
+            logger=logger
+        )
     except Exception as e:
-        logger.error("Error running diagnostics for %s: %s", full_container_name, str(e))
-        raise HTTPException(500, f"Unexpected error: {str(e)}")
+        from src.web.utils.error_handler import create_error_response
+        raise create_error_response(
+            e,
+            context=f"Unexpected error running diagnostics for {full_container_name}",
+            status_code=500,
+            logger=logger
+        )
