@@ -595,6 +595,27 @@ async def download_backup(
     return FileResponse(str(backup_path), filename=filename, media_type="application/octet-stream")
 
 
+@router.delete("/api/backups/delete/{category}/{filename}", summary="Delete Backup", description="Delete a specific backup file")
+async def delete_backup(
+    category: str = PathParam(..., description="Backup category"),
+    filename: str = PathParam(..., description="Backup filename")
+):
+    """
+    Delete a backup file.
+    """
+    try:
+        backup_path = SHARED_DIR / "data" / "backups" / category / filename
+        if not backup_path.is_file():
+            raise HTTPException(status_code=404, detail=f"Backup not found at path: {backup_path}")
+
+        backup_path.unlink()
+        logger.info(f"Deleted backup: {backup_path}")
+        return {"status": "success", "message": f"Backup '{filename}' deleted."}
+    except Exception as e:
+        logger.error(f"Error deleting backup: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete backup: {e}")
+
+
 @router.get(
     "/debug-config",
     response_model=DebugConfig,

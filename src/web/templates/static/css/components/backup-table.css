@@ -151,6 +151,40 @@
     box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
+/* Delete Button */
+.backup-delete-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    margin-left: 8px; /* Add some space between download and delete */
+}
+
+.backup-delete-btn::before {
+    content: "🗑️";
+    font-size: 14px;
+}
+
+.backup-delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.backup-delete-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
 /* Empty State */
 .backups-empty {
     padding: 60px 20px;

@@ -244,6 +244,10 @@ const ApiService = {
         return `${window.location.origin}/api/download-backup/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`;
     },
 
+    async deleteBackup(category, filename) {
+        return this.fetchJson(`/api/backups/delete/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    },
+
     /**
      * Export config
      */

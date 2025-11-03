@@ -73,6 +73,9 @@ const BackupExportManager = {
                     <button class="backup-download-btn" onclick="BackupExportManager.downloadBackup('${backup.category}', '${backup.file}')">
                         Download
                     </button>
+                    <button class="backup-delete-btn" onclick="BackupExportManager.deleteBackup('${backup.category}', '${backup.file}')">
+                        Delete
+                    </button>
                 </td>
             </tr>
         `).join('');
@@ -160,6 +163,30 @@ const BackupExportManager = {
             ToastManager.show(`Downloading ${filename}...`, 'info');
         } catch (error) {
             ToastManager.show(`Download failed: ${error.message}`, 'error');
+        }
+    },
+
+    /**
+     * Delete backup
+     */
+    async deleteBackup(category, filename) {
+        const confirmation = await ConfirmModalManager.show(
+            'Delete Backup',
+            `Are you sure you want to delete the backup: <strong>${filename}</strong>? This action cannot be undone.`,
+            'danger'
+        );
+
+        if (confirmation) {
+            try {
+                showLoader(`Deleting ${filename}...`);
+                await ApiService.deleteBackup(category, filename);
+                ToastManager.show('Backup deleted successfully', 'success');
+                this.showBackups(); // Refresh the list
+            } catch (error) {
+                ToastManager.show(`Delete failed: ${error.message}`, 'error');
+            } finally {
+                hideLoader();
+            }
         }
     },
 
