@@ -3,6 +3,9 @@
 // =========================================================
 
 const BackupExportManager = {
+    currentBackups: [], // Store the current list of backups
+    currentSort: { key: 'modified', direction: 'desc' }, // Default sort
+
     /**
      * Show backups modal
      */
@@ -12,7 +15,8 @@ const BackupExportManager = {
             DOM.invalidateCache('backupFilterInput');
             DOM.invalidateCache('backupsTable');
             const data = await ApiService.getBackups();
-            this.renderBackupsList(data.backups);
+            this.currentBackups = data.backups;
+            this.sortBackups(this.currentSort.key, true);
             ModalManager.open('backupsModal');
             
             requestAnimationFrame(() => {
@@ -33,6 +37,7 @@ const BackupExportManager = {
      * Render backups list
      */
     renderBackupsList(backups) {
+        this.currentBackups = backups;
         const list = DOM.get('backupsList');
         if (!list) return;
 
@@ -40,6 +45,7 @@ const BackupExportManager = {
             list.innerHTML = this.createEmptyState();
         } else {
             list.innerHTML = this.createBackupsTable(backups);
+            this.updateSortIndicators();
         }
     },
 
@@ -110,10 +116,10 @@ const BackupExportManager = {
                 <table class="backups-table" id="backupsTable">
                     <thead>
                         <tr>
-                            <th>Container</th>
-                            <th>File</th>
-                            <th>Size</th>
-                            <th>Modified</th>
+                            <th class="sortable" data-sort-key="container" onclick="BackupExportManager.sortBackups('container')">Container</th>
+                            <th class="sortable" data-sort-key="file" onclick="BackupExportManager.sortBackups('file')">File</th>
+                            <th class="sortable" data-sort-key="size" onclick="BackupExportManager.sortBackups('size')">Size</th>
+                            <th class="sortable" data-sort-key="modified" onclick="BackupExportManager.sortBackups('modified')">Modified</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -134,6 +140,64 @@ const BackupExportManager = {
         } else {
             return bytes + ' bytes';
         }
+    },
+
+    /**
+     * Sort backups table
+     */
+    sortBackups(sortKey, keepDirection = false) {
+        const filterInput = DOM.get('backupFilterInput');
+        const filterValue = filterInput ? filterInput.value : '';
+
+        if (!keepDirection) {
+            if (this.currentSort.key === sortKey) {
+                this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.currentSort.key = sortKey;
+                this.currentSort.direction = 'asc';
+            }
+        }
+
+        const sortedBackups = [...this.currentBackups].sort((a, b) => {
+            const valA = a[this.currentSort.key];
+            const valB = b[this.currentSort.key];
+
+            if (valA < valB) {
+                return this.currentSort.direction === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return this.currentSort.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+        this.renderBackupsList(sortedBackups);
+        this.updateSortIndicators();
+
+        DOM.invalidateCache('backupFilterInput');
+        DOM.invalidateCache('backupsTable');
+
+        if (filterValue) {
+            const newFilterInput = DOM.get('backupFilterInput');
+            if (newFilterInput) {
+                newFilterInput.value = filterValue;
+                this.filterBackups();
+            }
+        }
+    },
+
+    /**
+     * Update sort indicators in table headers
+     */
+    updateSortIndicators() {
+        const headers = document.querySelectorAll('#backupsTable th[data-sort-key]');
+        headers.forEach(header => {
+            const key = header.getAttribute('data-sort-key');
+            header.classList.remove('sort-asc', 'sort-desc');
+            if (key === this.currentSort.key) {
+                header.classList.add(this.currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
     },
 
     /**

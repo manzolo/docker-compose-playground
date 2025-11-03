@@ -48,6 +48,36 @@
     text-align: center;
 }
 
+.backups-table thead th.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 30px; /* Space for arrow */
+}
+
+.backups-table thead th.sortable::after {
+    content: '\2195'; /* Up-down arrow */
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.backups-table thead th.sortable:hover::after {
+    opacity: 0.7;
+}
+
+.backups-table thead th.sort-asc::after {
+    content: '\25B2'; /* Up arrow */
+    opacity: 1;
+}
+
+.backups-table thead th.sort-desc::after {
+    content: '\25BC'; /* Down arrow */
+    opacity: 1;
+}
+
 .backups-table tbody {
     background: white;
 }
