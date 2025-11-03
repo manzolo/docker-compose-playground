@@ -109,18 +109,32 @@ async def start_container_background(operation_id: str, image_name: str, img_dat
             complete_operation(operation_id, started=0, already_running=1, failed=0)
             logger.info(f"Container {container_name} was already running")
         else:
+            # Pass debug information if available
             fail_operation(
-                operation_id, 
+                operation_id,
                 result.get("error", "Unknown error"),
+                debug_info=result.get("debug_info"),
                 started=0,
                 already_running=0,
                 failed=1
             )
-        
+
     except Exception as e:
+        from src.web.utils.error_handler import format_exception_details
         error_msg = str(e)
-        logger.error(f"Failed to start {image_name}: {error_msg}")
-        fail_operation(operation_id, error_msg, started=0, already_running=0, failed=1)
+        logger.error(f"Failed to start {image_name}: {error_msg}", exc_info=True)
+
+        # Capture detailed debug information
+        debug_info = format_exception_details(e, f"Background task error starting {image_name}")
+
+        fail_operation(
+            operation_id,
+            error_msg,
+            debug_info=debug_info,
+            started=0,
+            already_running=0,
+            failed=1
+        )
 
 @router.post("/api/stop/{container_name}")
 async def stop_container(container_name: str):
@@ -705,10 +719,9 @@ async def stop_all_background(operation_id: str, containers: List[Any]):
             """
             Unexpected error
             """
-            logger.error(
-                f"Unexpected error stopping {container_name}: {e}",
-                exc_info=True
-            )
+            from src.web.utils.error_handler import log_exception
+            log_exception(e, f"Unexpected error stopping {container_name}", logger)
+
             return {
                 "status": "failed",
                 "name": container_name,
@@ -986,7 +999,8 @@ async def restart_all_background(operation_id: str, containers: List[Any]):
             }
         
         except Exception as e:
-            logger.error(f"{container_name}: unexpected error: {e}", exc_info=True)
+            from src.web.utils.error_handler import log_exception
+            log_exception(e, f"{container_name}: unexpected error", logger)
             return {
                 "status": "failed",
                 "name": container_name,

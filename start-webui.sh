@@ -727,7 +727,6 @@ Logs are written to:
   - $ERROR_LOG_FILE (errors only)
   - $JSON_LOG_FILE (JSON format)
 
-For more information, visit https://x.ai or contact support@x.ai.
 EOF
 }
 

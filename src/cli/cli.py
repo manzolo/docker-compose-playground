@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.cli.utils.display import show_banner, show_quick_help, console
+from src.cli.utils.logger import setup_logging
 from src.cli.commands import containers, groups, system, debug
 
 # Main app
@@ -48,12 +49,22 @@ app.command(name="version")(system.version)
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context):
+def main(
+    ctx: typer.Context,
+    debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug mode with verbose output")
+):
     """
     Docker Playground CLI
-    
+
     Manage containerized development environments with ease.
     """
+    # Setup logging based on debug flag
+    setup_logging(debug)
+
+    # Store debug flag in context for subcommands
+    ctx.ensure_object(dict)
+    ctx.obj['debug'] = debug
+
     if ctx.invoked_subcommand is None:
         # No command specified, show help
         show_banner()

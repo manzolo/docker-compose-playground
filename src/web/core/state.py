@@ -147,18 +147,23 @@ def complete_operation(operation_id: str, **final_updates) -> bool:
     return update_operation(operation_id, **final_updates)
 
 
-def fail_operation(operation_id: str, error: str, **extra_updates) -> bool:
-    """Mark operation as failed"""
+def fail_operation(operation_id: str, error: str, debug_info: Dict[str, Any] = None, **extra_updates) -> bool:
+    """Mark operation as failed with optional debug information"""
     if operation_id not in active_operations:
         return False
-    
+
     updates = {
         "status": "error",
         "error": error,
         "completed_at": datetime.now().isoformat(),
     }
+
+    # Include detailed debug information if provided
+    if debug_info:
+        updates["debug_info"] = debug_info
+
     updates.update(extra_updates)
-    
+
     return update_operation(operation_id, **updates)
 
 

@@ -2,18 +2,28 @@ images:
   gitea:
     category: devops
     description: Gitea - Lightweight self-hosted Git service
-    image: gitea/gitea:latest
+    image: docker.gitea.com/gitea:1.25.0
     keep_alive_cmd: /usr/bin/entrypoint
     ports:
-    - 3000:3000  # Web UI
-    - 2222:22    # SSH
+    - "3000:3000"  # Web UI
+    - "2222:22"    # SSH
     shell: /bin/bash
     environment:
       USER_UID: "1000"
       USER_GID: "1000"
+    volumes:
+      - host: /etc/timezone
+        path: /etc/timezone
+        type: file
+      - host: /etc/localtime
+        path: /etc/localtime
+        type: file
+      - host: shared-volumes/data/gitea
+        path: /data
+        type: bind
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              Gitea - Self-Hosted Git Service                  ║
+      ║              Gitea - Self-Hosted Git Service                 ║
       ╚══════════════════════════════════════════════════════════════╝
 
       🌐 Web Interface:

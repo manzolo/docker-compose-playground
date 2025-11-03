@@ -99,7 +99,6 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **MariaDB** (10, 11)
 - **MongoDB** (6, 7)
 - **Redis** (6, 7, alpine, latest)
-- **SQLite** (lightweight, serverless)
 - **Cassandra**
 - **CockroachDB**
 - **Neo4j**
@@ -147,7 +146,6 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Tensorflow**
 - **Gradle**
 - **Maven**
-- **Packer**
 - **Ansible**
 - **Curl**
 - **Busybox**

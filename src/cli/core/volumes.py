@@ -58,27 +58,41 @@ class Volume:
         if self.volume_type == 'named':
             # Named volumes are managed by Docker
             return True, ""
-        
+
         # Convert relative paths to absolute
         host_path = self.host
         if not host_path.startswith('/'):
             host_path = os.path.join(str(BASE_PATH), host_path)
-        
+
+        path_obj = Path(host_path)
+
         try:
             if self.volume_type == 'bind':
+                # Check if directory already exists
+                if path_obj.exists():
+                    if path_obj.is_dir():
+                        return True, f"Using existing directory: {host_path}"
+                    else:
+                        return False, f"Path exists but is not a directory: {host_path}"
                 # Create directory
-                Path(host_path).mkdir(parents=True, exist_ok=True)
+                path_obj.mkdir(parents=True, exist_ok=True)
                 return True, f"Created bind mount directory: {host_path}"
-            
+
             elif self.volume_type == 'file':
+                # Check if file already exists
+                if path_obj.exists():
+                    if path_obj.is_file():
+                        return True, f"Using existing file: {host_path}"
+                    else:
+                        return False, f"Path exists but is not a file: {host_path}"
                 # Create file
-                Path(host_path).parent.mkdir(parents=True, exist_ok=True)
-                Path(host_path).touch(exist_ok=True)
+                path_obj.parent.mkdir(parents=True, exist_ok=True)
+                path_obj.touch(exist_ok=True)
                 return True, f"Created file mount: {host_path}"
-        
+
         except Exception as e:
             return False, f"Failed to prepare volume: {str(e)}"
-        
+
         return True, ""
     
     def to_docker_compose(self) -> str:

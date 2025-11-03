@@ -66,7 +66,7 @@ logger = get_logger(__name__)
 
 # Import routers (after logging setup)
 from src.web.api import web, containers, groups, system, config_mgmt, websocket
-from src.web.api import cleanup, monitoring, execute_command, health_check
+from src.web.api import cleanup, monitoring, execute_command, health_check, debug_api
 
 logger.info("=" * 80)
 logger.info("Starting Docker Playground Web Dashboard...")
@@ -220,6 +220,7 @@ app.include_router(monitoring.router, tags=["monitoring"])
 app.include_router(execute_command.router, tags=["commands"])
 app.include_router(cleanup.router, tags=["cleanup"])
 app.include_router(health_check.router, tags=["health"])
+app.include_router(debug_api.router, tags=["debug"])
 
 logger.info("All routers registered successfully")
 

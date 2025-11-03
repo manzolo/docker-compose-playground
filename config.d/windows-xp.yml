@@ -1,5 +1,5 @@
 images:
-  windows-xp:
+  dockurr-windows-xp:
     category: windows
     description: Windows XP + RDP + Web UI | Image -> dockurr/windows
     image: dockurr/windows
@@ -40,7 +40,7 @@ images:
       ╔══════════════════════════════════════════════════════════════╗
       ║ WINDOWS XP PLAYGROUND - RDP + Web UI                         ║
       ║ Image: dockurr/windows | KVM + QEMU                          ║
-      ║ Persistent Disk: shared-volumes/data/windows-xp-data ║
+      ║ Persistent Disk: shared-volumes/data/windows-xp-data         ║
       ╚══════════════════════════════════════════════════════════════╝
 
       CONNECTION INFO
@@ -67,7 +67,7 @@ images:
 
       IMPORTANT
       ─────────────────────────────────────────────────────────────
-      • First boot: 3–7 minutes (OOBE setup)
+      • First boot: 3-7 minutes (OOBE setup)
       • Disk grows in shared-volumes/data/windows-xp-data
       • To reset: delete the folder above
       • Audio works in RDP — enable in client settings
