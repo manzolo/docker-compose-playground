@@ -2,22 +2,30 @@ images:
   filebrowser:
     category: utility
     description: File Browser - Web-based file manager
-    image: filebrowser/filebrowser:latest
-    keep_alive_cmd: /filebrowser
+    image: filebrowser/filebrowser:s6
+    keep_alive_cmd: sleep infinity
     ports:
-    - 8090:80
+    - "8090:80"
     shell: /bin/sh
     volumes:
-      - /shared:/srv
+      - host: shared-volumes/data/filebrowser-srv
+        path: /srv
+        type: bind    
+      - host: shared-volumes/data/filebrowser-database
+        path: /database
+        type: bind    
+      - host: shared-volumes/data/filebrowser-config
+        path: /config
+        type: bind    
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              File Browser - Web File Manager                  ║
+      ║              File Browser - Web File Manager                 ║
       ╚══════════════════════════════════════════════════════════════╝
 
       🌐 Web Interface:
          Access: http://localhost:8090
-         Default Login: admin / admin
-         ⚠️  Change password after first login!
+         admin # Default Login
+         admin password # Check container log -> User admin initialized with randomly generated password: xxxxxxxxxx
 
       📁 File Management:
          • Browse files and folders

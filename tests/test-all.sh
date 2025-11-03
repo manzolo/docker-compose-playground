@@ -197,6 +197,38 @@ get_container_image() {
     return 1
 }
 
+# Function to get category for a specific container from YAML files
+get_container_category() {
+    local container_name=$1
+    local category_name=""
+
+    # Search in config.yml and config.d/*.yml and custom.d/*.yml
+    for file in config.yml config.d/*.yml config.d/*.yaml custom.d/*.yml custom.d/*.yaml; do
+        if [ -f "$file" ]; then
+            # Use awk to find the container and extract its category
+            category_name=$(awk -v container="$container_name" '
+                /^images:/ { in_images=1; next }
+                in_images && /^[^ ]/ { in_images=0 }
+                in_images && $0 ~ "^  " container ":" { in_container=1; next }
+                in_container && /^  [a-zA-Z]/ { in_container=0 }
+                in_container && /^    category:/ {
+                    gsub(/^    category: *"?/, "")
+                    gsub(/".*/, "")
+                    print
+                    exit
+                }
+            ' "$file")
+
+            if [ -n "$category_name" ]; then
+                echo "$category_name"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
 # Function to check if docker image exists locally
 image_exists_locally() {
     local image_name=$1
@@ -710,6 +742,18 @@ main() {
             if [ -z "$container" ] || [[ "$container" =~ ^[[:space:]]*$ ]]; then
                 ((SKIPPED++))
                 continue
+            fi
+
+            # Skip containers in the 'windows' category in CI environment
+            if [ "${CI:-false}" = "true" ]; then
+                local category
+                category=$(get_container_category "$container")
+                if [ "$category" = "windows" ]; then
+                    echo -e "\n${YELLOW}⏩ Skipping container $container (category: $category) in CI environment${NC}"
+                    log "Skipping container $container (category: $category) in CI environment"
+                    ((SKIPPED++))
+                    continue
+                fi
             fi
 
             test_container "$container" "$index" "$TOTAL_CONTAINERS"
