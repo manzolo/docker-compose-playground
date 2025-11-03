@@ -64,28 +64,28 @@ images:
 
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║        Ubuntu 24.04 LTS with ZSH + Powerlevel10k             ║
+      ║          Ubuntu 24.04 LTS with ZSH + Powerlevel10k           ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🐚 Shell: /bin/zsh (ZSH configured)
-
+      
       📦 Installed:
         • Oh My ZSH framework
         • Powerlevel10k theme
         • zsh-syntax-highlighting
         • zsh-autosuggestions
         • Common utilities (git, curl, build-essential, etc)
-
+      
       🎨 Plugins Enabled:
         • git
         • git-flow
         • history
         • sudo
-
+      
       📁 Configuration:
         ~/.zshrc - Main configuration file
         ~/.oh-my-zsh - Oh My ZSH installation
-
+      
       🚀 Quick Commands:
         zsh --version
         echo $SHELL

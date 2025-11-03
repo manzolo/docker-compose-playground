@@ -108,9 +108,9 @@ images:
 
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║         Arch Linux with Nushell + Starship                  ║
+      ║              Arch Linux with Nushell + Starship              ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       Inside Nushell:
         help                - Show all commands
         ls, ll              - List files
@@ -128,12 +128,12 @@ images:
         weather             - Show weather
         myip                - Show public IP
         htop                - System monitor
-
+      
       📁 Configuration:
         ~/.config/nushell/config.nu     - Main configuration
         ~/.config/nushell/env.nu        - Environment setup
         ~/.config/starship.toml         - Prompt configuration
-
+      
       Arch Linux:
         pacman -Syu         - Update system
         pacman -S <pkg>     - Install package

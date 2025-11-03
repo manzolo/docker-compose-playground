@@ -9,15 +9,15 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              Selenium Chrome Quick Reference                  ║
+      ║               Selenium Chrome Quick Reference                ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔧 Selenium Server:
          Use with Selenium WebDriver for Chrome browser automation
-
+      
       🌐 VNC Access:
          Port: 5900 (if VNC enabled)
-
+      
       💡 Tips:
          • Browser automation with Chrome
          • Headless browser testing

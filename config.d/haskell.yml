@@ -7,19 +7,19 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Haskell Quick Reference                      ║
+      ║                   Haskell Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          ghci                                      # GHC interactive
          ghc --version                             # Check version
          runhaskell script.hs                      # Run Haskell script
-
+      
       📝 In GHCi:
          Prelude> 2 + 2                            # Simple calculation
          Prelude> :type (+)                        # Check type
          Prelude> :quit                            # Exit
-
+      
       💡 Tips:
          • Purely functional programming language
          • Strong static typing

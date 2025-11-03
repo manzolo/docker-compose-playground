@@ -12,26 +12,26 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   Neo4j Quick Reference                       ║
+      ║                    Neo4j Quick Reference                     ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          HTTP: http://localhost:7474
          Bolt: bolt://localhost:7687
          User: neo4j / Password: (check env)
-
+      
       📊 Quick Cypher Commands:
          cypher-shell                              # Connect to Neo4j shell
-
+      
          # Create node
          CREATE (n:Person {name: 'Alice', age: 30})
-
+      
          # Find nodes
          MATCH (n:Person) RETURN n
-
+      
          # Check version
          CALL dbms.components() YIELD name, versions
-
+      
       💡 Tips:
          • Graph database for connected data
          • Access web UI at http://localhost:7474

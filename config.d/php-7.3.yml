@@ -7,23 +7,23 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                    PHP 7.3 Quick Reference                    ║
+      ║                   PHP 7.3 Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          php -v                                    # Check PHP version
          php -i | head -20                         # PHP info
          php -r "echo 'Hello!';"                   # Run code directly
          php -S 0.0.0.0:8000 -t /shared            # Start dev server
-
+      
       📝 Quick Test:
          echo '<?php echo "PHP " . phpversion() . " is working!\n"; ?>' > /shared/test.php
          php /shared/test.php
-
+      
       💡 Tips:
          • PHP 7.3 with flexible heredoc/nowdoc
          • Keep projects in /shared
          • Use php -S for quick testing
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host

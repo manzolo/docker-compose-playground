@@ -11,13 +11,13 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Grafana Quick Reference                      ║
+      ║                   Grafana Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Web UI:
          Access: http://localhost:3000
          Default: admin / admin
-
+      
       💡 Tips:
          • Visualization and analytics platform
          • Create dashboards for metrics

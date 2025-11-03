@@ -11,13 +11,13 @@ images:
       ADMINER_DEFAULT_SERVER: ""
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║            Adminer - Database Management Tool                 ║
+      ║              Adminer - Database Management Tool              ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Web Interface:
          Access: http://localhost:8080
          Login with your database credentials
-
+      
       🗄️  Supported Databases:
          • MySQL / MariaDB
          • PostgreSQL
@@ -25,20 +25,20 @@ images:
          • MS SQL
          • Oracle
          • MongoDB
-
+      
       🔐 Connection Examples:
          # MySQL on host
          Server: host.docker.internal
          Username: root
          Password: playground
          Database: playground
-
+      
          # PostgreSQL on host
          Server: host.docker.internal:5432
          Username: playground
          Password: playground
          Database: playground
-
+      
       ⚡ Features:
          • Lightweight (single 470KB file)
          • Support for multiple databases
@@ -46,11 +46,11 @@ images:
          • Execute SQL queries
          • Manage database structure
          • No phpMyAdmin bloat
-
+      
       💡 Tips:
          • Use host.docker.internal to connect to databases on host
          • Or use container names for other playground containers
          • Adminer is much lighter than phpMyAdmin
          • Supports themes and plugins
-
+      
       📚 Documentation: https://www.adminer.org/

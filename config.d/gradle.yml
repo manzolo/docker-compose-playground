@@ -7,18 +7,18 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Gradle Quick Reference                       ║
+      ║                    Gradle Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          gradle --version                          # Check Gradle version
          gradle init                               # Initialize new project
          gradle build                              # Build project
          gradle tasks                              # List available tasks
-
+      
       📝 Quick Test:
          cd /shared && gradle init --type basic
-
+      
       💡 Tips:
          • Build automation tool for JVM
          • Groovy or Kotlin DSL

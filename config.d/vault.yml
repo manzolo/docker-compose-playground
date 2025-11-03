@@ -11,17 +11,17 @@ images:
     shell: /bin/sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Vault Quick Reference                       ║
+      ║                    Vault Quick Reference                     ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          vault --version                           # Check Vault version
          vault status                              # Check seal status
          vault secrets list                        # List secret engines
-
+      
       🌐 Web UI:
          Access: http://localhost:8200
-
+      
       💡 Tips:
          • Secrets management platform
          • Encryption as a service

@@ -82,26 +82,26 @@ images:
           echo "✓ Nushell installed"
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║         Ubuntu 24.04 with Nushell                            ║
+      ║                  Ubuntu 24.04 with Nushell                   ║
       ╚══════════════════════════════════════════════════════════════╝
       Inside Nushell:
         help                - Show all commands
         ls, ll              - List files
         cd <dir>            - Change directory
         mkcd <dir>          - Create and enter directory
-
+      
       Git shortcuts:
         gs                  - git status
         ga                  - git add
         gc                  - git commit
         gp                  - git push
         gl                  - git log
-
+      
       Utilities:
         weather             - Show weather
         myip                - Show public IP
         htop                - System monitor
-
+      
       📁 Configuration:
         ~/.config/nushell/config.nu     - Main configuration
         ~/.config/nushell/env.nu        - Environment setup

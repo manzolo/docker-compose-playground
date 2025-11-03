@@ -7,20 +7,20 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                 Anaconda Quick Reference                      ║
+      ║                   Anaconda Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          conda --version                           # Check Conda version
          conda create -n myenv python=3.9          # Create environment
          conda activate myenv                      # Activate environment
          conda install numpy pandas                # Install packages
-
+      
       📦 Environment Management:
          conda env list                            # List environments
          conda list                                # List installed packages
          conda deactivate                          # Deactivate environment
-
+      
       💡 Tips:
          • Data science platform with 1500+ packages
          • Python and R distribution

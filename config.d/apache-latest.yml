@@ -9,23 +9,23 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                 Apache Web Server (Latest)                    ║
+      ║                  Apache Web Server (Latest)                  ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Server Info:
          Port: 8083
          Access: http://localhost:8083
          Document Root: /usr/local/apache2/htdocs
-
+      
       🔧 Configuration:
          apachectl -v                              # Check Apache version
          apachectl -t                              # Test configuration
          apachectl -k graceful                     # Graceful reload
-
+      
       📁 Content Directories:
          /usr/local/apache2/htdocs                 # Web root
          /usr/local/apache2/conf/httpd.conf        # Main config
-
+      
       💡 Tips:
          • Full Apache httpd server
          • Place files in /shared for persistence

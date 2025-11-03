@@ -36,17 +36,17 @@ images:
     shm_size: 2g
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ WINDOWS 8.1 ENTERPRISE - Metro UI                           ║
+      ║              WINDOWS 8.1 ENTERPRISE - Metro UI               ║
       ║ Image: dockurr/windows                                      ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       CONNECTION
       RDP: localhost:3311 | Web: http://localhost:8011
       User: docker | Pass: admin
-
+      
       TIPS
       • Win + C → Charms Bar
       • Install Classic Shell for Start Menu
-
+      
       READY!
       ╚══════════════════════════════════════════════════════════════╝

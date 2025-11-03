@@ -7,24 +7,24 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║          Python 3.9 Development Environment                      ║
+      ║              Python 3.9 Development Environment              ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📦 Package Manager (pip):
          pip install package_name                 # Install package
          pip install -r requirements.txt          # Install from file
          pip list                                 # List installed packages
          pip freeze > /shared/requirements.txt    # Save dependencies
-
+      
       🚀 Quick Start:
          python3                                  # Interactive REPL
          python3 script.py                        # Run a script
          python3 -m venv /shared/myenv            # Create virtual environment
-
+      
       🔧 Development Tools:
          python3 --version                        # Check version
          pip install ipython jupyter              # Better REPL & notebooks
          pip install pytest                       # Testing framework
-
+      
       💡 Workspace: /shared/projects/
       📚 Docs: https://docs.python.org/

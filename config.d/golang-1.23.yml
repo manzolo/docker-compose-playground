@@ -7,13 +7,13 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              Go 1.23 Development Environment (Latest)         ║
+      ║           Go 1.23 Development Environment (Latest)           ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Start:
          go version                                # Check Go version
          go env                                    # Show Go environment
-
+      
       📝 Hello World:
          # Create a simple Go program
          cat > /shared/hello.go <<'EOF'
@@ -23,34 +23,34 @@ images:
              fmt.Println("Hello from Go 1.23!")
          }
          EOF
-
+      
          # Run directly
          go run /shared/hello.go
-
+      
          # Or compile and run
          go build -o /shared/hello /shared/hello.go
          /shared/hello
-
+      
       🏗️  Project Setup:
          # Initialize a new module
          cd /shared/myproject
          go mod init example.com/myproject
-
+      
          # Add dependencies
          go get github.com/gin-gonic/gin
-
+      
          # Build
          go build
-
+      
          # Run
          go run main.go
-
+      
       📦 Package Management:
          go get package_name                       # Add dependency
          go mod tidy                               # Clean up dependencies
          go mod download                           # Download modules
          go list -m all                            # List all modules
-
+      
       🔧 Development Commands:
          go run main.go                            # Run without building
          go build                                  # Compile
@@ -58,24 +58,24 @@ images:
          go fmt                                    # Format code
          go vet                                    # Examine code
          go doc package_name                       # View documentation
-
+      
       🆕 Go 1.23 Features:
          • Enhanced type inference
          • Improved generics support
          • Performance improvements
          • Better standard library
          • Range over func
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host
          /go/src                                   # Go source (legacy GOPATH)
          /go/pkg                                   # Compiled packages
-
+      
       💡 Tips:
          • Go 1.23 is the latest stable version
          • Modules are the standard for dependency management
          • Keep projects in /shared
          • Go is compiled, fast, and concurrent
          • Great for microservices and CLI tools
-
+      
       📚 Documentation: https://go.dev/doc/

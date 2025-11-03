@@ -9,21 +9,21 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   Cassandra Quick Reference                   ║
+      ║                  Cassandra Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📊 Quick Connect:
          cqlsh                                     # Connect to Cassandra
-
+      
       🔍 Quick CQL Commands:
          SELECT release_version FROM system.local;  # Check version
          DESCRIBE KEYSPACES;                        # List keyspaces
          CREATE KEYSPACE myks WITH replication = {'class':'SimpleStrategy', 'replication_factor':1};
-
+      
       🔧 Cluster Management:
          nodetool status                           # Check cluster status
          nodetool info                             # Node information
-
+      
       💡 Tips:
          • Distributed NoSQL database
          • CQL is similar to SQL

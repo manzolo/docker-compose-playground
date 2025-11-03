@@ -36,17 +36,17 @@ images:
     shm_size: 2g
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ WINDOWS 7 ULTIMATE SP1 - Aero Glass                         ║
+      ║             WINDOWS 7 ULTIMATE SP1 - Aero Glass              ║
       ║ Image: dockurr/windows                                      ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       CONNECTION
       RDP: localhost:3312 | Web: http://localhost:8012
       User: docker | Pass: admin
-
+      
       TIPS
       • Enable Aero: Personalization
       • Install Gadgets manually
-
+      
       READY!
       ╚══════════════════════════════════════════════════════════════╝

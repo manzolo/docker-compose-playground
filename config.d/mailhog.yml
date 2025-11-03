@@ -10,38 +10,38 @@ images:
     shell: /bin/sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              MailHog - Email Testing Tool                    ║
+      ║                 MailHog - Email Testing Tool                 ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Web Interface:
          Access: http://localhost:8025
          View all captured emails in real-time
-
+      
       📧 SMTP Configuration:
          Host: localhost
          Port: 1025
          No authentication required
-
+      
       🔧 Configure Your Application:
          # PHP (php.ini or runtime)
          sendmail_path = "/usr/sbin/sendmail -S localhost:1025"
-
+      
          # Node.js (nodemailer)
          const transporter = nodemailer.createTransport({
            host: 'localhost',
            port: 1025,
            ignoreTLS: true
          });
-
+      
          # Python (smtplib)
          import smtplib
          smtp = smtplib.SMTP('localhost', 1025)
-
+      
          # Laravel (.env)
          MAIL_MAILER=smtp
          MAIL_HOST=localhost
          MAIL_PORT=1025
-
+      
       ⚡ Features:
          • Catch all outgoing emails
          • Web UI to view emails
@@ -49,17 +49,17 @@ images:
          • No emails actually sent
          • REST API for automation
          • Perfect for development/testing
-
+      
       📋 Testing Workflow:
          1. Configure your app to use localhost:1025
          2. Trigger email in your application
          3. Open http://localhost:8025 to view
          4. Check email rendering, links, content
-
+      
       💡 Tips:
          • All emails are caught, none are sent
          • Great for testing registration, password reset, etc.
          • Emails are stored in memory (lost on restart)
          • Use for development only, not production
-
+      
       📚 Documentation: https://github.com/mailhog/MailHog

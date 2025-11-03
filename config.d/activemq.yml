@@ -10,14 +10,14 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║               Apache ActiveMQ Quick Reference                 ║
+      ║               Apache ActiveMQ Quick Reference                ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          Broker URL: tcp://localhost:61616
          Admin Console: http://localhost:8161
          Default: admin / admin
-
+      
       💡 Tips:
          • JMS message broker
          • Access web console for management

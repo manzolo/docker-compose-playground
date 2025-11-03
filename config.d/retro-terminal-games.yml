@@ -9,18 +9,18 @@ images:
       - "2227:22"
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║           🎮 RETRO TERMINAL GAMES & ASCII ART 🎨             ║
+      ║             🎮 RETRO TERMINAL GAMES & ASCII ART 🎨             ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 QUICK START:
         games-menu  - Show all available games
         ascii-demo  - See ASCII art demonstration
-
+      
       🎮 POPULAR GAMES:
         ninvaders   - Space Invaders in terminal
         moon-buggy  - Jump over craters
         bastet      - Tetris that gives you the worst pieces
-
+      
       🎨 CREATE ASCII ART:
         figlet "Your Text"     - Big ASCII letters
         toilet "Text" --gay    - Colorful ASCII text
@@ -28,11 +28,11 @@ images:
         fortune | cowsay       - Wise cow
         cmatrix               - Matrix effect (q to quit)
         hollywood             - Fake hacker screen
-
+      
       💡 TIPS:
         - Most games use arrow keys for movement
         - Press "q" or Ctrl+C to quit most programs
         - Try: fortune | cowsay -f dragon
         - Combine tools: figlet "GAME OVER" | toilet --gay
-
+      
       Have fun playing! 🕹️

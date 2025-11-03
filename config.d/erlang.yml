@@ -7,13 +7,13 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Erlang Quick Reference                       ║
+      ║                    Erlang Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          erl                                       # Erlang shell
          erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().' -noshell  # Version
-
+      
       💡 Tips:
          • Designed for concurrent, distributed systems
          • Powers many telecom systems

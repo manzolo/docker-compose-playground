@@ -23,30 +23,30 @@ images:
         type: bind
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              Gitea - Self-Hosted Git Service                 ║
+      ║               Gitea - Self-Hosted Git Service                ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Web Interface:
          Access: http://localhost:3000
          First-time setup required on first access
-
+      
       🔧 Initial Setup:
          1. Open http://localhost:3000
          2. Configure database (SQLite recommended for testing)
          3. Create admin account
          4. Start using Git!
-
+      
       📦 Git Operations:
          # Clone repository
          git clone http://localhost:3000/username/repo.git
-
+      
          # Add remote
          git remote add origin http://localhost:3000/username/repo.git
          git push -u origin main
-
+      
          # SSH clone (port 2222)
          git clone ssh://git@localhost:2222/username/repo.git
-
+      
       ⚡ Features:
          • Lightweight Git hosting
          • Web-based repository management
@@ -57,11 +57,11 @@ images:
          • Webhooks
          • CI/CD integration
          • Migration from GitHub/GitLab
-
+      
       🔑 SSH Access:
          Port: 2222 (not standard 22)
          Add SSH key in user settings
-
+      
       💡 Tips:
          • Perfect for private Git hosting
          • Much lighter than GitLab
@@ -69,8 +69,8 @@ images:
          • Great for learning Git workflows
          • Use SQLite for quick setup
          • Data stored in container volumes
-
+      
       📁 Repository Storage:
          /data/git/repositories                    # Git repos location
-
+      
       📚 Documentation: https://docs.gitea.io/

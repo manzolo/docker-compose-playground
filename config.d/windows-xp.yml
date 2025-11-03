@@ -38,24 +38,24 @@ images:
     shm_size: 4g      # Shared memory for graphics acceleration
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ WINDOWS XP PLAYGROUND - RDP + Web UI                         ║
+      ║             WINDOWS XP PLAYGROUND - RDP + Web UI             ║
       ║ Image: dockurr/windows | KVM + QEMU                          ║
       ║ Persistent Disk: shared-volumes/data/windows-xp-data         ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       CONNECTION INFO
       ─────────────────────────────────────────────────────────────
       RDP (Recommended): localhost:3309
       Web UI (noVNC): http://localhost:8009
       Username: docker
       Password: admin
-
+      
       From Host:
         • Windows: mstsc → localhost:3309
         • Remmina: RDP → localhost:3309
         • FreeRDP: xfreerdp /v:localhost:3309 /u:docker /p:admin
         • Browser: http://localhost:8009
-
+      
       FEATURES
       ─────────────────────────────────────────────────────────────
       Windows XP Professional SP3
@@ -64,14 +64,14 @@ images:
       Audio passthrough (PulseAudio)
       Auto-login + preconfigured RDP
       Install apps (IE, Notepad++, etc.)
-
+      
       IMPORTANT
       ─────────────────────────────────────────────────────────────
       • First boot: 3-7 minutes (OOBE setup)
       • Disk grows in shared-volumes/data/windows-xp-data
       • To reset: delete the folder above
       • Audio works in RDP — enable in client settings
-
+      
       TIPS
       ─────────────────────────────────────────────────────────────
       • Increase RAM: RAM=16G
@@ -79,6 +79,6 @@ images:
       • Enable clipboard & drive sharing in RDP client
       • Install apps via .exe or Add/Remove Programs
       • Use Win+R → cmd → net user to change password
-
+      
                        READY TO USE - Connect via RDP!
       ╚══════════════════════════════════════════════════════════════╝

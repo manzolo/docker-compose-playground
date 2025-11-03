@@ -13,24 +13,24 @@ images:
       DATABASE_FILENAME: /srv/app/data.db
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              Strapi - Headless CMS                           ║
+      ║                    Strapi - Headless CMS                     ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Admin Panel:
          Access: http://localhost:1337/admin
          First-time setup required on first access
-
+      
       🔧 Initial Setup:
          1. Open http://localhost:1337/admin
          2. Create admin account
          3. Start building your API!
-
+      
       📦 Content Type Builder:
          • Create content types visually
          • Define fields and relationships
          • No coding required
          • RESTful API auto-generated
-
+      
       ⚡ Features:
          • Headless CMS (API-first)
          • Admin panel included
@@ -40,7 +40,7 @@ images:
          • Media library
          • i18n support
          • Customizable with plugins
-
+      
       🔑 API Endpoints:
          # After creating content type "Article"
          GET    http://localhost:1337/api/articles
@@ -48,30 +48,30 @@ images:
          GET    http://localhost:1337/api/articles/1
          PUT    http://localhost:1337/api/articles/1
          DELETE http://localhost:1337/api/articles/1
-
+      
       📝 Quick Start:
          1. Create content type (e.g., "Blog Post")
          2. Add fields (title, content, image, etc.)
          3. Set permissions in Settings → Roles
          4. Add content via admin panel
          5. Access via API endpoints
-
+      
       💡 Use Cases:
          • Blog/Website backend
          • E-commerce product catalog
          • Mobile app backend
          • Multi-platform content management
          • Headless CMS for any frontend
-
+      
       📁 Data Storage:
          /srv/app                                  # Strapi application
          /srv/app/data.db                          # SQLite database
-
+      
       💡 Tips:
          • Perfect for learning headless CMS
          • Great for JAMstack applications
          • Use with React, Vue, Next.js, etc.
          • Data persists in container
          • API documentation auto-generated
-
+      
       📚 Documentation: https://docs.strapi.io/

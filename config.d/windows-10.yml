@@ -36,20 +36,20 @@ images:
     shm_size: 4g
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ WINDOWS 10 PRO - RDP + Web UI                               ║
+      ║                WINDOWS 10 PRO - RDP + Web UI                 ║
       ║ Image: dockurr/windows | Modern UI + Store                  ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       CONNECTION
       RDP: localhost:3310 | Web: http://localhost:8010
       User: docker | Pass: admin
-
+      
       FEATURES
       6 GB RAM | 4 CPU | 64 GB Disk | Audio
-
+      
       TIPS
       • Activate: Settings → Update & Security
       • Enable Dark Mode: Personalization
-
+      
       READY!
       ╚══════════════════════════════════════════════════════════════╝

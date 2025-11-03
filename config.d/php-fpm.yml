@@ -7,14 +7,14 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  PHP-FPM Quick Reference                      ║
+      ║                   PHP-FPM Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          php -v                                    # Check PHP version
          php-fpm -v                                # Check FPM version
          php -i | head -20                         # PHP info
-
+      
       💡 Tips:
          • FastCGI Process Manager for high performance
          • Use with Nginx for production

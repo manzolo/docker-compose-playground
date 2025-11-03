@@ -7,19 +7,19 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Elixir Quick Reference                       ║
+      ║                    Elixir Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          elixir --version                          # Check Elixir version
          iex                                       # Interactive Elixir
          elixir -e "IO.puts('Hello!')"             # Run Elixir code
-
+      
       📦 Mix (Build Tool):
          mix new myapp                             # Create new project
          mix deps.get                              # Install dependencies
          mix test                                  # Run tests
-
+      
       💡 Tips:
          • Functional language built on Erlang VM
          • Great for concurrent applications
