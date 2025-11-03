@@ -3,15 +3,29 @@
 // =========================================================
 
 const BackupExportManager = {
+    currentBackups: [], // Store the current list of backups
+    currentSort: { key: 'modified', direction: 'desc' }, // Default sort
+
     /**
      * Show backups modal
      */
     async showBackups() {
         try {
             showLoader('Loading backups...');
+            DOM.invalidateCache('backupFilterInput');
+            DOM.invalidateCache('backupsTable');
             const data = await ApiService.getBackups();
-            this.renderBackupsList(data.backups);
+            this.currentBackups = data.backups;
+            this.sortBackups(this.currentSort.key, true);
             ModalManager.open('backupsModal');
+            
+            requestAnimationFrame(() => {
+                const filterInput = DOM.get('backupFilterInput');
+                if (filterInput) {
+                    filterInput.focus();
+                }
+            });
+
         } catch (error) {
             ToastManager.show(`Error loading backups: ${error.message}`, 'error');
         } finally {
@@ -23,6 +37,7 @@ const BackupExportManager = {
      * Render backups list
      */
     renderBackupsList(backups) {
+        this.currentBackups = backups;
         const list = DOM.get('backupsList');
         if (!list) return;
 
@@ -30,6 +45,7 @@ const BackupExportManager = {
             list.innerHTML = this.createEmptyState();
         } else {
             list.innerHTML = this.createBackupsTable(backups);
+            this.updateSortIndicators();
         }
     },
 
@@ -57,8 +73,8 @@ const BackupExportManager = {
         // Create table rows with proper CSS classes
         const rows = backups.map(backup => `
             <tr>
-                <td data-label="Category">
-                    <span class="backup-category">${backup.category}</span>
+                <td data-label="Container">
+                    <span class="backup-category">${backup.container}</span>
                 </td>
                 <td data-label="File">
                     <span class="backup-filename">${backup.file}</span>
@@ -70,8 +86,11 @@ const BackupExportManager = {
                     <span class="backup-date">${new Date(backup.modified * 1000).toLocaleString()}</span>
                 </td>
                 <td data-label="Actions">
-                    <button class="backup-download-btn" onclick="BackupExportManager.downloadBackup('${backup.category}', '${backup.file}')">
+                    <button class="backup-download-btn" onclick="BackupExportManager.downloadBackup('${backup.container}', '${backup.file}')">
                         Download
+                    </button>
+                    <button class="backup-delete-btn" onclick="BackupExportManager.deleteBackup('${backup.container}', '${backup.file}')">
+                        Delete
                     </button>
                 </td>
             </tr>
@@ -90,14 +109,17 @@ const BackupExportManager = {
                     <span class="backups-stats-value">${this.formatFileSize(totalSize)}</span>
                 </div>
             </div>
+            <div class="backup-filter">
+                <input type="text" id="backupFilterInput" onkeyup="BackupExportManager.filterBackups()" placeholder="Filter by container...">
+            </div>
             <div class="backups-table-wrapper">
-                <table class="backups-table">
+                <table class="backups-table" id="backupsTable">
                     <thead>
                         <tr>
-                            <th>Category</th>
-                            <th>File</th>
-                            <th>Size</th>
-                            <th>Modified</th>
+                            <th class="sortable" data-sort-key="container" onclick="BackupExportManager.sortBackups('container')">Container</th>
+                            <th class="sortable" data-sort-key="file" onclick="BackupExportManager.sortBackups('file')">File</th>
+                            <th class="sortable" data-sort-key="size" onclick="BackupExportManager.sortBackups('size')">Size</th>
+                            <th class="sortable" data-sort-key="modified" onclick="BackupExportManager.sortBackups('modified')">Modified</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -121,11 +143,91 @@ const BackupExportManager = {
     },
 
     /**
+     * Sort backups table
+     */
+    sortBackups(sortKey, keepDirection = false) {
+        const filterInput = DOM.get('backupFilterInput');
+        const filterValue = filterInput ? filterInput.value : '';
+
+        if (!keepDirection) {
+            if (this.currentSort.key === sortKey) {
+                this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.currentSort.key = sortKey;
+                this.currentSort.direction = 'asc';
+            }
+        }
+
+        const sortedBackups = [...this.currentBackups].sort((a, b) => {
+            const valA = a[this.currentSort.key];
+            const valB = b[this.currentSort.key];
+
+            if (valA < valB) {
+                return this.currentSort.direction === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return this.currentSort.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+        this.renderBackupsList(sortedBackups);
+        this.updateSortIndicators();
+
+        DOM.invalidateCache('backupFilterInput');
+        DOM.invalidateCache('backupsTable');
+
+        if (filterValue) {
+            const newFilterInput = DOM.get('backupFilterInput');
+            if (newFilterInput) {
+                newFilterInput.value = filterValue;
+                this.filterBackups();
+            }
+        }
+    },
+
+    /**
+     * Update sort indicators in table headers
+     */
+    updateSortIndicators() {
+        const headers = document.querySelectorAll('#backupsTable th[data-sort-key]');
+        headers.forEach(header => {
+            const key = header.getAttribute('data-sort-key');
+            header.classList.remove('sort-asc', 'sort-desc');
+            if (key === this.currentSort.key) {
+                header.classList.add(this.currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    },
+
+    /**
+     * Filter backups table
+     */
+    filterBackups() {
+        const input = DOM.get('backupFilterInput');
+        const filter = input.value.toUpperCase();
+        const table = DOM.get('backupsTable');
+        const tr = table.getElementsByTagName('tr');
+
+        for (let i = 1; i < tr.length; i++) {
+            const td = tr[i].getElementsByTagName('td')[0];
+            if (td) {
+                const txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = '';
+                } else {
+                    tr[i].style.display = 'none';
+                }
+            }
+        }
+    },
+
+    /**
      * Download backup
      */
-    async downloadBackup(category, filename) {
+    async downloadBackup(container, filename) {
         try {
-            const url = await ApiService.downloadBackup(category, filename);
+            const url = await ApiService.downloadBackup(container, filename);
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
@@ -135,6 +237,46 @@ const BackupExportManager = {
             ToastManager.show(`Downloading ${filename}...`, 'info');
         } catch (error) {
             ToastManager.show(`Download failed: ${error.message}`, 'error');
+        }
+    },
+
+    /**
+     * Delete backup
+     */
+    async deleteBackup(container, filename) {
+        const confirmation = await ConfirmModalManager.show(
+            'Delete Backup',
+            `Are you sure you want to delete the backup: <strong>${filename}</strong>? This action cannot be undone.`,
+            'danger'
+        );
+
+        if (confirmation) {
+            try {
+                showLoader(`Deleting ${filename}...`);
+
+                const filterInput = DOM.get('backupFilterInput');
+                const filterValue = filterInput ? filterInput.value : '';
+
+                await ApiService.deleteBackup(container, filename);
+                ToastManager.show('Backup deleted successfully', 'success');
+                
+                await this.showBackups();
+
+                if (filterValue) {
+                    DOM.invalidateCache('backupFilterInput');
+                    DOM.invalidateCache('backupsTable');
+                    const newFilterInput = DOM.get('backupFilterInput');
+                    if (newFilterInput) {
+                        newFilterInput.value = filterValue;
+                        this.filterBackups();
+                    }
+                }
+
+            } catch (error) {
+                ToastManager.show(`Delete failed: ${error.message}`, 'error');
+            } finally {
+                hideLoader();
+            }
         }
     },
 

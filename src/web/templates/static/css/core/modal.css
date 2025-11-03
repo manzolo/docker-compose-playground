@@ -190,6 +190,10 @@
    CONFIRM MODAL
    ============================================ */
 
+#confirmModal {
+    z-index: 10000;
+}
+
 #confirmModal .modal-content {
     max-width: 480px;
     width: 90%;

@@ -48,6 +48,36 @@
     text-align: center;
 }
 
+.backups-table thead th.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 30px; /* Space for arrow */
+}
+
+.backups-table thead th.sortable::after {
+    content: '\2195'; /* Up-down arrow */
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.backups-table thead th.sortable:hover::after {
+    opacity: 0.7;
+}
+
+.backups-table thead th.sort-asc::after {
+    content: '\25B2'; /* Up arrow */
+    opacity: 1;
+}
+
+.backups-table thead th.sort-desc::after {
+    content: '\25BC'; /* Down arrow */
+    opacity: 1;
+}
+
 .backups-table tbody {
     background: white;
 }
@@ -149,6 +179,69 @@
 .backup-download-btn:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+/* Backup Filter Input */
+.backup-filter {
+    padding: 16px 20px;
+    background: var(--light);
+    border-bottom: 1px solid var(--border);
+}
+
+.backup-filter input[type="text"] {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background: white;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.backup-filter input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.backup-filter input[type="text"]::placeholder {
+    color: #94a3b8;
+}
+
+/* Delete Button */
+.backup-delete-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    margin-left: 8px; /* Add some space between download and delete */
+}
+
+.backup-delete-btn::before {
+    content: "🗑️";
+    font-size: 14px;
+}
+
+.backup-delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.backup-delete-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
 /* Empty State */
