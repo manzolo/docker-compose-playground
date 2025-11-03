@@ -317,9 +317,9 @@ const ExecuteCommandManager = {
                 this.showRefreshIndicator();
             }
 
-            if (!silent) {
+            /*if (!silent) {
                 ToastManager.show('Diagnostics completed', 'success');
-            }
+            }*/
 
         } catch (error) {
             if (!silent) {
@@ -404,10 +404,10 @@ const ExecuteCommandManager = {
 
         if (enabled) {
             this.startAutoRefresh();
-            ToastManager.show('Auto-refresh enabled (2s)', 'success');
+            //ToastManager.show('Auto-refresh enabled (2s)', 'success');
         } else {
             this.stopAutoRefresh();
-            ToastManager.show('Auto-refresh disabled', 'info');
+            //ToastManager.show('Auto-refresh disabled', 'info');
         }
 
         this.updateAutoRefreshLabel();
@@ -486,10 +486,10 @@ const ExecuteCommandManager = {
 
         if (this.isFullscreen) {
             DOM.addClass(modalContent, 'fullscreen');
-            ToastManager.show('Fullscreen mode enabled', 'success');
+            //ToastManager.show('Fullscreen mode enabled', 'success');
         } else {
             DOM.removeClass(modalContent, 'fullscreen');
-            ToastManager.show('Fullscreen mode disabled', 'info');
+            //ToastManager.show('Fullscreen mode disabled', 'info');
         }
 
         this.updateFullscreenButton();
