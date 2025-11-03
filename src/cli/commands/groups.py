@@ -74,7 +74,7 @@ def start_group(
 ):
     """🚀 Start all containers in a group"""
     groups = load_groups()
-    config = load_config()
+    config = load_config(include_group_containers=True)
     
     if group_name not in groups:
         console.print(f"[red]❌ Group '{group_name}' not found[/red]")
@@ -156,7 +156,7 @@ def stop_group(
 ):
     """⏹ Stop all containers in a group"""
     groups = load_groups()
-    config = load_config()
+    config = load_config(include_group_containers=True)
     
     if group_name not in groups:
         console.print(f"[red]❌ Group '{group_name}' not found[/red]")

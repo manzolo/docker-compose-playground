@@ -290,24 +290,28 @@ def _process_config(config: Dict[str, Any], source_name: str, images: Dict[str, 
             logger.debug("Loaded images from direct keys in %s", source_name)
 
 
-def _load_config_internal() -> Dict[str, Dict[str, Any]]:
+def _load_config_internal(include_group_containers: bool = False) -> Dict[str, Dict[str, Any]]:
     """Internal function to load configuration from all sources
-    
+
     Configuration is loaded in this order (lower priority wins):
     1. config.yml (main config file)
     2. config.d/ (additional configs)
     3. custom.d/ (user-defined configs, highest priority)
-    
+
+    Args:
+        include_group_containers: If False, excludes containers that are part of a group.
+                                 If True, includes all containers.
+
     Returns:
         dict: Dictionary with 'images' and 'groups' keys
-    
+
     Raises:
         HTTPException: If no valid configurations found or YAML parsing fails
     """
     images = {}
     groups = {}
     files_loaded = 0
-    
+
     # 1. Load from config.yml
     if CONFIG_FILE.exists():
         try:
@@ -319,7 +323,7 @@ def _load_config_internal() -> Dict[str, Dict[str, Any]]:
         except yaml.YAMLError as e:
             logger.error("Failed to parse config.yml: %s", str(e))
             raise HTTPException(500, f"Failed to parse config.yml: {str(e)}")
-    
+
     # 2. Load from config.d
     if CONFIG_DIR.exists():
         for config_file in sorted(CONFIG_DIR.glob("*.yml")):
@@ -332,7 +336,7 @@ def _load_config_internal() -> Dict[str, Dict[str, Any]]:
             except yaml.YAMLError as e:
                 logger.error("Failed to parse %s: %s", config_file, str(e))
                 continue
-    
+
     # 3. Load from custom.d
     if CUSTOM_CONFIG_DIR.exists():
         for config_file in sorted(CUSTOM_CONFIG_DIR.glob("*.yml")):
@@ -345,30 +349,39 @@ def _load_config_internal() -> Dict[str, Dict[str, Any]]:
             except yaml.YAMLError as e:
                 logger.error("Failed to parse %s: %s", config_file, str(e))
                 continue
-    
+
     if not images:
         logger.error("No valid configurations found in %d files", files_loaded)
         raise HTTPException(500, "No valid configurations found")
 
-    # Filter out containers that are part of a group
-    # These should only be launched via their group, not standalone
-    group_containers = set()
-    for group in groups.values():
-        if "containers" in group and isinstance(group["containers"], list):
-            group_containers.update(group["containers"])
+    # Filter out containers that are part of a group (unless explicitly requested)
+    if not include_group_containers:
+        # These should only be launched via their group, not standalone
+        group_containers = set()
+        for group in groups.values():
+            if "containers" in group and isinstance(group["containers"], list):
+                group_containers.update(group["containers"])
 
-    # Remove group component containers from standalone images
-    filtered_images = {
-        name: data
-        for name, data in images.items()
-        if name not in group_containers
-    }
+        # Remove group component containers from standalone images
+        filtered_images = {
+            name: data
+            for name, data in images.items()
+            if name not in group_containers
+        }
 
-    logger.info("Configuration loaded: %d images (%d filtered as group components), %d groups from %d files",
-               len(filtered_images), len(images) - len(filtered_images), len(groups), files_loaded)
+        logger.info("Configuration loaded: %d images (%d filtered as group components), %d groups from %d files",
+                   len(filtered_images), len(images) - len(filtered_images), len(groups), files_loaded)
+
+        return {
+            "images": dict(sorted(filtered_images.items(), key=lambda x: x[0].lower())),
+            "groups": groups
+        }
+
+    logger.info("Configuration loaded: %d images, %d groups from %d files",
+               len(images), len(groups), files_loaded)
 
     return {
-        "images": dict(sorted(filtered_images.items(), key=lambda x: x[0].lower())),
+        "images": dict(sorted(images.items(), key=lambda x: x[0].lower())),
         "groups": groups
     }
 
@@ -377,32 +390,41 @@ def _load_config_internal() -> Dict[str, Dict[str, Any]]:
 # PUBLIC FUNCTION: load_config with caching
 # ============================================================
 
-def load_config() -> Dict[str, Dict[str, Any]]:
+def load_config(include_group_containers: bool = False) -> Dict[str, Dict[str, Any]]:
     """Load configuration with caching
-    
+
     Returns cached config if available and valid, otherwise reloads from disk.
     Cache automatically invalidates after MAX_CACHE_AGE_SECONDS or when files change.
-    
+
+    Args:
+        include_group_containers: If False, excludes containers that are part of a group.
+                                 If True, includes all containers.
+
     Returns:
         dict: Dictionary with 'images' and 'groups' keys
-    
+
     Raises:
         HTTPException: If no valid configurations found or YAML parsing fails
     """
     if not CacheConfig.ENABLE_CACHE:
         logger.debug("Cache disabled, loading config from disk")
-        return _load_config_internal()
-    
+        return _load_config_internal(include_group_containers)
+
+    # When including group containers, always reload (don't use cache)
+    # to ensure we get the complete configuration
+    if include_group_containers:
+        return _load_config_internal(include_group_containers)
+
     # Try to get from cache
     cached = _config_cache.get()
     if cached is not None:
         return cached
-    
+
     # Cache miss, load and cache
     _config_cache.stats["misses"] += 1
-    config = _load_config_internal()
+    config = _load_config_internal(include_group_containers)
     _config_cache.set(config)
-    
+
     return config
 
 
