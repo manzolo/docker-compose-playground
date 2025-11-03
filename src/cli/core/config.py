@@ -20,9 +20,13 @@ CUSTOM_CONFIG_DIR = BASE_PATH / "custom.d"
 
 
 def load_config() -> Dict[str, Any]:
-    """Load configuration from all sources with volume support"""
+    """Load configuration from all sources with volume support
+
+    Note: This function excludes containers that are part of a group.
+    Group component containers should only be launched via their group, not standalone.
+    """
     images = {}
-    
+
     # Load from config.yml
     if CONFIG_FILE.exists():
         try:
@@ -33,7 +37,7 @@ def load_config() -> Dict[str, Any]:
         except yaml.YAMLError as e:
             console.print(f"[red]❌ Failed to parse config.yml: {e}[/red]")
             raise typer.Exit(1)
-    
+
     # Load from config.d
     if CONFIG_DIR.exists():
         for config_file in sorted(CONFIG_DIR.glob("*.yml")):
@@ -44,7 +48,7 @@ def load_config() -> Dict[str, Any]:
                         images.update(config["images"])
             except yaml.YAMLError as e:
                 console.print(f"[yellow]⚠ Failed to parse {config_file.name}: {e}[/yellow]")
-    
+
     # Load from custom.d
     if CUSTOM_CONFIG_DIR.exists():
         for config_file in sorted(CUSTOM_CONFIG_DIR.glob("*.yml")):
@@ -55,12 +59,27 @@ def load_config() -> Dict[str, Any]:
                         images.update(config["images"])
             except yaml.YAMLError as e:
                 console.print(f"[yellow]⚠ Failed to parse {config_file.name}: {e}[/yellow]")
-    
+
     if not images:
         console.print("[red]❌ No valid configurations found[/red]")
         raise typer.Exit(1)
-    
-    return dict(sorted(images.items(), key=lambda x: x[0].lower()))
+
+    # Filter out containers that are part of a group
+    # These should only be launched via their group, not standalone
+    groups = load_groups()
+    group_containers = set()
+    for group in groups.values():
+        if "containers" in group and isinstance(group["containers"], list):
+            group_containers.update(group["containers"])
+
+    # Remove group component containers from standalone images
+    filtered_images = {
+        name: data
+        for name, data in images.items()
+        if name not in group_containers
+    }
+
+    return dict(sorted(filtered_images.items(), key=lambda x: x[0].lower()))
 
 
 def load_groups() -> Dict[str, Any]:

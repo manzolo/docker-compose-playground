@@ -349,12 +349,26 @@ def _load_config_internal() -> Dict[str, Dict[str, Any]]:
     if not images:
         logger.error("No valid configurations found in %d files", files_loaded)
         raise HTTPException(500, "No valid configurations found")
-    
-    logger.info("Configuration loaded: %d images, %d groups from %d files",
-               len(images), len(groups), files_loaded)
-    
+
+    # Filter out containers that are part of a group
+    # These should only be launched via their group, not standalone
+    group_containers = set()
+    for group in groups.values():
+        if "containers" in group and isinstance(group["containers"], list):
+            group_containers.update(group["containers"])
+
+    # Remove group component containers from standalone images
+    filtered_images = {
+        name: data
+        for name, data in images.items()
+        if name not in group_containers
+    }
+
+    logger.info("Configuration loaded: %d images (%d filtered as group components), %d groups from %d files",
+               len(filtered_images), len(images) - len(filtered_images), len(groups), files_loaded)
+
     return {
-        "images": dict(sorted(images.items(), key=lambda x: x[0].lower())),
+        "images": dict(sorted(filtered_images.items(), key=lambda x: x[0].lower())),
         "groups": groups
     }
 

@@ -145,6 +145,7 @@ log() {
 }
 
 # Function to extract containers from YAML files
+# Excludes containers that are part of a group
 get_containers_from_yaml() {
     local yaml_file=$1
 
@@ -152,9 +153,24 @@ get_containers_from_yaml() {
         return
     fi
 
-    # Extract container names that are directly under "images:" section
-    # These are keys with exactly 2 spaces indentation after "images:"
-    awk '
+    # First, extract all group component containers
+    local group_containers
+    group_containers=$(awk '
+        /^group:/ { in_group=1; next }
+        in_group && /^  containers:/ { in_containers=1; next }
+        in_group && in_containers && /^    - / {
+            gsub(/^    - /, "")
+            gsub(/^[[:space:]]*"/, "")
+            gsub(/"[[:space:]]*$/, "")
+            print
+        }
+        in_group && /^[^ ]/ { in_group=0; in_containers=0 }
+        in_group && in_containers && /^  [a-zA-Z]/ { in_containers=0 }
+    ' "$yaml_file" | sort -u)
+
+    # Extract all container names from "images:" section
+    local all_containers
+    all_containers=$(awk '
         /^images:/ { in_images=1; next }
         in_images && /^[^ ]/ { in_images=0 }
         in_images && /^  [a-zA-Z0-9][a-zA-Z0-9._-]*:/ {
@@ -162,7 +178,14 @@ get_containers_from_yaml() {
             gsub(/:.*/, "")
             print
         }
-    ' "$yaml_file" | sort -u
+    ' "$yaml_file" | sort -u)
+
+    # Filter out group containers from all containers
+    if [ -n "$group_containers" ]; then
+        echo "$all_containers" | grep -v -F -x "$group_containers" || true
+    else
+        echo "$all_containers"
+    fi
 }
 
 # Function to get image name for a specific container from YAML files
