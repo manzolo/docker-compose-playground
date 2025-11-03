@@ -46,10 +46,20 @@ def enrich_image_data(config):
 async def dashboard(request: Request):
     """Main dashboard"""
     try:
-        config_data = load_config()
+        # Load ALL containers including group containers so status updates work
+        config_data = load_config(include_group_containers=True)
         config = config_data["images"]
         groups = config_data["groups"]
-        
+
+        # Identify which containers are part of groups and map them to group names
+        group_containers = set()
+        container_to_group = {}  # Map container name to group name
+        for group_name, group in groups.items():
+            if "containers" in group and isinstance(group["containers"], list):
+                group_containers.update(group["containers"])
+                for container_name in group["containers"]:
+                    container_to_group[container_name] = group_name
+
         # Natural sorting
         sorted_config = dict(sorted(config.items(), key=lambda x: natural_sort_key(x[0])))
         
@@ -68,15 +78,15 @@ async def dashboard(request: Request):
         
         # Enrich config with parsed MOTD commands and cleaned text
         sorted_config = enrich_image_data(sorted_config)
-        
-        # Categories
+
+        # Categories (include all containers now)
         categories = set()
         category_counts = {}
         for img_name, img_data in sorted_config.items():
             cat = img_data.get('category', 'other')
             categories.add(cat)
             category_counts[cat] = category_counts.get(cat, 0) + 1
-        
+
         return templates.TemplateResponse("index.html", {
             "request": request,
             "images": sorted_config,
@@ -84,7 +94,9 @@ async def dashboard(request: Request):
             "running": running_dict,
             "features": features_dict,
             "categories": sorted(categories),
-            "category_counts": category_counts
+            "category_counts": category_counts,
+            "group_containers": group_containers,  # Pass to template
+            "container_to_group": container_to_group  # Map container to its group
         })
     except Exception as e:
         logger.error("Error loading dashboard: %s", str(e))

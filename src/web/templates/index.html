@@ -175,10 +175,12 @@
             {% for name, data in images.items() %}
             {% set feature = features.get(name, {}) %}
             {% set running_info = running.get(name) %}
+            {% set is_group_container = name in group_containers %}
 
-            <div class="container-card" data-name="{{ name }}" data-category="{{ data.category }}"
+            <div class="container-card{% if is_group_container %} group-container-card{% endif %}" data-name="{{ name }}" data-category="{{ data.category }}"
                 data-container="playground-{{ name }}" data-search="{{ name|lower }} {{ data.description|lower }}"
-                data-commands='{{ data.motd_commands_json|safe }}'>
+                data-commands='{{ data.motd_commands_json|safe }}'
+                {% if is_group_container %}data-is-group-container="true"{% endif %}>
 
                 <!-- HEADER CON NOME CLICCABILE E CATEGORIA A DESTRA -->
                 <div class="container-header">
@@ -189,10 +191,17 @@
                         {{ name }}
                     </span>
 
-                    <!-- CATEGORIA BADGE A DESTRA -->
-                    <span class="badge badge-{{ data.category }}">
-                        {{ data.category }}
-                    </span>
+                    <!-- BADGES A DESTRA -->
+                    <div style="display: flex; gap: 0.25rem; align-items: center;">
+                        {% if is_group_container and name in container_to_group %}
+                        <span class="badge badge-info" style="font-size: 0.7rem;" title="Part of {{ container_to_group[name] }} stack">
+                            🚀 {{ container_to_group[name] }}
+                        </span>
+                        {% endif %}
+                        <span class="badge badge-{{ data.category }}">
+                            {{ data.category }}
+                        </span>
+                    </div>
                 </div>
 
                 <!-- FEATURE ICONS (Post-Start, Pre-Stop) -->

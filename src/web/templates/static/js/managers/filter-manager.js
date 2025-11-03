@@ -98,11 +98,14 @@ const FilterManager = {
      * Update filter badge counts
      */
     updateCounts() {
-        let totalCount = DOM.queryAll('.container-card').length;
+        // Count all container cards (including group containers)
+        const allCards = DOM.queryAll('.container-card');
+
+        let totalCount = allCards.length;
         let runningCount = 0;
         let stoppedCount = 0;
 
-        DOM.queryAll('.container-card').forEach(card => {
+        allCards.forEach(card => {
             const statusDot = card.querySelector('.status-dot');
             const isRunning = statusDot && statusDot.classList.contains('running');
             if (isRunning) {
@@ -113,7 +116,7 @@ const FilterManager = {
         });
 
         let visibleCount = 0;
-        DOM.queryAll('.container-card').forEach(card => {
+        allCards.forEach(card => {
             if (card.style.display !== 'none') {
                 visibleCount++;
             }

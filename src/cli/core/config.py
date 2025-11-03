@@ -19,11 +19,13 @@ CONFIG_DIR = BASE_PATH / "config.d"
 CUSTOM_CONFIG_DIR = BASE_PATH / "custom.d"
 
 
-def load_config() -> Dict[str, Any]:
+def load_config(include_group_containers: bool = False) -> Dict[str, Any]:
     """Load configuration from all sources with volume support
 
-    Note: This function excludes containers that are part of a group.
-    Group component containers should only be launched via their group, not standalone.
+    Args:
+        include_group_containers: If False, excludes containers that are part of a group.
+                                 Group component containers should only be launched via their group, not standalone.
+                                 If True, includes all containers.
     """
     images = {}
 
@@ -64,22 +66,24 @@ def load_config() -> Dict[str, Any]:
         console.print("[red]❌ No valid configurations found[/red]")
         raise typer.Exit(1)
 
-    # Filter out containers that are part of a group
-    # These should only be launched via their group, not standalone
-    groups = load_groups()
-    group_containers = set()
-    for group in groups.values():
-        if "containers" in group and isinstance(group["containers"], list):
-            group_containers.update(group["containers"])
+    # Filter out containers that are part of a group (unless explicitly requested)
+    if not include_group_containers:
+        # These should only be launched via their group, not standalone
+        groups = load_groups()
+        group_containers = set()
+        for group in groups.values():
+            if "containers" in group and isinstance(group["containers"], list):
+                group_containers.update(group["containers"])
 
-    # Remove group component containers from standalone images
-    filtered_images = {
-        name: data
-        for name, data in images.items()
-        if name not in group_containers
-    }
+        # Remove group component containers from standalone images
+        filtered_images = {
+            name: data
+            for name, data in images.items()
+            if name not in group_containers
+        }
+        return dict(sorted(filtered_images.items(), key=lambda x: x[0].lower()))
 
-    return dict(sorted(filtered_images.items(), key=lambda x: x[0].lower()))
+    return dict(sorted(images.items(), key=lambda x: x[0].lower()))
 
 
 def load_groups() -> Dict[str, Any]:

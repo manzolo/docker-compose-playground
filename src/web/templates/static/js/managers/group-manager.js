@@ -234,6 +234,16 @@ const GroupOperations = {
         try {
             await Promise.all(refreshPromises);
             // console.log(`Refreshed ${containers.length} container cards after group operation`);
+
+            // Update counters after all cards have been refreshed
+            if (window.FilterManager && typeof FilterManager.updateCounts === 'function') {
+                FilterManager.updateCounts();
+            }
+
+            // Update container tag statuses in group cards
+            if (window.ContainerTagManager && typeof ContainerTagManager.refreshContainerTagStatuses === 'function') {
+                ContainerTagManager.refreshContainerTagStatuses();
+            }
         } catch (error) {
             console.error('Error refreshing group containers:', error);
         }

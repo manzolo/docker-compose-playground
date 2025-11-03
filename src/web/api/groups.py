@@ -68,10 +68,10 @@ async def list_groups():
 async def get_group_details(group_name: str):
     """
     Get detailed information about a specific group
-    
+
     Parameters:
         group_name: Name of the group (e.g., "MinIO-S3-Stack")
-    
+
     Response:
     {
         "name": "MinIO-S3-Stack",
@@ -89,7 +89,7 @@ async def get_group_details(group_name: str):
     }
     """
     try:
-        config_data = load_config()
+        config_data = load_config(include_group_containers=True)
         groups = config_data.get("groups", {})
         images = config_data.get("images", {})
         
@@ -148,7 +148,7 @@ async def get_group_details(group_name: str):
 async def start_group(group_name: str):
     """Start all containers in a group"""
     try:
-        config_data = load_config()
+        config_data = load_config(include_group_containers=True)
         groups = config_data["groups"]
         images = config_data["images"]
         
@@ -249,7 +249,7 @@ async def start_group_background(operation_id: str, group_name: str, containers:
 async def stop_group(group_name: str):
     """Stop all containers in a group"""
     try:
-        config_data = load_config()
+        config_data = load_config(include_group_containers=True)
         groups = config_data["groups"]
         images = config_data["images"]
         
