@@ -50,6 +50,12 @@ def setup_logging(debug: bool = False):
         ]
     )
 
+    # Suppress debug logs from third-party libraries unless in debug mode
+    if not debug:
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
+        logging.getLogger("docker").setLevel(logging.WARNING)
+        logging.getLogger("requests").setLevel(logging.WARNING)
+
 
 def log_exception(e: Exception, context: str = ""):
     """Log an exception with context and stack trace in debug mode"""
