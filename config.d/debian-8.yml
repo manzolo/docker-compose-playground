@@ -7,26 +7,26 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║           Debian 8 Quick Reference                            ║
+      ║                   Debian 8 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📦 Package Manager (apt):
          apt update                               # Update package index
          apt install package_name                 # Install package
          apt remove package_name                  # Remove package
          apt search package_name                  # Search for package
          apt list --installed                     # List installed packages
-
+      
       🔧 System Information:
          uname -a                                 # Kernel and system info
          cat /etc/debian_version                  # Debian version
          cat /etc/os-release                      # Distribution details
          df -h                                    # Disk usage
          free -h                                  # Memory usage
-
+      
       💡 Tips:
          • Use apt-get for scripts, apt for interactive use
          • Common packages: curl, wget, git, vim
          • Use /shared for persistent files
-
+      
       📚 Documentation: https://www.debian.org/doc/

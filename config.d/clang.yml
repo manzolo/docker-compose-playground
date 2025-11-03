@@ -7,22 +7,22 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Clang/LLVM Quick Reference                   ║
+      ║                  Clang/LLVM Quick Reference                  ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          clang --version                           # Check Clang version
          clang hello.c -o hello                    # Compile C program
          clang++ hello.cpp -o hello                # Compile C++ program
          ./hello                                   # Run compiled program
-
+      
       📝 Quick Test:
          echo 'int main() { printf("Hello!\\n"); return 0; }' > /shared/test.c
          clang /shared/test.c -o /shared/test && /shared/test
-
+      
       💡 Tips:
          • LLVM-based C/C++ compiler
          • Modern alternative to GCC
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host

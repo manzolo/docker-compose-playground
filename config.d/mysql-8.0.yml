@@ -25,9 +25,9 @@ images:
 
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                    MySQL 8.0 Quick Reference                  ║
+      ║                  MySQL 8.0 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          Host: localhost / Container IP
          Port: 3306
@@ -36,11 +36,11 @@ images:
          User: playground
          Password: playground
          Database: playground
-
+      
       📊 Basic Commands:
          mysql -u root -pplayground                    # Connect as root
          mysql -u playground -pplayground playground   # Connect to playground DB
-
+      
       📁 Database Operations:
          SHOW DATABASES;                               # List all databases
          CREATE DATABASE mydb;                         # Create database
@@ -48,26 +48,26 @@ images:
          DROP DATABASE mydb;                           # Delete database
          SHOW TABLES;                                  # List tables
          DESCRIBE tablename;                           # Show table structure
-
+      
       💾 Backup & Restore:
          # Backup single database
          mysqldump -u root -pplayground playground > /shared/data/backup.sql
-
+      
          # Backup all databases
          mysqldump -u root -pplayground --all-databases > /shared/data/full_backup.sql
-
+      
          # Backup specific table
          mysqldump -u root -pplayground playground users > /shared/data/users_backup.sql
-
+      
          # Restore database
          mysql -u root -pplayground playground < /shared/data/backup.sql
-
+      
          # Restore with creation
          mysql -u root -pplayground < /shared/data/backup.sql
-
+      
          # Note: Automatic backups on stop are saved to:
          # ./shared-volumes/data/backups/mysql-8.0/
-
+      
       📝 Quick Table Example:
          CREATE TABLE users (
          id INT AUTO_INCREMENT PRIMARY KEY,
@@ -81,20 +81,20 @@ images:
          ('Bob', 'bob@example.com');
          
          SELECT * FROM users;
-
+      
       🔍 Useful Queries:
          SELECT USER(), DATABASE();                    # Current user & DB
          SHOW PROCESSLIST;                            # Active connections
          SHOW VARIABLES LIKE '%version%';             # MySQL version info
          SHOW TABLE STATUS;                           # Table information
          SHOW FULL PROCESSLIST;                       # Detailed process list
-
+      
       🔧 User Management:
          CREATE USER 'newuser'@'%' IDENTIFIED BY 'password';
          GRANT ALL PRIVILEGES ON database.* TO 'newuser'@'%';
          FLUSH PRIVILEGES;
          SHOW GRANTS FOR 'username'@'%';
-
+      
       💡 Tips:
          - Use /shared/data for SQL dumps
          - Automatic backups on stop: ./shared-volumes/data/backups/mysql-8.0/

@@ -7,49 +7,49 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  PHP 8.2 Development Environment              ║
+      ║               PHP 8.2 Development Environment                ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          php -v                                    # Check PHP version
          php -i                                    # Full PHP info (phpinfo)
          php -m                                    # List loaded modules
          php -a                                    # Interactive shell (REPL)
          php -r "echo 'Hello World!';"             # Run PHP code directly
-
+      
       📝 Quick Script Test:
          # Create and run a test script
          echo '<?php echo "PHP " . phpversion() . " is working!\n"; ?>' > /shared/test.php
          php /shared/test.php
-
+      
          # Show PHP configuration
          echo '<?php phpinfo(); ?>' > /shared/info.php
          php /shared/info.php | head -20
-
+      
       🔧 Development Server:
          # Start built-in web server
          php -S 0.0.0.0:8000 -t /shared
          # Access at http://localhost:8000
-
+      
       📦 Composer (if available):
          composer --version                        # Check Composer version
          composer init                             # Initialize project
          composer require vendor/package           # Add package
-
+      
       🏗️  Common Extensions Check:
          php -m | grep -i pdo                      # Check PDO
          php -m | grep -i curl                     # Check cURL
          php -m | grep -i json                     # Check JSON
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host
          /shared/projects                          # Your PHP projects
          /usr/local/etc/php                        # PHP config directory
-
+      
       💡 Tips:
          • PHP 8.2 includes readonly classes
          • New random extension for better RNG
          • Keep projects in /shared for persistence
          • Use php -S for quick testing
-
+      
       📚 Documentation: https://www.php.net/manual/en/

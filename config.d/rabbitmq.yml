@@ -10,19 +10,19 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                 RabbitMQ Quick Reference                      ║
+      ║                   RabbitMQ Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          AMQP Port: 5672
          Management UI: http://localhost:15672
          Default: guest / guest
-
+      
       🚀 Quick Commands:
          rabbitmqctl status                        # Check status
          rabbitmqctl list_queues                   # List queues
          rabbitmqctl list_exchanges                # List exchanges
-
+      
       💡 Tips:
          • Message broker implementing AMQP
          • Access management UI for monitoring

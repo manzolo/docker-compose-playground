@@ -9,9 +9,9 @@ images:
       post_start: init/python.sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║          Python 3.12 Development Environment                 ║
+      ║             Python 3.12 Development Environment              ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📦 Package Manager (pip):
          pip install package_name                 # Install package
          pip install -r requirements.txt          # Install from file
@@ -19,13 +19,13 @@ images:
          pip show package_name                    # Show package details
          pip freeze > /shared/requirements.txt    # Save dependencies
          pip uninstall package_name               # Remove package
-
+      
       🚀 Quick Start:
          python3                                  # Interactive REPL
          python3 script.py                        # Run a script
          python3 -m http.server 8000              # Start simple HTTP server
          python3 -m venv /shared/myenv            # Create virtual environment
-
+      
       🔧 Development Tools:
          python3 --version                        # Check Python version
          pip install ipython                      # Better interactive shell
@@ -33,7 +33,7 @@ images:
          pip install black                        # Code formatter
          pip install pylint                       # Code linter
          pip install pytest                       # Testing framework
-
+      
       📝 Hello World:
          cat > /shared/hello.py <<'EOF'
          #!/usr/bin/env python3
@@ -41,7 +41,7 @@ images:
          EOF
          chmod +x /shared/hello.py
          python3 /shared/hello.py
-
+      
       🔗 Popular Packages:
          requests                                 # HTTP library
          pandas                                   # Data analysis
@@ -49,17 +49,17 @@ images:
          flask / fastapi                          # Web frameworks
          sqlalchemy                               # Database ORM
          pytest                                   # Testing framework
-
+      
       🏗️  Project Structure:
          /shared/projects/                        # Your projects here
          /shared/venvs/                           # Virtual environments
          /shared/requirements.txt                 # Dependencies file
-
+      
       💡 Tips:
          • Use virtual environments for project isolation
          • Keep your code in /shared/projects/ for persistence
          • Install common packages with the init script
          • Use requirements.txt for dependency management
-
+      
       📚 Documentation: https://docs.python.org/3.12/
       🎓 Tutorial: https://docs.python.org/3.12/tutorial/

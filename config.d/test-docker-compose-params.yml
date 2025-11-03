@@ -248,49 +248,49 @@ images:
 
     motd: |
       ╔════════════════════════════════════════════════════════════════╗
-      ║     Docker Compose Parameters - Comprehensive Test             ║
+      ║         Docker Compose Parameters - Comprehensive Test         ║
       ╚════════════════════════════════════════════════════════════════╝
-
+      
       This container tests ALL 50+ Docker Compose parameters:
-
+      
       📡 NETWORK & CONNECTIVITY
       • extra_hosts, dns, dns_search, hostname
-
+      
       🔒 SECURITY
       • privileged, cap_add, cap_drop, security_opt, read_only
-
+      
       💾 RESOURCES
       • mem_limit, memswap_limit, shm_size, cpu_shares, cpuset_cpus
       • cpu_quota, cpu_period, pids_limit
-
+      
       ⚙️  PROCESS MANAGEMENT
       • oom_kill_disable, oom_score_adj, init
-
+      
       💿 STORAGE
       • tmpfs, working_dir
-
+      
       🖥️  SYSTEM CONTROLS
       • sysctls
-
+      
       🔐 NAMESPACES
       • group_add
-
+      
       📊 ULIMITS
       • nofile, nproc
-
+      
       🏥 HEALTHCHECK
       • test, interval, timeout, retries, start_period
-
+      
       🔄 RESTART POLICY
       • Name, MaximumRetryCount
-
+      
       📝 LOGGING
       • Type, Config
-
+      
       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       VERIFICATION COMMANDS:
       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+      
       Network:     cat /etc/hosts | grep example.com
       DNS:         cat /etc/resolv.conf
       Memory:      free -h
@@ -298,5 +298,5 @@ images:
       Sysctls:     sysctl -a | grep -E "(ip_forward|somaxconn)"
       Ulimits:     ulimit -a
       Working Dir: pwd
-
+      
       All parameters are automatically verified in the post_start script!

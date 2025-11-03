@@ -12,26 +12,26 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  CouchDB Quick Reference                      ║
+      ║                   CouchDB Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          HTTP: http://localhost:5984
          Web UI (Fauxton): http://localhost:5984/_utils
-
+      
       🔍 Quick Commands:
          # Check version
          curl http://localhost:5984
-
+      
          # List databases
          curl http://localhost:5984/_all_dbs
-
+      
          # Create database
          curl -X PUT http://localhost:5984/mydb
-
+      
          # Create document
          curl -X POST http://localhost:5984/mydb -H "Content-Type: application/json" -d '{"name":"Alice"}'
-
+      
       💡 Tips:
          • Document-oriented NoSQL database
          • Access Fauxton web UI for management

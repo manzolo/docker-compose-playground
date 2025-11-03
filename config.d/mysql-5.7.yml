@@ -20,22 +20,22 @@ images:
       start_period: "30s"
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   MySQL 5.7 Quick Reference                   ║
+      ║                  MySQL 5.7 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          Port: 3305
          User: root / Password: playground
-
+      
       📊 Quick Connect:
          mysql -u root -pplayground                    # Connect as root
-
+      
       🔍 Quick Commands:
          mysql -u root -pplayground -e "SELECT version();"  # Check version
          mysql -u root -pplayground -e "SHOW DATABASES;"    # List databases
-
+      
       💾 Backup:
          mysqldump -u root -pplayground --all-databases > /shared/backup.sql
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host

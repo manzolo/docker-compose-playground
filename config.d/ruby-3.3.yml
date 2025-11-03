@@ -7,23 +7,23 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   Ruby 3.3 Quick Reference                    ║
+      ║                   Ruby 3.3 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          ruby --version                            # Check Ruby version
          irb                                       # Interactive Ruby
          ruby -e "puts 'Hello World!'"             # Run Ruby code
-
+      
       📦 Gem Management:
          gem --version                             # Gem version
          gem install rails                         # Install gem
          gem list                                  # List installed gems
-
+      
       📝 Quick Script:
          echo "puts 'Ruby ' + RUBY_VERSION" > /shared/test.rb
          ruby /shared/test.rb
-
+      
       💡 Tips:
          • Ruby 3.3 with YJIT improvements
          • Use /shared for your projects

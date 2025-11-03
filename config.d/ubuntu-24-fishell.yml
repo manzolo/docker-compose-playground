@@ -117,32 +117,32 @@ images:
 
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║           Ubuntu 24.04 LTS with Fish Shell + Starship        ║
+      ║         Ubuntu 24.04 LTS with Fish Shell + Starship          ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🐠 Shell: /usr/bin/fish (Fish Shell)
-
+      
       📦 Installed:
         • Fish Shell (user-friendly interactive shell)
         • Starship prompt (cross-shell prompt)
         • Common utilities (git, curl, build-essential, etc)
-
+      
       ✨ Features:
         • Syntax highlighting
         • Auto-suggestions from history
         • Tab completions
         • Vi keybindings enabled
-
+      
       📁 Configuration:
         ~/.config/fish/config.fish - Fish configuration
         ~/.config/starship.toml - Starship prompt config
-
+      
       🎯 Quick Commands:
         fish --version
         echo $SHELL
         functions  # List all functions
         abbr       # List abbreviations
-
+      
       🔧 Useful Aliases:
         ls, ll, la - List files with colors
         gs, ga, gc, gp, gl - Git shortcuts

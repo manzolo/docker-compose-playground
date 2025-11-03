@@ -9,19 +9,19 @@ images:
     shell: /bin/sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                Memcached Quick Reference                      ║
+      ║                  Memcached Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          Port: 11211
-
+      
       🔍 Quick Test:
          telnet localhost 11211                    # Connect
          stats                                     # Show statistics
          set mykey 0 0 5                           # Set value
          hello
          get mykey                                 # Get value
-
+      
       💡 Tips:
          • High-performance distributed memory caching
          • Simple key-value store

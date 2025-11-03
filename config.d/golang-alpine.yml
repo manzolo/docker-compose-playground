@@ -7,18 +7,18 @@ images:
     shell: /bin/sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║          Golang Alpine Development Environment                      ║
+      ║            Golang Alpine Development Environment             ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📦 Package Manager:
          go get package                           # Install package
          go mod init module_name                  # Initialize module
          go mod tidy                              # Clean dependencies
-
+      
       🚀 Quick Start:
          go run main.go                           # Run program
          go build                                 # Compile program
          go test                                  # Run tests
-
+      
       💡 Workspace: /shared/projects/
       📚 Docs: https://go.dev/doc/

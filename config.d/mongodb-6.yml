@@ -9,50 +9,50 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  MongoDB 6 Quick Reference                    ║
+      ║                  MongoDB 6 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🔐 Connection Info:
          Host: localhost
          Port: 27018
          No authentication by default
-
+      
       📊 Quick Connect:
          mongosh                                   # Connect to MongoDB shell
          mongosh --port 27017                      # Connect with port
-
+      
       🔍 Quick Commands:
          # In mongosh:
          show dbs                                  # List all databases
          use mydb                                  # Switch/create database
          show collections                          # List collections
          db.version()                              # Check MongoDB version
-
+      
       📝 Basic Operations:
          # Create/Insert
          db.users.insertOne({name: "Alice", age: 30})
-
+      
          # Find
          db.users.find()                           # Find all
          db.users.findOne({name: "Alice"})         # Find one
-
+      
          # Update
          db.users.updateOne({name: "Alice"}, {$set: {age: 31}})
-
+      
          # Delete
          db.users.deleteOne({name: "Alice"})
-
+      
       💾 Backup & Restore:
          # Backup database
          mongodump --db=mydb --out=/shared/backup
-
+      
          # Restore database
          mongorestore /shared/backup
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host
          /data/db                                  # Data directory
-
+      
       💡 Tips:
          • Use mongosh (new shell) instead of legacy mongo
          • Collections are created automatically on insert

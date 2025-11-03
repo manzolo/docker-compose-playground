@@ -7,22 +7,22 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   GCC Quick Reference                         ║
+      ║                     GCC Quick Reference                      ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          gcc --version                             # Check GCC version
          gcc hello.c -o hello                      # Compile C program
          g++ hello.cpp -o hello                    # Compile C++ program
          ./hello                                   # Run compiled program
-
+      
       📝 Quick Test:
          echo 'int main() { printf("Hello!\\n"); return 0; }' > /shared/test.c
          gcc /shared/test.c -o /shared/test && /shared/test
-
+      
       💡 Tips:
          • GNU Compiler Collection
          • Industry standard C/C++ compiler
-
+      
       📁 Useful Directories:
          /shared                                   # Shared with host

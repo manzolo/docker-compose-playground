@@ -7,25 +7,25 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║           Ubuntu 14 Quick Reference                          ║
+      ║                  Ubuntu 14 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📦 Package Manager (apt):
          apt update                               # Update package index
          apt install nano                         # Install package
          apt remove nano                          # Remove package
          apt search nano                          # Search package
          apt list --installed                     # List installed packages
-
+      
       🔧 System Information:
          uname -a                                 # Kernel and system info
          lsb_release -a                           # Ubuntu version
          df -h                                    # Disk usage
          free -h                                  # Memory usage
-
+      
       💡 Tips:
          • Ubuntu is Debian-based
          • Use /shared for persistent files
          • Common packages: build-essential, git, curl
-
+      
       📚 Documentation: https://ubuntu.com/server/docs

@@ -36,17 +36,17 @@ images:
     shm_size: 1g
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ WINDOWS 2000 PROFESSIONAL SP4 - Classic NT                  ║
+      ║          WINDOWS 2000 PROFESSIONAL SP4 - Classic NT          ║
       ║ Image: dockurr/windows | ~0.4 GB Disk                       ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       CONNECTION
       RDP: localhost:3314 | Web: http://localhost:8014
       User: docker | Pass: admin
-
+      
       TIPS
       • Use RDP 5.0 client
       • Install DirectX 8 for games
-
+      
       READY!
       ╚══════════════════════════════════════════════════════════════╝

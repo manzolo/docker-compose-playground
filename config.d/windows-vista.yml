@@ -36,17 +36,17 @@ images:
     shm_size: 2g
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ WINDOWS VISTA ULTIMATE SP2 - Sidebar & Aero                 ║
+      ║         WINDOWS VISTA ULTIMATE SP2 - Sidebar & Aero          ║
       ║ Image: dockurr/windows                                      ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       CONNECTION
       RDP: localhost:3313 | Web: http://localhost:8013
       User: docker | Pass: admin
-
+      
       TIPS
       • Disable UAC for old apps
       • Enable DreamScene (if available)
-
+      
       READY!
       ╚══════════════════════════════════════════════════════════════╝

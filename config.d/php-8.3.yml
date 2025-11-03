@@ -9,40 +9,40 @@ images:
       - "8098:8000"  # PHP Built-in Server Port
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   PHP 8.3 Playground                         ║
+      ║                      PHP 8.3 Playground                      ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🟦 PHP Environment:
          php -v                                       # Check PHP version
          php --ini                                    # Show configuration
          php -m                                       # List modules
-
+      
       📂 Shared Directory:
          /shared                                      # Persistent storage
          /shared/index.php                            # Main page
          /shared/api.php                              # JSON API endpoint
          /shared/form.php                             # Form handler
-
+      
       🚀 Quick Start:
          # PHP Built-in Server (already running):
          http://localhost:8098
          http://localhost:8098/api.php
          http://localhost:8098/form.php
-
+      
       🏗️ Development:
          php -S 0.0.0.0:8000 -t /shared               # Start dev server
          php index.php                                # Run script directly
          php -l file.php                              # Syntax check
-
+      
       🧪 Testing:
          php -r "echo 'PHP OK';"
          php -r "var_dump($_SERVER);"
          php -r "phpinfo(); exit;"
-
+      
       📝 Create Your Code:
          nano /shared/myapp.php                       # Edit new PHP file
          php /shared/myapp.php                        # Run your code
          php -S 0.0.0.0:8000 -t /shared               # Serve your files
-
+      
       💾 Persistence:
          All files in /shared persist across restarts

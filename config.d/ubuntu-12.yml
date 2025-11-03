@@ -7,23 +7,23 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║           Ubuntu 12 Quick Reference                          ║
+      ║                  Ubuntu 12 Quick Reference                   ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📦 Package Manager (apt):
          apt-get update                           # Update package index
          apt-get install na                       # Install package
          apt-get remove nan                       # Remove package
-
+      
       🔧 System Information:
          uname -a                                 # Kernel and system info
          lsb_release -a                           # Ubuntu version
          df -h                                    # Disk usage
          free -h                                  # Memory usage
-
+      
       💡 Tips:
          • Ubuntu is Debian-based
          • Use /shared for persistent files
          • Common packages: build-essential, git, curl
-
+      
       📚 Documentation: https://ubuntu.com/server/docs

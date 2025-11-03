@@ -13,22 +13,22 @@ images:
       - TZ=UTC
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ Ubuntu 24.04 + XFCE Desktop - RDP                           ║
+      ║              Ubuntu 24.04 + XFCE Desktop - RDP               ║
       ║ Source: linuxserver/rdesktop:ubuntu-xfce                    ║
       ║ Ephemeral Container (Resets on restart)                     ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📋 CONNECTION INFO
       ─────────────────────────────────────────────────────────────
       🌐 Address:  localhost:3391
       👤 Username: abc
       🔑 Password: abc
-
+      
       📍 From host machine:
          • Remmina: localhost:3391
          • Windows RDP Client: localhost:3391
          • FreeRDP: xfreerdp /v:localhost:3391 /u:abc /p:abc
-
+      
       ⚙️  FEATURES
       ─────────────────────────────────────────────────────────────
       ✓ Lightweight XFCE Desktop Environment
@@ -36,18 +36,18 @@ images:
       ✓ Sudo access without password
       ✓ Pre-configured RDP (xvfb-run + openbox)
       ✓ Persistent package installation during session
-
+      
       ⚠️  IMPORTANT
       ─────────────────────────────────────────────────────────────
       • Data is EPHEMERAL - everything resets on container restart
       • To persist changes: use volumes or rebuild the image
       • Run 'apt-get update && apt-get install' for extra packages
-
+      
       💡 TIPS
       ─────────────────────────────────────────────────────────────
       • For better performance: increase resolution in RDP client
       • Default resolution: 1280x720 (configurable via env vars)
       • Port 3391 maps to container's 3389 (RDP standard port)
-
+      
       🚀 READY TO USE - Connect now!
       ╚══════════════════════════════════════════════════════════════╝

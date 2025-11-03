@@ -22,21 +22,21 @@ images:
 
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║    Nextcloud - Self-hosted Cloud Storage & File Sharing     ║
+      ║     Nextcloud - Self-hosted Cloud Storage & File Sharing     ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐  Web Interface: http://localhost:8888
         Port: 8888
-
+      
       🔐  Admin Credentials:
         Username: admin
         Password: admin123
-
+      
       📁  Important Directories:
         /var/www/html          # Nextcloud installation
         /var/www/html/data     # User files & data
         /var/www/html/config   # Configuration files
-
+      
       📊  Quick Commands:
         # Check Nextcloud version:
         php occ --version
@@ -55,7 +55,7 @@ images:
         
         # Enable 2FA:
         php occ twofactorauth:enable username totp
-
+      
       🎯  Features:
         • File sync & sharing
         • Calendar & Contacts
@@ -65,12 +65,12 @@ images:
         • User management
         • Encryption
         • Versioning & trash bin
-
+      
       💾  Persistence:
         • /var/www/html        # All Nextcloud files
         • /var/www/html/data   # User uploaded files
         Data persists across restarts
-
+      
       🔌  Apps & Plugins:
         Available in: Admin → Apps
         Popular apps:
@@ -80,20 +80,20 @@ images:
          • Notes
          • Deck (Kanban boards)
          • News (RSS reader)
-
+      
       📝  Users & Sharing:
         1. Create users: Admin → Users
         2. Set permissions: Admin → Users → username
         3. Share files: Click file → Share
         4. Public links: Share button → Create link
-
+      
       🔐  Security:
         • Admin → Settings → Security
         • Enable brute force protection
         • Set password policy
         • Enable 2FA for admin
         • Configure SSL/TLS (production)
-
+      
       🚀  Next Steps:
         1. Change admin password immediately
         2. Configure backup strategy
@@ -101,6 +101,6 @@ images:
         4. Set up external storage (optional)
         5. Install recommended apps
         6. Configure cron jobs for background tasks
-
+      
       📚  Documentation:
         https://docs.nextcloud.com/

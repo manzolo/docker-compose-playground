@@ -19,21 +19,21 @@ images:
         type: named
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║ MinIO - S3-Compatible Object Storage                         ║
+      ║             MinIO - S3-Compatible Object Storage             ║
       ║ Source: minio/minio                                          ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       📋 CONNECTION INFO
       ─────────────────────────────────────────────────────────────
       🌐 API Address:     localhost:9000
       🌐 Console Address: http://localhost:9001
       👤 Username: minioadmin
       🔑 Password: minioadmin123
-
+      
       📍 From host machine:
          • Web Console: http://localhost:9001
          • S3 API: http://localhost:9000
-
+      
       ⚙️  FEATURES
       ─────────────────────────────────────────────────────────────
       ✓ S3-compatible object storage
@@ -42,24 +42,24 @@ images:
       ✓ Versioning & retention policies
       ✓ Access control & policies
       ✓ Persistent data storage
-
+      
       ⚠️  IMPORTANT
       ─────────────────────────────────────────────────────────────
       • Data PERSISTS in minio-data volume
       • Default credentials: minioadmin / minioadmin123
       • Change password immediately in production!
       • API runs on port 9000, Console on port 9001
-
+      
       💡 TIPS
       ─────────────────────────────────────────────────────────────
       • Access via AWS CLI: aws s3 --endpoint-url http://localhost:9000
       • Configure: aws configure (use minioadmin/minioadmin123)
       • Create buckets via web console
       • Upload/download files via S3 API or console
-
+      
       📝 AWS CLI Example:
          aws s3 mb s3://mybucket --endpoint-url http://localhost:9000
          aws s3 cp file.txt s3://mybucket/ --endpoint-url http://localhost:9000
-
+      
       🚀 READY TO USE - Connect to console now!
       ╚══════════════════════════════════════════════════════════════╝

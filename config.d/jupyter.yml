@@ -11,16 +11,16 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                  Jupyter Quick Reference                      ║
+      ║                   Jupyter Quick Reference                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Start:
          jupyter notebook --ip=0.0.0.0 --allow-root  # Start Jupyter
          # Access: http://localhost:8888
-
+      
       📝 JupyterLab:
          jupyter lab --ip=0.0.0.0 --allow-root
-
+      
       💡 Tips:
          • Interactive computational notebooks
          • Supports Python, R, Julia, and more

@@ -7,21 +7,21 @@ images:
     shell: /bin/sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   cURL Quick Reference                        ║
+      ║                     cURL Quick Reference                     ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          curl --version                            # Check cURL version
          curl https://example.com                  # Fetch URL
          curl -X POST -d 'data' https://api.com    # POST request
          curl -H "Content-Type: application/json" -d '{"key":"value"}' https://api.com
-
+      
       📝 Useful Options:
          -I                                        # Headers only
          -o file.txt                               # Save to file
          -L                                        # Follow redirects
          -v                                        # Verbose output
-
+      
       💡 Tips:
          • Command-line tool for transferring data
          • Supports HTTP, FTP, and many protocols

@@ -7,19 +7,19 @@ images:
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                   Lua Quick Reference                         ║
+      ║                     Lua Quick Reference                      ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🚀 Quick Commands:
          lua -v                                    # Check Lua version
          lua                                       # Interactive mode
          lua script.lua                            # Run Lua script
          lua -e "print('Hello!')"                  # Run code directly
-
+      
       📦 LuaRocks (Package Manager):
          luarocks install package_name             # Install package
          luarocks list                             # List packages
-
+      
       💡 Tips:
          • Lightweight scripting language
          • Embedded in many applications

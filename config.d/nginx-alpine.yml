@@ -9,35 +9,35 @@ images:
     shell: /bin/sh
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║                Nginx Alpine Web Server                        ║
+      ║                   Nginx Alpine Web Server                    ║
       ╚══════════════════════════════════════════════════════════════╝
-
+      
       🌐 Server Info:
          Port: 8081
          Access: http://localhost:8081
          Document Root: /usr/share/nginx/html
-
+      
       🔧 Configuration:
          Config: /etc/nginx/nginx.conf
          Test config: nginx -t
          Reload: nginx -s reload
          Stop: nginx -s stop
-
+      
       📁 Content Directories:
          /usr/share/nginx/html                         # Default web root
          /etc/nginx/conf.d/                            # Additional configs
          /shared                                       # Shared with host
-
+      
       📝 Quick Static Site:
          echo '<h1>Hello World!</h1>' > /usr/share/nginx/html/index.html
          # Access at http://localhost:8081
-
+      
       🔍 Useful Commands:
          nginx -v                                      # Version info
          nginx -T                                      # Dump config
          cat /var/log/nginx/access.log                # Access logs
          cat /var/log/nginx/error.log                 # Error logs
-
+      
       💡 Tips:
          • Place static files in /usr/share/nginx/html
          • Custom configs in /etc/nginx/conf.d/
