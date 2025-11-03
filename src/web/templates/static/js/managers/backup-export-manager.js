@@ -57,7 +57,7 @@ const BackupExportManager = {
         // Create table rows with proper CSS classes
         const rows = backups.map(backup => `
             <tr>
-                <td data-label="Category">
+                <td data-label="Container">
                     <span class="backup-category">${backup.category}</span>
                 </td>
                 <td data-label="File">
@@ -90,11 +90,14 @@ const BackupExportManager = {
                     <span class="backups-stats-value">${this.formatFileSize(totalSize)}</span>
                 </div>
             </div>
+            <div class="backup-filter">
+                <input type="text" id="backupFilterInput" onkeyup="BackupExportManager.filterBackups()" placeholder="Filter by container...">
+            </div>
             <div class="backups-table-wrapper">
-                <table class="backups-table">
+                <table class="backups-table" id="backupsTable">
                     <thead>
                         <tr>
-                            <th>Category</th>
+                            <th>Container</th>
                             <th>File</th>
                             <th>Size</th>
                             <th>Modified</th>
@@ -117,6 +120,28 @@ const BackupExportManager = {
             return (bytes / 1024).toFixed(2) + ' KB';
         } else {
             return bytes + ' bytes';
+        }
+    },
+
+    /**
+     * Filter backups table
+     */
+    filterBackups() {
+        const input = DOM.get('backupFilterInput');
+        const filter = input.value.toUpperCase();
+        const table = DOM.get('backupsTable');
+        const tr = table.getElementsByTagName('tr');
+
+        for (let i = 1; i < tr.length; i++) {
+            const td = tr[i].getElementsByTagName('td')[0];
+            if (td) {
+                const txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = '';
+                } else {
+                    tr[i].style.display = 'none';
+                }
+            }
         }
     },
 
