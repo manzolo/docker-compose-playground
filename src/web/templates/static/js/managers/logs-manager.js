@@ -55,7 +55,14 @@ const LogsManager = {
             // Setup Escape key listener
             this.setupEscapeListener();
 
+            const autoScrollCheckbox = DOM.get('autoScroll');
             if (follow) {
+                if (autoScrollCheckbox) {
+                    autoScrollCheckbox.checked = true;
+                }
+            }
+
+            if (autoScrollCheckbox && autoScrollCheckbox.checked) {
                 this.startFollowing();
             }
         } catch (error) {
