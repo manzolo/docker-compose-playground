@@ -6,7 +6,7 @@ import logging
 
 # Logger
 logger = logging.getLogger("scripts")
-logger.setLevel(logging.DEBUG)
+# Don't set level here - let it inherit from root logger
 
 # Configura il file handler per scrivere su venv/cli.log
 LOG_FILE = Path(__file__).parent.parent.parent.parent / "venv" / "cli.log"

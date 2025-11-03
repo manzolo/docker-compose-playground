@@ -144,33 +144,16 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
 
-# Function to extract containers from YAML files
-# Excludes containers that are part of a group
-get_containers_from_yaml() {
+# Function to extract ALL containers from YAML files (no filtering)
+get_all_containers_from_yaml() {
     local yaml_file=$1
 
     if [ ! -f "$yaml_file" ]; then
         return
     fi
 
-    # First, extract all group component containers
-    local group_containers
-    group_containers=$(awk '
-        /^group:/ { in_group=1; next }
-        in_group && /^  containers:/ { in_containers=1; next }
-        in_group && in_containers && /^    - / {
-            gsub(/^    - /, "")
-            gsub(/^[[:space:]]*"/, "")
-            gsub(/"[[:space:]]*$/, "")
-            print
-        }
-        in_group && /^[^ ]/ { in_group=0; in_containers=0 }
-        in_group && in_containers && /^  [a-zA-Z]/ { in_containers=0 }
-    ' "$yaml_file" | sort -u)
-
     # Extract all container names from "images:" section
-    local all_containers
-    all_containers=$(awk '
+    awk '
         /^images:/ { in_images=1; next }
         in_images && /^[^ ]/ { in_images=0 }
         in_images && /^  [a-zA-Z0-9][a-zA-Z0-9._-]*:/ {
@@ -178,14 +161,31 @@ get_containers_from_yaml() {
             gsub(/:.*/, "")
             print
         }
-    ' "$yaml_file" | sort -u)
+    ' "$yaml_file"
+}
 
-    # Filter out group containers from all containers
-    if [ -n "$group_containers" ]; then
-        echo "$all_containers" | grep -v -F -x "$group_containers" || true
-    else
-        echo "$all_containers"
+# Function to extract group component containers from YAML files
+get_group_containers_from_yaml() {
+    local yaml_file=$1
+
+    if [ ! -f "$yaml_file" ]; then
+        return
     fi
+
+    # Extract all group component containers
+    awk '
+        /^group:/ { in_group=1; next }
+        in_group && /^  containers:/ { in_containers=1; next }
+        in_group && in_containers && /^    - / {
+            gsub(/^    - /, "")
+            gsub(/^[[:space:]]*"/, "")
+            gsub(/"[[:space:]]*$/, "")
+            print
+            next
+        }
+        in_group && /^[^ ]/ { in_group=0; in_containers=0 }
+        in_group && in_containers && /^  [a-zA-Z]/ { in_containers=0 }
+    ' "$yaml_file"
 }
 
 # Function to get image name for a specific container from YAML files
@@ -262,18 +262,22 @@ image_exists_locally() {
 get_containers_list() {
     log "Retrieving container list from YAML files..."
 
-    local containers=""
+    local all_containers=""
+    local all_group_containers=""
 
+    # First pass: collect all containers and all group component containers
     if [ -f "config.yml" ]; then
         log "Found config.yml"
-        containers="$(get_containers_from_yaml config.yml)"
+        all_containers="$all_containers"$'\n'"$(get_all_containers_from_yaml config.yml)"
+        all_group_containers="$all_group_containers"$'\n'"$(get_group_containers_from_yaml config.yml)"
     fi
 
     if [ -d "config.d" ]; then
         for file in config.d/*.yml config.d/*.yaml; do
             if [ -f "$file" ]; then
                 log "Found config file: $file"
-                containers="$containers"$'\n'"$(get_containers_from_yaml "$file")"
+                all_containers="$all_containers"$'\n'"$(get_all_containers_from_yaml "$file")"
+                all_group_containers="$all_group_containers"$'\n'"$(get_group_containers_from_yaml "$file")"
             fi
         done
     fi
@@ -282,12 +286,22 @@ get_containers_list() {
         for file in custom.d/*.yml custom.d/*.yaml; do
             if [ -f "$file" ]; then
                 log "Found config file: $file"
-                containers="$containers"$'\n'"$(get_containers_from_yaml "$file")"
+                all_containers="$all_containers"$'\n'"$(get_all_containers_from_yaml "$file")"
+                all_group_containers="$all_group_containers"$'\n'"$(get_group_containers_from_yaml "$file")"
             fi
         done
     fi
 
-    echo "$containers" | sort -u | grep -v '^$'
+    # Remove duplicates from both lists
+    all_containers=$(echo "$all_containers" | sort -u | grep -v '^$')
+    all_group_containers=$(echo "$all_group_containers" | sort -u | grep -v '^$')
+
+    # Filter out ALL group component containers from the container list
+    if [ -n "$all_group_containers" ]; then
+        echo "$all_containers" | grep -v -F -x -f <(echo "$all_group_containers") || true
+    else
+        echo "$all_containers"
+    fi
 }
 
 # Function to extract groups from YAML files
@@ -714,6 +728,11 @@ $(if [ ${#STOP_FAILED_GROUPS[@]} -gt 0 ]; then printf '   • %s\n' "${STOP_FAIL
 
 # Main
 main() {
+    # Clean up old test files
+    echo -e "${CYAN}🧹 Cleaning up old test files...${NC}"
+    rm -f playground_summary_*.txt 2>/dev/null
+    rm -f playground_test_*.log 2>/dev/null
+
     log "Starting Docker Playground tests"
 
     if ! command -v docker &> /dev/null; then
@@ -863,20 +882,20 @@ main() {
     # Check both containers and groups
     if [ $START_FAILED -eq 0 ] && [ $STOP_FAILED -eq 0 ] && [ $GROUP_START_FAILED -eq 0 ] && [ $GROUP_STOP_FAILED -eq 0 ]; then
         echo -e "\n${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║                                                               ║${NC}"
-        echo -e "${GREEN}║                  ✅  ALL TESTS PASSED!  ✅                   ║${NC}"
-        echo -e "${GREEN}║                                                               ║${NC}"
+        echo -e "${GREEN}║                                                                 ║${NC}"
+        echo -e "${GREEN}║                  ✅  ALL TESTS PASSED!  ✅                      ║${NC}"
+        echo -e "${GREEN}║                                                                 ║${NC}"
         echo -e "${GREEN}║           $TOTAL_CONTAINERS containers + $TOTAL_GROUPS groups tested successfully           ║${NC}"
-        echo -e "${GREEN}║                                                               ║${NC}"
+        echo -e "${GREEN}║                                                                 ║${NC}"
         echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}\n"
         exit 0
     else
         echo -e "\n${RED}╔═══════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${RED}║                                                               ║${NC}"
-        echo -e "${RED}║                 ❌  SOME TESTS FAILED  ❌                    ║${NC}"
-        echo -e "${RED}║                                                               ║${NC}"
+        echo -e "${RED}║                                                                 ║${NC}"
+        echo -e "${RED}║                 ❌  SOME TESTS FAILED  ❌                       ║${NC}"
+        echo -e "${RED}║                                                                 ║${NC}"
         echo -e "${RED}║              Failed: $total_failed | Passed: $total_success                     ║${NC}"
-        echo -e "${RED}║                                                               ║${NC}"
+        echo -e "${RED}║                                                                 ║${NC}"
         echo -e "${RED}╚═══════════════════════════════════════════════════════════════╝${NC}\n"
 
         echo -e "${YELLOW}💡 Check the detailed report above or review:${NC}"
