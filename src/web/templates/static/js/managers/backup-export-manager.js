@@ -9,9 +9,19 @@ const BackupExportManager = {
     async showBackups() {
         try {
             showLoader('Loading backups...');
+            DOM.invalidateCache('backupFilterInput');
+            DOM.invalidateCache('backupsTable');
             const data = await ApiService.getBackups();
             this.renderBackupsList(data.backups);
             ModalManager.open('backupsModal');
+            
+            requestAnimationFrame(() => {
+                const filterInput = DOM.get('backupFilterInput');
+                if (filterInput) {
+                    filterInput.focus();
+                }
+            });
+
         } catch (error) {
             ToastManager.show(`Error loading backups: ${error.message}`, 'error');
         } finally {
@@ -58,7 +68,7 @@ const BackupExportManager = {
         const rows = backups.map(backup => `
             <tr>
                 <td data-label="Container">
-                    <span class="backup-category">${backup.category}</span>
+                    <span class="backup-category">${backup.container}</span>
                 </td>
                 <td data-label="File">
                     <span class="backup-filename">${backup.file}</span>
@@ -70,10 +80,10 @@ const BackupExportManager = {
                     <span class="backup-date">${new Date(backup.modified * 1000).toLocaleString()}</span>
                 </td>
                 <td data-label="Actions">
-                    <button class="backup-download-btn" onclick="BackupExportManager.downloadBackup('${backup.category}', '${backup.file}')">
+                    <button class="backup-download-btn" onclick="BackupExportManager.downloadBackup('${backup.container}', '${backup.file}')">
                         Download
                     </button>
-                    <button class="backup-delete-btn" onclick="BackupExportManager.deleteBackup('${backup.category}', '${backup.file}')">
+                    <button class="backup-delete-btn" onclick="BackupExportManager.deleteBackup('${backup.container}', '${backup.file}')">
                         Delete
                     </button>
                 </td>
@@ -151,9 +161,9 @@ const BackupExportManager = {
     /**
      * Download backup
      */
-    async downloadBackup(category, filename) {
+    async downloadBackup(container, filename) {
         try {
-            const url = await ApiService.downloadBackup(category, filename);
+            const url = await ApiService.downloadBackup(container, filename);
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
@@ -169,7 +179,7 @@ const BackupExportManager = {
     /**
      * Delete backup
      */
-    async deleteBackup(category, filename) {
+    async deleteBackup(container, filename) {
         const confirmation = await ConfirmModalManager.show(
             'Delete Backup',
             `Are you sure you want to delete the backup: <strong>${filename}</strong>? This action cannot be undone.`,
@@ -179,9 +189,25 @@ const BackupExportManager = {
         if (confirmation) {
             try {
                 showLoader(`Deleting ${filename}...`);
-                await ApiService.deleteBackup(category, filename);
+
+                const filterInput = DOM.get('backupFilterInput');
+                const filterValue = filterInput ? filterInput.value : '';
+
+                await ApiService.deleteBackup(container, filename);
                 ToastManager.show('Backup deleted successfully', 'success');
-                this.showBackups(); // Refresh the list
+                
+                await this.showBackups();
+
+                if (filterValue) {
+                    DOM.invalidateCache('backupFilterInput');
+                    DOM.invalidateCache('backupsTable');
+                    const newFilterInput = DOM.get('backupFilterInput');
+                    if (newFilterInput) {
+                        newFilterInput.value = filterValue;
+                        this.filterBackups();
+                    }
+                }
+
             } catch (error) {
                 ToastManager.show(`Delete failed: ${error.message}`, 'error');
             } finally {

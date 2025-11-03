@@ -240,12 +240,12 @@ const ApiService = {
         return this.fetchJson('/api/backups');
     },
 
-    async downloadBackup(category, filename) {
-        return `${window.location.origin}/api/download-backup/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`;
+    async downloadBackup(container, filename) {
+        return `${window.location.origin}/api/download-backup/${encodeURIComponent(container)}/${encodeURIComponent(filename)}`;
     },
 
-    async deleteBackup(category, filename) {
-        return this.fetchJson(`/api/backups/delete/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    async deleteBackup(container, filename) {
+        return this.fetchJson(`/api/backups/delete/${encodeURIComponent(container)}/${encodeURIComponent(filename)}`, { method: 'DELETE' });
     },
 
     /**

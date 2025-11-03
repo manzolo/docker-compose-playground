@@ -72,7 +72,7 @@ class DetectShellResponse(BaseModel):
 
 class BackupInfo(BaseModel):
     """Backup file information"""
-    category: str = Field(..., description="Backup category")
+    container: str = Field(..., description="Backup container")
     file: str = Field(..., description="Filename")
     size: int = Field(..., description="File size in bytes")
     modified: float = Field(..., description="Modification timestamp")
@@ -547,14 +547,14 @@ async def get_backups():
         if not backup_dir.exists():
             return BackupsList(backups=[])
         
-        for category_dir in backup_dir.iterdir():
-            if category_dir.is_dir():
-                for file_path in category_dir.iterdir():
+        for container_dir in backup_dir.iterdir():
+            if container_dir.is_dir():
+                for file_path in container_dir.iterdir():
                     if file_path.is_file():
                         try:
                             stat = file_path.stat()
                             backups.append(BackupInfo(
-                                category=category_dir.name,
+                                container=container_dir.name,
                                 file=file_path.name,
                                 size=stat.st_size,
                                 modified=stat.st_mtime
@@ -569,7 +569,7 @@ async def get_backups():
 
 
 @router.get(
-    "/api/download-backup/{category}/{filename}",
+    "/api/download-backup/{container}/{filename}",
     summary="Download Backup",
     description="Download a specific backup file",
     responses={
@@ -579,32 +579,32 @@ async def get_backups():
     }
 )
 async def download_backup(
-    category: str = PathParam(..., description="Backup category"),
+    container: str = PathParam(..., description="Backup container"),
     filename: str = PathParam(..., description="Backup filename")
 ):
     """
     Download a backup file.
 
     **Path Parameters:**
-    - `category`: Category directory name
+    - `container`: Category directory name
     - `filename`: Filename to download
     """
-    backup_path = SHARED_DIR / "data" / "backups" / category / filename
+    backup_path = SHARED_DIR / "data" / "backups" / container / filename
     if not backup_path.exists():
         raise HTTPException(404, "Backup not found")
     return FileResponse(str(backup_path), filename=filename, media_type="application/octet-stream")
 
 
-@router.delete("/api/backups/delete/{category}/{filename}", summary="Delete Backup", description="Delete a specific backup file")
+@router.delete("/api/backups/delete/{container}/{filename}", summary="Delete Backup", description="Delete a specific backup file")
 async def delete_backup(
-    category: str = PathParam(..., description="Backup category"),
+    container: str = PathParam(..., description="Backup container"),
     filename: str = PathParam(..., description="Backup filename")
 ):
     """
     Delete a backup file.
     """
     try:
-        backup_path = SHARED_DIR / "data" / "backups" / category / filename
+        backup_path = SHARED_DIR / "data" / "backups" / container / filename
         if not backup_path.is_file():
             raise HTTPException(status_code=404, detail=f"Backup not found at path: {backup_path}")
 

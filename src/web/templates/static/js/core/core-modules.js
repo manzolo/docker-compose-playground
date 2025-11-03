@@ -44,9 +44,6 @@ const DOM = {
 
     invalidateCache(id) {
         delete this.cache[id];
-        if (id) {
-            this.cache[id] = document.getElementById(id);
-        }
     },
     
     query(selector) {
