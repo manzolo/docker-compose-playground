@@ -116,7 +116,7 @@ The Docker Playground Manager includes over 100 pre-configured containers and st
 - **Golang** (1.18, 1.19, 1.20, 1.21, 1.22, 1.23, alpine)
 - **Ruby** (3.3, alpine)
 - **PHP** (5.6, 7.2, 7.3, 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, fpm)
-- **Java (OpenJDK)** (8, 11, 17, 21)
+- **Java (OpenJDK)**
 - **Rust** (1.75, alpine)
 - **Elixir**
 - **Erlang**

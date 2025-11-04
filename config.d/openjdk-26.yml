@@ -1,13 +1,13 @@
 images:
-  openjdk-8:
+  openjdk-26:
     category: programming
-    description: OpenJDK 8
-    image: openjdk:8
+    description: OpenJDK 26
+    image: openjdk:26-ea
     keep_alive_cmd: sleep infinity
     shell: /bin/bash
     motd: |
       ╔══════════════════════════════════════════════════════════════╗
-      ║              Openjdk 8 Development Environment               ║
+      ║              Openjdk 26 Development Environment              ║
       ╚══════════════════════════════════════════════════════════════╝
       
       🚀 Quick Start:
