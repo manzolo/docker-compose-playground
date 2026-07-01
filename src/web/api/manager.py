@@ -46,7 +46,7 @@ async def manage_page(request: Request):
         except:
             network_info = {"name": "Not created", "driver": "N/A", "subnet": "N/A"}
         
-        return templates.TemplateResponse("manage.html", {
+        return templates.TemplateResponse(request, "manage.html", {
             "request": request,
             "total_images": len(config),
             "running_count": len(running),
