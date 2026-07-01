@@ -87,7 +87,7 @@ async def dashboard(request: Request):
             categories.add(cat)
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request, "index.html", {
             "request": request,
             "images": sorted_config,
             "groups": groups,
@@ -132,7 +132,7 @@ async def manage_page(request: Request):
         except:
             network_info = {"name": "Not created", "driver": "N/A", "subnet": "N/A"}
         
-        return templates.TemplateResponse("manage.html", {
+        return templates.TemplateResponse(request, "manage.html", {
             "request": request,
             "total_images": len(config),
             "running_count": len(running),
@@ -154,7 +154,7 @@ async def add_container_page(request: Request):
         config = config_data["images"]
         categories = sorted(set(img_data.get('category', 'other') for img_data in config.values()))
         
-        return templates.TemplateResponse("add_container.html", {
+        return templates.TemplateResponse(request, "add_container.html", {
             "request": request,
             "existing_categories": categories
         })
